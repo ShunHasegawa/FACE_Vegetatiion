@@ -121,7 +121,7 @@ ddply(plt.pfg.cst, .(year, co2), summarise, mean(p))
 
 library(effects)
 ??plotallEffect
-library(all)
+
 ?model.tables
 plot(m1)
 ?glmer
