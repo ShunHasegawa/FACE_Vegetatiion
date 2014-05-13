@@ -1,4 +1,8 @@
+library(xlsx)
+library(plyr)
+
 # function which reads worksheet from an xcel file
+read.veg.xlx <- function(sheetName) {
 read.veg.xlx <- function(sheetName) {
   a <- read.xlsx2("Data/Result_FACE_Vegetation_Datasheet_2014.xlsx", sheetName,
                   header = TRUE, startRow = 4, endRow = 29, stringsAsFactors = FALSE)
@@ -30,18 +34,22 @@ veg.2014.raw$pos <- factor(sapply(splt, "[", 3))
 veg.2014.raw$year <- factor("2014")
 
 # sort colmuns
-veg.2014.raw <- veg.2014.raw[c("year", "ring", "plot", "pos", "cell", "position", 
-                               sort(names(veg.2014.raw)[-grep("year|ring|plot|pos|cell|position", names(veg.2014.raw))]))]
+NotSpp <- c("year", "ring", "plot", "pos", "cell", "position")
+Spp <- sort(names(veg.2014.raw)[which(!(names(veg.2014.raw) %in% NotSpp))])
 
-veg.2014.raw[ ,7:ncol(veg.2014.raw)] <- apply(veg.2014.raw[ ,7:ncol(veg.2014.raw)], 2, as.numeric)
+veg.2014.raw <- veg.2014.raw[c(NotSpp, Spp)]
+names(veg.2014.raw)
+
+# Turn Spp into numeric
+veg.2014.raw[Spp] <- apply(veg.2014.raw[Spp], 2, as.numeric)
 
 # turn na into 0
 veg.2014.raw[is.na(veg.2014.raw)] <- 0
 
 
 # remove the spp which were not found
-kpt.sp<- names(which(colSums(veg.2014.raw[, 7:ncol(veg.2014.raw)]) != 0))
-veg.14 <- veg.2014.raw[c("year", "ring", "plot", "pos", "cell", "position", kpt.sp)]
+kpt.sp<- names(which(colSums(veg.2014.raw[Spp]) != 0))
+veg.14 <- veg.2014.raw[c(NotSpp, kpt.sp)]
 veg.14$position <- NULL
 names(veg.14)[4] <- "position"
-save(veg.14, file = "output/veg.14.Rdata")
+save(veg.14, file = "output/Data/FACE_Veg2014.RData")
