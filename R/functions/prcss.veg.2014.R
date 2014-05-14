@@ -1,8 +1,4 @@
-library(xlsx)
-library(plyr)
-
 # function which reads worksheet from an xcel file
-read.veg.xlx <- function(sheetName) {
 read.veg.xlx <- function(sheetName) {
   a <- read.xlsx2("Data/Result_FACE_Vegetation_Datasheet_2014.xlsx", sheetName,
                   header = TRUE, startRow = 4, endRow = 29, stringsAsFactors = FALSE)
