@@ -56,14 +56,15 @@ m2 <- manyglm(m1 ~ (sites$year + sites$co2 + sites$block)^2 , family="negative.b
 rslt <- anova(m2, nBoot=500, test="wald", p.uni="adjusted", show.time=TRUE)
 
 
-
-## functional group ##
-
+##############
+# plant form #
+##############
 # ring
-fg.dat <- cast(FACE.veg.rslt, year + ring ~ fgs, sum)
-vg.data <- fg.dat[, -grep("year|ring|notknown", names(fg.dat))]
-sites <- fg.dat[, grep("year|ring", names(fg.dat))]
-sites$co2 <- factor(ifelse(sites$ring %in% c("1", "4", "5"), "elev", "amb"))
+fg.dat <- cast(FACE.veg.rslt, year + ring + co2 ~ form, sum)
+fg.dat <- fg.dat[, -12]
+
+vg.data <- fg.dat[, -grep("year|ring|co2", names(fg.dat))]
+sites <- fg.dat[, grep("year|ring|co2", names(fg.dat))]
 
 m1 <- mvabund(vg.data)
 m2 <- manyglm(m1 ~ sites$year * sites$co2, family="negative.binomial", cor.type = "shrink")
@@ -71,18 +72,19 @@ anova(m2, nBoot=500, test="wald", p.uni="adjusted", show.time=TRUE)
 plot(m2)
 
 # plot
-fg.dat <- cast(FACE.veg.rslt, year + ring + plot ~ fgs, sum)
-vg.data <- fg.dat[, -grep("year|plot|ring|notknown", names(fg.dat))]
-sites <- fg.dat[, grep("year|ring|plot", names(fg.dat))]
-sites$co2 <- factor(ifelse(sites$ring %in% c("1", "4", "5"), "elev", "amb"))
-sites$pos <- factor(sites$ring:sites$plot)
-sites$block <- factor(recode(sites$ring, "1:2 = 'A'; 3:4 = 'B'; 5:6 = 'C'"))
+# fg.dat <- cast(FACE.veg.rslt, year + ring + plot ~ fgs, sum)
+# vg.data <- fg.dat[, -grep("year|plot|ring|notknown", names(fg.dat))]
+# sites <- fg.dat[, grep("year|ring|plot", names(fg.dat))]
+# sites$co2 <- factor(ifelse(sites$ring %in% c("1", "4", "5"), "elev", "amb"))
+# sites$pos <- factor(sites$ring:sites$plot)
+# sites$block <- factor(recode(sites$ring, "1:2 = 'A'; 3:4 = 'B'; 5:6 = 'C'"))
+# 
+# m1 <- mvabund(vg.data)
+# m2 <- manyglm(m1 ~ sites$year * sites$co2, family="negative.binomial", cor.type = "shrink")
+# anova(m2, nBoot=500, test="wald", p.uni="adjusted", show.time=TRUE)
+# plot(m2)
+# 
+# # co2 x block
+# m2 <- manyglm(m1 ~ sites$year * sites$co2 * sites$block, family="negative.binomial", cor.type = "shrink")
+# anova(m2, nBoot=500, test="wald", p.uni="adjusted", show.time=TRUE)
 
-m1 <- mvabund(vg.data)
-m2 <- manyglm(m1 ~ sites$year * sites$co2, family="negative.binomial", cor.type = "shrink")
-anova(m2, nBoot=500, test="wald", p.uni="adjusted", show.time=TRUE)
-plot(m2)
-
-# co2 x block
-m2 <- manyglm(m1 ~ sites$year * sites$co2 * sites$block, family="negative.binomial", cor.type = "shrink")
-anova(m2, nBoot=500, test="wald", p.uni="adjusted", show.time=TRUE)
