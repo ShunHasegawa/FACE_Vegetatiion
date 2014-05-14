@@ -9,17 +9,45 @@ veg <- FACE.veg.rslt[-grep("Unknown", FACE.veg.rslt$variable), ,drop = TRUE]
 # natrualised(?) -> NA for the time beting
 veg$origin[which(veg$origin == "naturalised(?)")] <- NA
 
+# remove rows with value of 0 as stat = bin (the number of 
+# cases in each group) will be used
+veg <- veg[which(veg$value != 0), ]
+
 veg <- droplevels(veg)
 
 # summary data
-RngSum <- ddply(veg, .(year, ring, co2, variable, PFG, form, origin), summarise, frq = sum(value, na.rm = TRUE))
-CO2Sum <- ddply(veg, .(year, co2, variable, PFG, form, origin), summarise, frq = sum(value, na.rm = TRUE))
+# RngSum <- ddply(veg, .(year, ring, co2, variable, PFG, form, origin), summarise, frq = sum(value, na.rm = TRUE))
+# CO2Sum <- ddply(veg, .(year, co2, variable, PFG, form, origin), summarise, frq = sum(value, na.rm = TRUE))
 
 ###########
 # All Spp #
 ###########
 
-PltVeg <- function(data, group, ...){
+
+
+PltVeg <- function(data = veg, xlab = NULL, ...){
+  # change factor lablles for labbeling in figs
+  data$co2 <- factor(data$co2, levels = c("amb", "elev"), labels = c("Ambient", "eCO[2]"))
+  
+  data$PFG <- factor(data$PFG, 
+                     levels = c("c3", "c3_4", "c4", "legume", "Lichen", "moss", "Non_legume", "wood"),
+                     labels = c("C[3]", "C[3-4]", "C[4]", "Legume", "Lichen", "Moss", "Non_legume", "wood"))
+  data$origin <- factor(data$origin, 
+                        levels = c("native", "naturalised"), 
+                        labels = c("Native", "Naturalised"))
+  p <- ggplot(data, aes(x = variable, fill = year))
+  p2 <- p + geom_bar(alpha = 0.6, position = "identity") + 
+    theme(axis.text.y = element_text(...)) +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5, ...)) +
+    labs(x = xlab, y = "Frequency")
+}
+
+p2 <- PltVeg() +
+  facet_grid(ring ~ form + PFG + origin, scale = "free_x", space = "free_x", labeller = label_parsed)
+
+
+
+PltVeg <- function(data = veg, group, ...){
   # change factor lablles for labbeling in figs
   data$co2 <- factor(data$co2, levels = c("amb", "elev"), labels = c("Ambient", "eCO[2]"))
   
@@ -30,8 +58,8 @@ PltVeg <- function(data, group, ...){
                         levels = c("native", "naturalised"), 
                         labels = c("Native", "Naturalised"))
   data$y <- data[, group]
-  p <- ggplot(data, aes(x = variable, y = frq, fill = year))
-  p2 <- p + geom_bar(stat = "identity", alpha = 0.6, position = "identity") + 
+  p <- ggplot(data, aes(x = variable, fill = year))
+  p2 <- p + geom_bar(alpha = 0.6, position = "identity") + 
     facet_grid(y ~ form + PFG + origin, scale = "free_x", space = "free_x", labeller = label_parsed) +
     theme(axis.text.y = element_text(...)) +
     theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5, ...)) +
@@ -39,7 +67,7 @@ PltVeg <- function(data, group, ...){
 }
 
 ## Ring ##
-p2 <- PltVeg(data = RngSum, group = "ring", size =8) +
+p2 <- PltVeg(group = "ring", size =8) +
   theme(strip.text.x = element_text(size = 6)) +
   expand_limits(x = 4.5) 
 #     set minimum size of the graphic areas of each group 
