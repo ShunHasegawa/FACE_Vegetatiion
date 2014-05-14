@@ -6,6 +6,8 @@ library(XLConnect)
 library(ggplot2)
 library(reshape)
 library(lme4)
+library(packrat)
+library(car)
 
 source("R/functions.R")
 ################
