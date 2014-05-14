@@ -6,7 +6,7 @@ library(XLConnect)
 library(ggplot2)
 library(reshape)
 
-source("R/functions//functions.R")
+source("R/functions.R")
 ################
 # Process Data #
 ################
@@ -31,7 +31,7 @@ source("R//Figs.R")
 ######
 # CA #
 ######
-source("functions/CA.analysis.R")
+source("R/CA.analysis.R")
 
 ########
 # GLMs #
