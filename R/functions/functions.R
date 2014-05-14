@@ -53,7 +53,8 @@ pltCA <- function(data, xv, yv, ...){
   ca.site <- data.frame(sites, m1.sm$sites)
   
   # plot spp score: higher sp score gets darker color
-  ass <- (abs(ca.spp[, xv]) + abs(ca.spp[, yv])) / max((abs(ca.spp[, xv]) + abs(ca.spp[, yv])))
+  ass <- apply(cbind(ca.spp[, xv], ca.spp[, yv]), 1, function(x) max(abs(x))) / 
+    max(c(abs(ca.spp[, xv]), abs(ca.spp[, yv])))
   
   pl.ttl <- paste(unique(ca.site$year), collapse = "&")
     
@@ -64,20 +65,10 @@ pltCA <- function(data, xv, yv, ...){
                  aes_string(col = "ring", fill = "ring", ...)) +
     geom_text(data = ca.spp, size = 2, aes_string(x = xv, y = yv), alpha = ass, label = rownames(ca.spp)) +
     ggtitle(pl.ttl)
-  figtitle <- paste("output/figs/FACE.veg.", pl.ttl, "_", xv, "vs", yv, ".pdf", sep = "" )
-  ggsave(filename = figtitle, plot = p2, width = 9, height = 6)
+  figtitle <- paste("output/figs/FACE.veg.", pl.ttl, "_", xv, "vs", yv, sep = "" )
+  ggsavePP(filename = figtitle, plot = p2, width = 9, height = 6)
 }
 
-#pltCA <- function(data, xv, yv, ...){
-#  p <- ggplot(data, aes_string(x=xv, y=yv, col = "ring", ...))
-#  #aes_string takes character vector
-#  pl.ttl <- paste(unique(data$year), collapse = "&")
-#  p2 <- p + geom_point(size = 5, alpha = 0.8) + 
-#    stat_ellipse(geom = "polygon", alpha = 0.1, aes(fill = ring), level=0.75) +
-#    ggtitle(pl.ttl)
-#  figtitle <- paste("output/figs/FACE.veg.", pl.ttl, "_", xv, "vs", yv, ".pdf", sep = "" )
-#  ggsave(filename = figtitle, plot = p2)
-#}
 
 # analyse for each year separately and plot
 plt.CA.yr <- function(data){
