@@ -101,3 +101,30 @@ ggsavePP <- function(filename, plot, width, height){
          height = height, 
          dpi = 600)
 }
+
+####################
+# Create bargraphs #
+####################
+PltVeg <- function(data = veg, 
+                   xval, 
+                   xlab = NULL, 
+                   ..., 
+                   pfgLabs = c("C[3]", "C[3-4]", "C[4]", "Legume", "Lichen", "Moss", "Non_legume", "wood"),
+                   orgnLabs = c("Native", "Introduced")){
+  # change factor lablles for labbeling in figs
+  data$co2 <- factor(data$co2, levels = c("amb", "elev"), labels = c("Ambient", "eCO[2]"))
+  
+  data$PFG <- factor(data$PFG, 
+                     levels = c("c3", "c3_4", "c4", "legume", "Lichen", "moss", "Non_legume", "wood"),
+                     labels = pfgLabs)
+  data$origin <- factor(data$origin, 
+                        levels = c("native", "naturalised"), 
+                        labels = orgnLabs)
+  data$xv <- data[, xval]
+  p <- ggplot(data, aes(x = xv, fill = year))
+  p2 <- p + geom_bar(alpha = 0.6, position = "identity") + 
+    theme(axis.text.y = element_text(...)) +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5, ...)) +
+    labs(x = xlab, y = "Frequency")
+  return(p2)
+}
