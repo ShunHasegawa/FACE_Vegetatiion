@@ -17,31 +17,35 @@ source("functions/mvabund.analysis.R")
 #########
 head(FACE.veg.rslt)
 
-# plot, PFG mean for grass
-plt.pfg <- ddply(subset(FACE.veg.rslt, form == "Grass"), .(year, ring, plot, fgs), summarise, frq = sum(value))
+# Create C3, C4 grass summary DF
 
-# remove Grass:C3.4, not known
-plt.pfg <- subset(plt.pfg, !(fgs %in% c("Grass:C3.4", "Grass:notknown")))
-plt.pfg <- droplevels(plt.pfg)
+# PFG_plot sum for c3 and c4 grass wihtought unknown spp
+PFGPltSum<- ddply(subsetD(FACE.veg.rslt, form == "Grass" & PFG %in% c("c3", "c4")),
+                          .(year, co2, ring, plot, PFG), summarise, value = sum(value, na.rm = TRUE))
 
-# cast
-names(plt.pfg)[5]  <- "value"
-plt.pfg.cst <- cast(plt.pfg, year + ring + plot ~ fgs)
-names(plt.pfg.cst)[4:5] <- c("C3", "C4")
 
-plt.pfg.cst$yv <- cbind(plt.pfg.cst$C3, plt.pfg.cst$C4)
-plt.pfg.cst$co2 <- factor(ifelse(plt.pfg.cst$ring %in% c("1", "4", "5"), "elev", "amb"))
+## linear model ##
+
+boxplot()
+
+
+# cast and make data frame for anlysis
+C34grassDF <- cast(PFGPltSum, year + co2 + ring + plot ~ PFG)
+
+
+
 
 # glm
-library(lme4)
-m1 <- glmer(yv ~ year * co2 + (1|ring/plot), family = "binomial", data = plt.pfg.cst)
-m2 <- glmer(yv ~ year * co2 + (1|year/ring/plot), family = binomial, data = plt.pfg.cst)
-plot(m1)
-
+C34grassDF$yv <- cbind(C34grassDF$c3, C34grassDF$c4)
+m1 <- glmer(yv ~ year * co2 + (1|ring/plot), family = "binomial", data = C34grassDF)
+m2 <- glmer(yv ~ year + co2 + (1|ring/plot), family = "binomial", data = C34grassDF)
 anova(m1, m2, test = "F")
-summary(m2)
+# unable to remove year:co2 interaction
 
-m2 <- glmer(yv ~ year + co2 + (1|ring/plot), family = binomial, data = plt.pfg.cst)
+anova(m1)
+summary(m1)
+
+
 plot(m1)
 summary(m1)
 AIC(m1, m2)
