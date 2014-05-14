@@ -5,6 +5,7 @@ library(plyr)
 library(XLConnect)
 library(ggplot2)
 library(reshape)
+library(lme4)
 
 source("R/functions.R")
 ################
@@ -17,6 +18,9 @@ load("output/Data//FACE_Vegetation_Raw.RData")
 
 # Data frame with plant functional groups
 load("output//Data//FACE_Vegetation_PFG.RData")
+
+# co2 factor
+FACE.veg.rslt$co2 <- factor(ifelse(FACE.veg.rslt$ring %in% c(1, 4, 5), "elev", "amb"))
 
 ########
 # Figs #
