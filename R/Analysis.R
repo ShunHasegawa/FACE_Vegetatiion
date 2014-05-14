@@ -8,6 +8,7 @@ library(reshape)
 library(lme4)
 library(packrat)
 library(car)
+library(mvabund)
 
 source("R/functions.R")
 ################
