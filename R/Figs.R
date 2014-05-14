@@ -14,7 +14,6 @@ veg <- droplevels(veg)
 # summary data
 RngSum <- ddply(veg, .(year, ring, co2, variable, PFG, form, origin), summarise, frq = sum(value, na.rm = TRUE))
 CO2Sum <- ddply(veg, .(year, co2, variable, PFG, form, origin), summarise, frq = sum(value, na.rm = TRUE))
-FormSum <- ddply(veg, .(year, co2, PFG, form, origin), summarise, frq = sum(value, na.rm = TRUE))
 
 ###########
 # All Spp #
@@ -53,12 +52,101 @@ p2 <- PltVeg(data = CO2Sum, group = "co2", size = 8) +
   expand_limits(x = 4.5) 
 ggsavePP(filename = "output/figs/FACE_vegetation_CO2", plot = p2, width= 17, height = 11)
 
+#######
+# PFG #
+#######
+
+# summary table
+RngFormSum <- ddply(veg, .(year, ring, co2, PFG, form), summarise, frq = sum(value, na.rm = TRUE))
+CO2FormSum <- ddply(veg, .(year, co2, PFG, form), summarise, frq = sum(value, na.rm = TRUE))
+
+PltPlntPFG <- function(data, group, ...){
+  # change factor lablles for labbeling in figs
+  data$co2 <- factor(data$co2, levels = c("amb", "elev"), labels = c("Ambient", "eCO[2]"))
+  
+  data$PFG <- factor(data$PFG, 
+                     levels = c("c3", "c3_4", "c4", "legume", "Lichen", "moss", "Non_legume", "wood"),
+                     labels = c(expression(C[3]), 
+                                expression(C[3-4]),
+                                expression(C[4]),
+                                "Legume", "Lichen", "Moss", "Non_legume", "wood"))
+#   data$origin <- factor(data$origin, 
+#                         levels = c("native", "naturalised"), 
+#                         labels = c("Native", "Naturalised"))
+  data$y <- data[, group]
+  p <- ggplot(data, aes(x = PFG, y = frq, fill = year))
+  p2 <- p + geom_bar(stat = "identity", alpha = 0.6, position = "identity") + 
+    facet_grid(y ~ form, scale = "free_x", space = "free_x", labeller = label_parsed) +
+    theme(axis.text.y = element_text(...)) +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5, ...)) +
+    labs(x = "PFG", y = "Frequency") +
+    scale_x_discrete(breaks = levels(data$PFG),
+                     labels=c(expression(C[3]), 
+                              expression(C[3-4]),
+                              expression(C[4]),
+                              "Legume", "Lichen", "Moss", "Non_legume", "wood"))
+}
+
+## Ring ##
+p <- PltPlntPFG(data = RngFormSum, group = "ring") +
+  theme(strip.text.x = element_text(size = 9))
+ggsavePP(filename = "output/figs/FACE_PFG_Ring", plot = p, width= 8, height = 6)
+
+
+## CO2 ##
+p <- PltPlntPFG(data = CO2FormSum, group = "co2") +
+  theme(strip.text.x = element_text(size = 9))
+ggsavePP(filename = "output/figs/FACE_PFG_CO2", plot = p, width= 8, height = 6)
 
 
 
-###############
-# Plant forms #
-###############
+########################
+# Native or introduced #
+########################
+# summary table
+RngOrgnSum <- ddply(veg, .(year, ring, co2, origin, form), summarise, frq = sum(value, na.rm = TRUE))
+CO2OrgnSum <- ddply(veg, .(year, co2, origin, form), summarise, frq = sum(value, na.rm = TRUE))
+
+
+PltPlntOrgn <- function(data, group, ...){
+  # change factor lablles for labbeling in figs
+  data$co2 <- factor(data$co2, levels = c("amb", "elev"), labels = c("Ambient", "eCO[2]"))
+  
+  data$y <- data[, group]
+  p <- ggplot(data, aes(x = origin, y = frq, fill = year))
+  p2 <- p + geom_bar(stat = "identity", alpha = 0.6, position = "identity") + 
+    facet_grid(y ~ form, scale = "free_x", space = "free_x", labeller = label_parsed, margins= "form") +
+    theme(axis.text.y = element_text(...)) +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5, ...)) +
+    labs(x = "Origin", y = "Frequency") +
+    scale_x_discrete(breaks = levels(data$origin),
+                     labels=c("Native", "Naturalised"))
+}
+
+p <- PltPlntOrgn(data = RngOrgnSum, group = "ring")
+
+
+test <- veg
+test <- test[which(test$value != 0),]
+summary(test)
+
+p <- ggplot(test, aes(x = origin, fill = year))
+p2 <- p + geom_bar(stat = "bin", alpha = 0.6, position = "identity") + 
+  facet_grid(ring ~ form, scale = "free_x", space = "free_x", labeller = label_parsed, margins= "form") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)) +
+  labs(x = "Origin", y = "Frequency")
+
+
+
+p2 <- p + geom_bar(alpha = 0.6, position = "identity")
+  
+
+
+aa
+
+
+
+
 
 
 
