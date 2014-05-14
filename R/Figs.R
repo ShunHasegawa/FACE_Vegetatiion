@@ -1,8 +1,6 @@
 theme_set(theme_bw())
 
-# co2 factor
-FACE.veg.rslt$co2 <- factor(ifelse(FACE.veg.rslt$ring %in% c(1, 4, 5), "elev", "amb"))
-    
+
 # remove unknown spp
 veg <- FACE.veg.rslt[-grep("Unknown", FACE.veg.rslt$variable), ,drop = TRUE]
 
