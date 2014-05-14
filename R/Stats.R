@@ -27,26 +27,6 @@ PFGPltSum<- ddply(subsetD(FACE.veg.rslt, form == "Grass" & PFG %in% c("c3", "c4"
 C34grassDF <- cast(PFGPltSum, year + co2 + ring + plot ~ PFG)
 C34grassDF$id <- C34grassDF$ring:C34grassDF$plot
 
-## linear model ##
-# proportion data 
-df <- ddply(C34grassDF, .(ring, year), summarise, p = mean(c3/(c3 + c4)), V = var(c3/(c3 + c4)))
-
-plot(V ~ p, data = df, xlim = c(0,1))
-
-C34grassDF$prp <- C34grassDF$c3/(C34grassDF$c3 + C34grassDF$c4)
-boxplot(prp ~ co2 * year, data = C34grassDF)
-
-
-
-m1 <- lme(prp ~ co2 * year, random = ~1|ring/plot, data = C34grassDF)
-m1 <- lme(asin(sqrt(prp)) ~ co2 * year, random = ~1|ring/plot, data = C34grassDF)
-Anova(m1)
-plot(m1)
-qqnorm(m1, ~resid(.) | ring)
-qqnorm(residuals.lm(m1))
-qqline(residuals.lm(m1))
-
-
 # glm
 C34grassDF$yv <- cbind(C34grassDF$c3, C34grassDF$c4)
 
