@@ -119,6 +119,11 @@ Source: CRAN
 Version: 0.3.2.1.1
 Requires: Matrix, Rcpp
 
+Package: reshape
+Source: CRAN
+Version: 0.8.5
+Requires: plyr
+
 Package: reshape2
 Source: CRAN
 Version: 1.4
@@ -145,4 +150,14 @@ Requires: permute, lattice
 Package: XLConnect
 Source: CRAN
 Version: 0.2-7
+Requires: rJava
+
+Package: xlsx
+Source: CRAN
+Version: 0.5.5
+Requires: rJava, xlsxjars
+
+Package: xlsxjars
+Source: CRAN
+Version: 0.6.0
 Requires: rJava
