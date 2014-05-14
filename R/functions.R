@@ -119,3 +119,8 @@ PltVeg <- function(data = veg,
     labs(x = xlab, y = "Frequency")
   return(p2)
 }
+
+#########################
+# subset and droplevels #
+#########################
+subsetD <- function(...) droplevels(subset(...))
