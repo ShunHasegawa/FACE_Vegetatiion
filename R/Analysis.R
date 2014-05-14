@@ -21,8 +21,8 @@ load("output//Data//FACE_Vegetation_PFG.RData")
 ########
 # Figs #
 ########
-source("functions//crt_brgrph.R")
-dev.off()
+source("R//Figs.R")
+
 
 ###########
 ## Stats ##
