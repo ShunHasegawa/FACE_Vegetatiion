@@ -85,3 +85,19 @@ plt.CA.yr <- function(data){
   pltCA(data, xv = "CA2", yv = "CA3")
   pltCA(data, xv = "CA1", yv = "CA3")
 }
+
+##############################
+# Save ggplot in PDF and PNG #
+##############################
+ggsavePP <- function(filename, plot, width, height){
+  ggsave(filename = paste(filename, ".pdf", sep = ""), 
+         plot = plot, 
+         width = width, 
+         height = height)
+  
+  ggsave(filename = paste(filename, ".png", sep = ""), 
+         plot = plot, 
+         width = width, 
+         height = height, 
+         dpi = 600)
+}
