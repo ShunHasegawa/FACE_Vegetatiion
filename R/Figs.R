@@ -33,7 +33,7 @@ ggsavePP(filename = "output/figs/FACE_vegetation_Ring", plot = p2, width= 17, he
 
 ## CO2 ##
 p2 <- Spplt +
-  facet_grid(co2 ~ form + PFG + origin, scale = "free_x", space = "free_x", labeller = label_parsed) +
+  facet_grid(co2 ~ form + PFG + origin, scale = "free_x", space = "free_x", labeller = label_parsed)
 ggsavePP(filename = "output/figs/FACE_vegetation_CO2", plot = p2, width= 17, height = 11)
 
 #######
