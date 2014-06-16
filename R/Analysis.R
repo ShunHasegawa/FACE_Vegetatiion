@@ -14,7 +14,7 @@ source("R/functions.R")
 ################
 # Process Data #
 ################
-# source("R/FACE.vegetation.2014.management.R")
+source("R/FACE.vegetation.2014.management.R")
 
 # Row data for multi variate analysis
 load("output/Data//FACE_Vegetation_Raw.RData")
