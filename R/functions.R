@@ -1,8 +1,6 @@
 #############################
 # create ellipses on ggplot #
 #############################
-require(proto)
-
 StatEllipse <- proto(ggplot2:::Stat,
 {
   required_aes <- c("x", "y")
@@ -18,7 +16,7 @@ StatEllipse <- proto(ggplot2:::Stat,
     if (dfd < 3){
       ellipse <- rbind(c(NA,NA))	
     } else {
-      require(MASS)
+#       require(MASS)
       v <- cov.trob(cbind(data$x, data$y))
       shape <- v$cov
       center <- v$center

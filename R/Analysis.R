@@ -9,6 +9,7 @@ library(lme4)
 library(packrat)
 library(car)
 library(mvabund)
+library(proto)
 
 source("R/functions.R")
 ################
