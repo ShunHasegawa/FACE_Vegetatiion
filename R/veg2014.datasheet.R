@@ -1,5 +1,15 @@
-rm(list=ls(all=TRUE))
-load("output/veg.12.R")
+
+################################################################################
+################################################################################
+#                                                                              #
+# Note that this script doesn't work anymore becuase some of the file and data #
+# frames were modified so needs to be updated                                  #
+#                                                                              #
+################################################################################
+################################################################################
+
+
+load("output/veg.12.Rdata")
 names(veg.12)
 # Papalidium distans = Paspalidium radiatum, so combine them
 veg.12$Grass.Paspalidium.distans <- veg.12$Grass.Paspalidium.distans+veg.12$Grass.Paspalidium.radiatum
