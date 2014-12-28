@@ -73,8 +73,6 @@ Spp <- sort(names(veg.face)[which(!(names(veg.face) %in% NotSpp))])
 
 veg.face <- veg.face[c(NotSpp, Spp)]
 
-save(veg.face, file = "output/Data/FACE_Vegetation_Raw.RData")
-
 ## Lachnagrostis may be Lachnagrostis filiformis ##
 # http://www.environment.nsw.gov.au/determinations/cumber
 # landplainpd.htm
@@ -86,6 +84,8 @@ names(veg.face)[grep("Lachnagrostis", names(veg.face))] <- "Lachnagrostis.filifo
 # landplainpd.htm
 veg.face$Tricoryne.simplex
 names(veg.face)[grep("Tricoryne.simplex", names(veg.face))] <- "Tricoryne.elatior"
+
+save(veg.face, file = "output/Data/FACE_Vegetation_Raw.RData")
 
 # Spp list
 veg.face.mlt <- melt(veg.face, id = c("year", "ring", "plot", "position", "cell"))
