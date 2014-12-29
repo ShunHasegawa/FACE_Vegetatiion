@@ -1,6 +1,6 @@
+library(XLConnect)
 library(xlsx)
 library(plyr)
-library(XLConnect)
 library(ggplot2)
 library(reshape)
 library(lme4)
