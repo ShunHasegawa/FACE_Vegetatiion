@@ -2,7 +2,7 @@
 read.veg.xlx <- function(sheetName) {
   a <- read.xlsx2("Data/Result_FACE_Vegetation_Datasheet_2014.xlsx", sheetName,
                   header = TRUE, startRow = 4, endRow = 29, stringsAsFactors = FALSE)
-  a <- a[ ,-grep("X.", names(a))]
+  a <- a[ ,!grepl("X.", names(a))]
   a$position <- sheetName
   a[a == ""]  <- 0 # empty cell -> 0
   xlcFreeMemory() # Frees Java Virtual Machine (JVM) memory
@@ -17,7 +17,7 @@ shts <- as.vector(outer(a, LETTERS[1:4], paste, sep = "."))
 
 # raed all files
 options(java.parameters = "-Xmx100m") # increase java memory
-fls <- lapply(shts, read.veg.xlx)
+fls <- llply(shts, read.veg.xlx, .progress = "text")
 
 # combine
 veg.2014.raw <- rbind.fill(fls) 
