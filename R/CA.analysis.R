@@ -1,14 +1,13 @@
 library(vegan)
 ## 2012 & 2014 ##
 
-
 # process dataset for analysis
 names(veg.face)
-# remove unknown
-vegCA <- veg.face[, -grep("Unknown", names(veg.face))]
 
-plt.veg <- ddply(vegCA, .(year, ring, plot), 
-                 function(x) colSums(x[,  -grep("year|ring|plot|position|cell", names(vegCA))]))
+# plot sum
+plt.veg <- ddply(veg.face, .(year, ring, plot), 
+                 function(x) colSums(x[, -grep("year|ring|plot|position|cell", 
+                                                names(veg.face))]))
 
 vg.data <- plt.veg[, -grep("year|ring|plot|position|cell", names(plt.veg))]
 sites <- plt.veg[, grep("year|ring|plot|position|cell", names(plt.veg))]
