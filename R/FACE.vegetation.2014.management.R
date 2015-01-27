@@ -47,12 +47,15 @@ veg.face$Glycine.sp <- GlySum
   
 ## Galium ##
 # Galium sp = Galium propinquum
-veg.face$Galium.propinquum <- rowSums(veg.face[, c("Galium.propinquum", "Galium.sp")], na.rm = TRUE)
+veg.face$Galium.propinquum <- rowSums(veg.face[, c("Galium.propinquum", "Galium.sp")], 
+                                      na.rm = TRUE)
+all(veg.face$Galium.propinquum <= 1) # all values are 1 or smaller than 1
 veg.face$Galium.sp <- NULL
 
 ## Oplismenus.aemulus ##
 # Oplismenus.aemulus = Oplismenus.sp
 veg.face$Oplismenus.aemulus <- rowSums(veg.face[, c("Oplismenus.aemulus", "Oplismenus.sp")], na.rm = TRUE)
+all(veg.face$Oplismenus.aemulus <= 1)
 veg.face$Oplismenus.sp <- NULL
 
 ## Eragrostis brownii and benthamii ##
@@ -62,10 +65,11 @@ veg.face$Oplismenus.sp <- NULL
 
 # Eragrostis brownii = benthamii
 veg.face$Eragrostis.brownii <- rowSums(veg.face[, c("Eragrostis.brownii", "Eragrostis.benthamii")], na.rm = TRUE)
-veg.face$Eragrostis.benthamii <- NULL
-
 # if there are values larger than 1, trun them into 1
-veg.face$Eragrostis.brownii <- ifelse(veg.face$Eragrostis.brownii > 1, 1, veg.face$Eragrostis.brownii)
+veg.face$Eragrostis.brownii <- ifelse(veg.face$Eragrostis.brownii > 1, 1, 
+                                      veg.face$Eragrostis.brownii)
+all(veg.face$Eragrostis.brownii <= 1)
+veg.face$Eragrostis.benthamii <- NULL
 
 ## sort column order ##
 NotSpp <- c("year", "ring", "plot", "position", "cell")
@@ -73,15 +77,13 @@ Spp <- sort(names(veg.face)[which(!(names(veg.face) %in% NotSpp))])
 
 veg.face <- veg.face[c(NotSpp, Spp)]
 
-## Lachnagrostis may be Lachnagrostis filiformis ##
-# http://www.environment.nsw.gov.au/determinations/cumber
-# landplainpd.htm
+## Lachnagrostis may be Lachnagrostis filiformis ## 
+# http://www.environment.nsw.gov.au/determinations/cumberlandplainpd.htm
 names(veg.face)[grep("Lachnagrostis", names(veg.face))] <- "Lachnagrostis.filiformis"
 
 
 ## Tricoryne smplix -> Tricoryne elatior?
-# http://www.environment.nsw.gov.au/determinations/cumber
-# landplainpd.htm
+# http://www.environment.nsw.gov.au/determinations/cumber landplainpd.htm
 veg.face$Tricoryne.simplex
 names(veg.face)[grep("Tricoryne.simplex", names(veg.face))] <- "Tricoryne.elatior"
 
