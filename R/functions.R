@@ -55,13 +55,20 @@ pltCA <- function(data, xv, yv, ...){
     max(c(abs(ca.spp[, xv]), abs(ca.spp[, yv])))
   
   pl.ttl <- paste(unique(ca.site$year), collapse = "&")
-    
+  
+  # df to draw an outline for each site
+  df <- ddply(ca.site[c("year", "ring", xv, yv)], .(year, ring),
+              function(x) {chx <- chull(x[c(xv, yv)]) 
+                           chxDF <- data.frame(rbind(x[chx,], x[chx[1], ]))
+                           return(chxDF)})
+  
   p <- ggplot(ca.site, aes_string(x=xv, y=yv))
   # aes_string takes character vector
-  p2 <- p + geom_point(data = ca.site, size = 5, alpha = 0.8, aes_string(col = "ring", ...)) +
-    stat_ellipse(data = ca.site, geom = "polygon", alpha = 0.1, level=0.75, 
-                 aes_string(col = "ring", fill = "ring", ...)) +
-    geom_text(data = ca.spp, size = 2, aes_string(x = xv, y = yv), alpha = ass, label = rownames(ca.spp)) +
+  p2 <- p + geom_point(data = ca.site, size = 2, alpha = 0.8, aes_string(col = "ring", ...)) +
+    geom_polygon(data = df, aes_string(x = xv, y = yv, fill = "ring", 
+                                       col = "ring", ..., alpha = .01)) +  
+    geom_text(data = ca.spp, size = 2, aes_string(x = xv, y = yv), alpha = ass, 
+              label = rownames(ca.spp)) +
     ggtitle(pl.ttl)
   figtitle <- paste("output/figs/FACE.veg.", pl.ttl, "_", xv, "vs", yv, sep = "" )
   ggsavePP(filename = figtitle, plot = p2, width = 9, height = 6)
