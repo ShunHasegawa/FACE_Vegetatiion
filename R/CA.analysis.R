@@ -20,6 +20,7 @@ plot(m1)
 names(m1.sm)
 
 # figs
+theme_set(theme_bw())
 pltCA(data = plt.veg, xv = "CA1", yv = "CA2", shape = "year")
 pltCA(data = plt.veg, xv = "CA2", yv = "CA3", shape = "year")
 pltCA(data = plt.veg, xv = "CA1", yv = "CA3", shape = "year")
