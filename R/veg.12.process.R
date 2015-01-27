@@ -2,9 +2,8 @@
 # Forb #
 ########
 
-
 # time1(sep'12) NOT not grass/sedges 
-time1<-read.table("Data/time1.veg.txt",header=T)
+time1 <- read.table("Data/time1.veg.txt",header=T)
 forbs<-time1[,which(substring(names(time1),1,5)!="Grass"&substring(names(time1),1,5)!="Sedge")]
 
 # check maximum value
@@ -23,7 +22,7 @@ names(forbs)[grep("Wahlenbergia.sp", names(forbs))] <- "Forb.Wahlenbergia.gracil
 # Grass/Sedge #
 ###############
 # time2(dec'12) for grass/sedge
-time2<-read.table("Data/time2.veg.txt",header=T)
+time2 <- read.table("Data/time2.veg.txt",header=T)
 grs<-time2[,c(1:4,which(substring(names(time2),1,5)=="Grass"|substring(names(time2),1,5)=="Sedge"))]
 grs<-grs[,c(1:34,36:38)] #exclude unknown spp
 length(names(grs))
@@ -84,7 +83,8 @@ veg.12 <- veg.12[, -grep("Unknown", names(veg.12))]
 
 #remove columns which is zero
 names(veg.12)
-veg.12 <- veg.12[ ,!names(veg.12) %in% (names(which(colSums(veg.12[ ,5:ncol(veg.12)]) == 0))), drop=FALSE]
+veg.12 <- veg.12[ ,!names(veg.12) %in% (names(which(colSums(veg.12[ ,5:ncol(veg.12)]) == 0))),
+                 drop=FALSE]
 veg.12$ring <- as.factor(veg.12$ring)
 veg.12$plot<-as.factor(veg.12$plot)
 veg.12$cell<-as.factor(veg.12$cell)
