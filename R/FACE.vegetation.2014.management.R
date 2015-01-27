@@ -87,6 +87,13 @@ names(veg.face)[grep("Lachnagrostis", names(veg.face))] <- "Lachnagrostis.filifo
 veg.face$Tricoryne.simplex
 names(veg.face)[grep("Tricoryne.simplex", names(veg.face))] <- "Tricoryne.elatior"
 
+## uknonw spp ##
+unknownSp <- veg.face[, grepl("unknown|Unknown", names(veg.face))]
+colSums(unknownSp)
+  # very samll proportaion, so remove
+veg.face <- veg.face[, !grepl("unknown|Unknown", names(veg.face))]
+
+## save
 save(veg.face, file = "output/Data/FACE_Vegetation_Raw.RData")
 
 # Spp list
