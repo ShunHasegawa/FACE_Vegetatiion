@@ -2,6 +2,7 @@
 # Forb #
 ########
 
+
 # time1(sep'12) NOT not grass/sedges 
 time1<-read.table("Data/time1.veg.txt",header=T)
 forbs<-time1[,which(substring(names(time1),1,5)!="Grass"&substring(names(time1),1,5)!="Sedge")]
