@@ -1,17 +1,19 @@
+plt.veg <- within(plt.veg, {
+  co2 <- factor(ifelse(ring %in% c(1, 4, 5), "elev", "amb"))
+  block <- recode(ring, "1:2 = 'A'; 3:4 = 'B'; 5:6 = 'C'")
+})
+Spp <- names(plt.veg)[!grepl("year|ring|plot|block|co2", names(plt.veg))]
+  
+  
+
 #################
 # Dissimilarity #
 #################
 # Compute dissimiliraity for each plot between 2012 and 2013
 
 # compute dissimilarity for each plot
-disDF <- ddply(plt.veg, .(ring, plot), function(x) vegdist(x[, -1:-3], method = "bray"))
-
-# organise data frame
+disDF <- ddply(plt.veg, .(ring, plot), function(x) vegdist(x[, Spp], method = "bray"))
 names(disDF)[3] <- "BC"
-disDF <- within(disDF, {
-  co2 <- factor(ifelse(ring %in% c(1, 4, 5), "elev", "amb"))
-  block <- recode(ring, "1:2 = 'A'; 3:4 = 'B'; 5:6 = 'C'")
-})
 
 boxplot(BC ~ ring, data = disDF)
 
