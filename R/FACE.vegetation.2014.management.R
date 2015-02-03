@@ -105,7 +105,7 @@ write.csv(spp, file = "output/Data/spp.csv",row.names = FALSE)
 # plant properties
 spList <- read.csv("Data//FACE_Vegetation_sp.list.csv")
 
-FACE.veg.rslt <- merge(veg.face.mlt, spList, by.x = "variable", by.y = "sp", all = TRUE)
+FACE.veg.rslt <- merge(veg.face.mlt, spList, by.x = "variable", by.y = "sp", all.x = TRUE)
 
 save(FACE.veg.rslt, file = "output/Data/FACE_Vegetation_PFG.RData")
 
