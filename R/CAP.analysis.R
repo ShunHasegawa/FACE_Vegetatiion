@@ -1,3 +1,4 @@
+library(BiodiversityR)
 sites$co2 <- factor(ifelse(sites$ring %in% c(1, 4, 5), "elev", "amb"))
 sites$YR <- sites$year:sites$ring
 
