@@ -114,3 +114,67 @@ plot(j1) # not very good..
 # no significant co2 effect, but may decreased eveness slightly
 
 plot(H ~ J, data = DivDF)
+
+###########################
+# Plant Functional Groups #
+###########################
+load("output/Data/FACE_Vegetation_PFG.RData")
+
+# remove rows whicn contain NA in PFG
+PFGdf <- FACE.veg.rslt[!is.na(FACE.veg.rslt$PFG),]
+library(reshape2)
+PFGsum <- dcast(year + ring + plot ~ PFG, sum, data = PFGdf)
+
+# just use c3, c4, legume and non-legume
+PFGsum <- PFGsum[, c("year", "ring", "plot","c3", "c4", "legume", "Non_legume")]
+
+# organise
+PFGsum <- within(PFGsum, {
+  block = recode(ring, "1:2 = 'A'; 3:4 = 'B'; 5:6 = 'C'")
+  co2 = factor(ifelse(ring %in% c(1, 4, 5), "elev", "amb"))
+})
+
+# Compute dissimiliraity for each plot between 2012 and 2013
+
+# compute dissimilarity for each plot
+pfgs <- c("c3", "c4", "legume", "Non_legume")
+sites <- c("year", "block", "ring", "plot", "co2")
+
+disDF <- ddply(PFGsum, .(block, ring, co2, plot), 
+               function(x) vegdist(x[, pfgs], method = "altGower"))
+names(disDF)[5] <- "BC"
+
+boxplot(BC ~ ring, data = disDF)
+boxplot(BC ~ co2, data = disDF)
+
+# perform LMM
+m1 <- lmer(BC ~ co2 + (1|block), data = disDF)
+summary(m1)
+Anova(m1)
+Anova(m1, test.statistic = "F")
+plot(m1)
+# marginal co2 effect, eCO2 slightly decreased dissimilarity in PFG
+
+# CAP
+siteDF <- PFGsum[, sites]
+siteDF$YC <- siteDF$year:siteDF$co2
+siteDF$YR <- siteDF$year:siteDF$ring
+
+pfgDF <- PFGsum[, pfgs]
+transDF <- decostand(pfgDF, "log")
+
+capDF <- CAPdiscrim(pfgDF ~ YR, siteDF, dist = "altGower", permutations = 10)
+
+capDF <- CAPdiscrim(transDF ~ YC, siteDF, dist = "bray", permutations = 10)
+
+# create a plot
+ldDF <- data.frame(siteDF, ld1 = capDF$x[, 1], ld2 = capDF$x[, 2])
+chulDF <- ddply(ldDF, .(year, co2), 
+                function(x) {chx <- chull(x[c("ld1", "ld2")]) 
+                             chxDF <- data.frame(rbind(x[chx,], x[chx[1], ]))
+                             return(chxDF)})
+
+theme_set(theme_bw())
+p <- ggplot(ldDF, aes(x = ld1, y = ld2, col = co2, shape = year))
+p + geom_point(size = 5) + geom_polygon(data = chulDF, alpha = .1)
+
