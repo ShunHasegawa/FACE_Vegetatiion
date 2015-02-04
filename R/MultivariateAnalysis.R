@@ -155,20 +155,58 @@ Anova(m1, test.statistic = "F")
 plot(m1)
 # marginal co2 effect, eCO2 slightly decreased dissimilarity in PFG
 
-# CAP
-siteDF <- PFGsum[, sites]
+# CAP for assembled sample
+# ring sum
+RngPFGSum <- ddply(PFGsum, .(year, co2, ring), 
+                   function(x) colSums(x[, pfgs]))
+siteDF <- RngPFGSum[, c("year", "co2", "ring")]
 siteDF$YC <- siteDF$year:siteDF$co2
 siteDF$YR <- siteDF$year:siteDF$ring
 
-pfgDF <- PFGsum[, pfgs]
+pfgDF <- RngPFGSum[, pfgs]
 transDF <- decostand(pfgDF, "log")
 
-capDF <- CAPdiscrim(pfgDF ~ YR, siteDF, dist = "altGower", permutations = 10)
+capDF <- CAPdiscrim(pfgDF ~ YC, siteDF, dist = "altGower", permutations = 10)
 
-capDF <- CAPdiscrim(transDF ~ YC, siteDF, dist = "bray", permutations = 10)
+pfg14 <- subsetD(RngPFGSum, year == 2012)
+pfg14df <- pfg14[, pfgs]
+site14 <- pfg14[, c("year", "co2", "ring")]
+
+capDF <- CAPdiscrim(pfg14df ~ co2, site14, dist = "altGower", permutations = 10)
+boxplot(capDF$x[, 1] ~ site14$co2)
+
 
 # create a plot
+boxplot(capDF$x[, 1] ~ siteDF$YC)
+
 ldDF <- data.frame(siteDF, ld1 = capDF$x[, 1], ld2 = capDF$x[, 2])
+chulDF <- ddply(ldDF, .(year, co2), 
+                function(x) {chx <- chull(x[c("ld1", "ld2")]) 
+                             chxDF <- data.frame(rbind(x[chx,], x[chx[1], ]))
+                             return(chxDF)})
+
+theme_set(theme_bw())
+p <- ggplot(ldDF, aes(x = ld1, y = ld2, col = co2, shape = year))
+p + geom_point(size = 5) + geom_polygon(data = chulDF, alpha = .1)
+
+##################################
+# assembled sample for each ring #
+##################################
+vegDF <-  plt.veg[, Spp]
+siteDF <-  plt.veg[, Sites]
+
+RngVeg <- ddply(plt.veg, .(year, block, co2, ring), function(x) colSums(x[, Spp]))
+
+# CAP
+RngVegdf <- RngVeg[, Spp]
+RngVegdf_site <- RngVeg[, c("year", "ring", "block", "co2")]
+RngVegdf_site$YC <- RngVegdf_site$year:RngVegdf_site$co2
+
+capDF <- CAPdiscrim(RngVegdf ~ YC, RngVegdf_site, dist = "altGower", permutations = 10)
+
+# create a plot
+ldDF <- data.frame(RngVegdf_site, ld1 = capDF$x[, 1], ld2 = capDF$x[, 2])
+
 chulDF <- ddply(ldDF, .(year, co2), 
                 function(x) {chx <- chull(x[c("ld1", "ld2")]) 
                              chxDF <- data.frame(rbind(x[chx,], x[chx[1], ]))
