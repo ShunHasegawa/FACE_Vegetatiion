@@ -2,9 +2,12 @@ plt.veg <- within(plt.veg, {
   co2 <- factor(ifelse(ring %in% c(1, 4, 5), "elev", "amb"))
   block <- recode(ring, "1:2 = 'A'; 3:4 = 'B'; 5:6 = 'C'")
 })
+
 Spp <- names(plt.veg)[!grepl("year|ring|plot|block|co2", names(plt.veg))]
+spDF <- plt.veg[, Spp]
+
 Sites <- names(plt.veg)[grepl("year|ring|plot|block|co2", names(plt.veg))]
-  
+siteDF <- plt.veg[, Sites]
 
 #################
 # Dissimilarity #
@@ -114,6 +117,41 @@ plot(j1) # not very good..
 # no significant co2 effect, but may decreased eveness slightly
 
 plot(H ~ J, data = DivDF)
+
+#############
+# PERMANOVA #
+#############
+# perform permanova for each year separately
+
+# 2012
+df12 <- subsetD(plt.veg, year == 2012)
+veg12 <- df12[, Spp]
+site12 <- df12[, Sites]
+
+a1 <- adonis(veg12 ~ co2, data = site12, strata = site12$ring, 
+             perm=100, method = "altGower")
+a1
+a3 <- adonis(veg12 ~ co2, data = site12, strata = site12$block, 
+             perm = 100, method = "altGower")
+
+
+n1 <- nested.npmanova(veg12 ~ co2 + ring, data = site12, perm=100, method = "altGower")
+n2 <- nested.npmanova(veg12 ~ co2 + block, data = site12, perm=100, method = "altGower")
+n1
+n2
+
+# 2014
+df14 <- subsetD(plt.veg, year == 2014)
+veg14 <- df14[, Spp]
+site14 <- df14[, Sites]
+
+a1 <- adonis(veg14 ~ co2 + ring, data = site14, strata = site14$ring, 
+             perm=10, method = "altGower")
+a1
+n1 <- nested.npmanova(veg14 ~ co2 + ring, data = site14, perm=5000, method = "altGower")
+n1
+
+
 
 ###########################
 # Plant Functional Groups #
