@@ -1,17 +1,10 @@
-theme_set(theme_bw())
-
-
-# remove unknown spp
-veg <- FACE.veg.rslt[-grep("Unknown", FACE.veg.rslt$variable), ,drop = TRUE]
-
-# natrualised(?) -> NA for the time beting
-veg$origin[which(veg$origin == "naturalised(?)")] <- NA
-
-# remove rows with value of 0 as stat = bin (the number of 
-# cases in each group) will be used
+# remove rows with value of 0 as stat = bin (the number of cases in each group)
+# will be used
 veg <- veg[which(veg$value != 0), ]
 
 veg <- droplevels(veg)
+
+theme_set(theme_bw())
 
 ###########
 # All Spp #
