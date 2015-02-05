@@ -147,6 +147,9 @@ site14 <- df14[, Sites]
 
 a1 <- adonis(veg14 ~ co2 + ring, data = site14, strata = site14$ring, 
              perm=10, method = "altGower")
+
+
+a1 <- adonis(veg14 ~ co2, data = site14, perm=100, method = "altGower")
 a1
 n1 <- nested.npmanova(veg14 ~ co2 + ring, data = site14, perm=5000, method = "altGower")
 n1
@@ -226,6 +229,24 @@ chulDF <- ddply(ldDF, .(year, co2),
 theme_set(theme_bw())
 p <- ggplot(ldDF, aes(x = ld1, y = ld2, col = co2, shape = year))
 p + geom_point(size = 5) + geom_polygon(data = chulDF, alpha = .1)
+
+
+
+# cap without pooling sample
+PFGVeg <- dcast(year + ring + plot ~ PFG, sum, data = PFGdf)
+PFGVeg <- PFGVeg[, c("year", "ring", "plot", pfgs)]
+PFGVeg$co2 <- factor(ifelse(PFGVeg$ring %in% c(1, 4, 5), "elev", "amb"))
+PFGa <- subsetD(PFGVeg, co2 == "amb")
+PFGe <- subsetD(PFGVeg, co2 == "elev")
+pfgS <- PFGe[,c("year", "ring", "plot")]
+
+
+summary(pfgS)
+summary(df)
+df <- data.frame(PFGe[, pfgs])
+str(df)
+capDF <- CAPdiscrim(df ~ year, pfgS, dist = "altGower", permutations = 10)
+?CAPdiscrim
 
 ##################################
 # assembled sample for each ring #
