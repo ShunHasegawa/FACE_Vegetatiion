@@ -276,7 +276,7 @@ ggsavePP(filename = "output/figs/FACE_DissmVs.Moist", width = 4, height = 4,
          plot = p2)
 
 #######
-# PCO #
+# MDS #
 #######
 
 # ring sum
@@ -286,73 +286,73 @@ RngSppDF <- RngVegdf[, SppName]
 RngSiteDF <- RngVegdf[, !names(RngVegdf) %in% SppName]
 RngSiteDF$co2 <- factor(ifelse(RngSiteDF$ring %in% c(1, 4, 5), "elev", "amb"))
 
-# peform PCO
+# peform MDS
 
-# pco <- cmdscale(d = vegdist(RngSppDF, method = "altGower"), eig = TRUE)
+# MDS <- cmdscale(d = vegdist(RngSppDF, method = "altGower"), eig = TRUE)
 
-pco <- cmdscale(d = vegdist(log(RngSppDF + 1), method = "bray"), eig = TRUE, k = 3)
-pco$GOF
-pco$eig
-ExpVars <- round(pco$eig[1:3] * pco$GOF[2]/(sum(pco$eig[1:3])) * 100, 2)
+MDS <- cmdscale(d = vegdist(log(RngSppDF + 1), method = "bray"), eig = TRUE, k = 3)
+MDS$GOF
+MDS$eig
+ExpVars <- round(MDS$eig[1:3] * MDS$GOF[2]/(sum(MDS$eig[1:3])) * 100, 2)
 
 # Note: GOF is given as belos 
-# pco$GOF[1] at k = 3
-sum(pco$eig[1:3])/sum(abs(pco$eig))
+# MDS$GOF[1] at k = 3
+sum(MDS$eig[1:3])/sum(abs(MDS$eig))
 
-# pco$GOF[2] at k = 2
-eig2 <- ifelse(pco$eig < 0, 0, pco$eig)
-sum(pco$eig[1:3])/sum(eig2)
+# MDS$GOF[2] at k = 2
+eig2 <- ifelse(MDS$eig < 0, 0, MDS$eig)
+sum(MDS$eig[1:3])/sum(eig2)
 
-# pco <- cmdscale(d = vegdist(log(RngSppDF + 1), method = "bray"), eig = TRUE, k = 11)
+# MDS <- cmdscale(d = vegdist(log(RngSppDF + 1), method = "bray"), eig = TRUE, k = 11)
 
 
 # this transformation and dissimilarity is more interpretable than above...
 
-pcos <- cbind(RngSiteDF, pco1 = pco$points[, 1], 
-                          pco2 = pco$points[, 2],
-                          pco3 = pco$points[, 3])
-pcoDF <- melt(pcos, id = c("year", "ring", "co2", "pco1"))
-pcoDF$variable <- factor(pcoDF$variable, levels = c("pco2", "pco3"), 
-                         labels = paste("PCO",  c(2, 3), " (", ExpVars[2:3], " %)", sep = ""))
+MDSs <- cbind(RngSiteDF, MDS1 = MDS$points[, 1], 
+                          MDS2 = MDS$points[, 2],
+                          MDS3 = MDS$points[, 3])
+MDSDF <- melt(MDSs, id = c("year", "ring", "co2", "MDS1"))
+MDSDF$variable <- factor(MDSDF$variable, levels = c("MDS2", "MDS3"), 
+                         labels = paste("MDS",  c(2, 3), " (", ExpVars[2:3], " %)", sep = ""))
 
 # make plots ----
 
 # connect the same ring in different years
-p <- ggplot(data = pcoDF, aes(x = pco1, y = value, shape = year, col = co2))
+p <- ggplot(data = MDSDF, aes(x = MDS1, y = value, shape = year, col = co2))
 p2 <- p + 
   geom_point(size = 3) + 
   scale_color_manual(values = c("blue", "red"), labels = c("Ambient", expression(eCO[2]))) +
   science_theme +
-  labs(x = paste("PCO1 (", ExpVars[1]," %)", sep = ""), 
-       y = "PCO axis") +
+  labs(x = paste("MDS1 (", ExpVars[1]," %)", sep = ""), 
+       y = "MDS axis") +
   theme(legend.position = "top",
         legend.box = "horizontal",
         legend.box.just = "left") +
   facet_grid(. ~variable)
 p3 <- p2 + geom_line(aes(group = ring))
-ggsavePP(filename = "output/figs/FACE_Vegetation_PCO_Ring", width = 4, height = 4, 
+ggsavePP(filename = "output/figs/FACE_Vegetation_MDS_Ring", width = 4, height = 4, 
          plot = p3)
 
 # make area for each pairs of amb and elev for each year
-chulDF <- ddply(pcoDF, .(year, co2, variable), 
-                function(x) {chx <- chull(x[c("pco1", "value")]) 
+chulDF <- ddply(MDSDF, .(year, co2, variable), 
+                function(x) {chx <- chull(x[c("MDS1", "value")]) 
                              chxDF <- data.frame(rbind(x[chx,], x[chx[1], ]))
                              return(chxDF)})
 p4 <- p2 + geom_polygon(data = chulDF, alpha = .1)
-ggsavePP(filename = "output/figs/FACE_Vegetation_PCO_CO2", width = 4, height = 4, 
+ggsavePP(filename = "output/figs/FACE_Vegetation_MDS_CO2", width = 4, height = 4, 
          plot = p4)
 
 # different colors for each ring
-p <- ggplot(data = pcoDF, aes(x = pco1, y = value, shape = year, col = ring))
+p <- ggplot(data = MDSDF, aes(x = MDS1, y = value, shape = year, col = ring))
 p2 <- p + 
   geom_point(size = 3) + 
   geom_line(aes(group = ring)) +
   science_theme +
-  labs(x = paste("PCO1 (", ExpVars[1]," %)", sep = ""), 
-       y = "PCO axis") +
+  labs(x = paste("MDS1 (", ExpVars[1]," %)", sep = ""), 
+       y = "MDS axis") +
   theme(legend.position = "top",
         legend.box = "horizontal",
         legend.box.just = "left") +
   facet_grid(. ~variable) 
-ggsavePP(filename = "output/figs/FACE_Vegetation_PCO_EachRing", width = 4, height = 4, 
+ggsavePP(filename = "output/figs/FACE_Vegetation_MDS_EachRing", width = 4, height = 4, 
          plot = p2)
