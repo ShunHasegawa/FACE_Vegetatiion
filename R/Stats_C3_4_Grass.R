@@ -3,7 +3,7 @@ head(FACE.veg.rslt)
 # Create C3, C4 grass summary DF
 
 # PFG_plot sum for c3 and c4 grass wihtought unknown spp
-PFGPltSum<- ddply(subsetD(FACE.veg.rslt, form == "Grass" & PFG %in% c("c3", "c4")),
+PFGPltSum <- ddply(subsetD(FACE.veg.rslt, form == "Grass" & PFG %in% c("c3", "c4")),
                   .(year, co2, ring, plot, PFG), summarise, value = sum(value, na.rm = TRUE))
 
 # cast and make data frame for anlysis
