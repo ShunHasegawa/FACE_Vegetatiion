@@ -141,3 +141,56 @@ stepLmer <- function(model, red.rndm = FALSE, ddf = "Kenward-Roger", ...){
 # is the same as the default DF given by Anova(model, test.statistic = "F). The
 # default of step gives me a warning message for IEM-NO3 for some reasons (not
 # sure why.. so changed it.)
+
+###########################################
+# produce box plots with transformed data #
+###########################################
+# log OR sqrt OR power(1/3) OR inverse OR box-cox
+bxplts <- function(value, xval, ofst = 0, data, ...){
+  data$y <- data[[value]] + ofst #ofst is added to make y >0
+  data$xv <- data[[xval]]
+  a <- boxcox(y ~ xv * year, data = data)
+  par(mfrow = c(2, 3))
+  boxplot(y ~ xv*year, data, main = "raw")
+  boxplot(log(y) ~ xv*year, main = "log", data)
+  boxplot(sqrt(y) ~ xv*year, main = "sqrt", data)
+  boxplot(y^(1/3) ~ xv*year, main = "power(1/3)", data)
+  boxplot(1/y ~ xv*year, main = "inverse", data)
+  BCmax <- a$x[a$y == max(a$y)]
+  texcol <- ifelse(BCmax < 0, "red", "black") 
+  boxplot(y^(BCmax) ~ xv*year, 
+          main = "", sep = "=", 
+          data = data)
+  title(main = paste("Box Cox", round(BCmax, 4)), 
+        col.main = texcol)
+  par(mfrow = c(1,1))
+}
+
+# multiple box-cox power plot for different constant values
+bxcxplts <- function(value, xval, data, sval, fval){
+  par.def <- par() # current graphic conditions
+  data$yval <- data[[value]]
+  data$xv <- data[[xval]]
+  ranges <- seq(sval, fval, (fval - sval)/9)
+  
+  # store parameters given from box-cox plot
+  BCmax <- vector()
+  for (i in 1:10){
+    data$y <- data$yval + ranges[i]
+    a <- boxcox(y ~ xv * year, data = data)
+    BCmax[i] <- a$x[a$y == max(a$y)]
+  }
+  
+  # plot box plot with poer given from box-box for 
+  # each contstant value
+  par(mfrow = c(5, 2), omi = c(0, 0, 0, 0), mai = c(0.4, 0.4, 0.4, 0))
+  sapply(1:10, function(x) {
+    boxplot((yval + ranges[x]) ^ BCmax[x] ~ xval * year, 
+            main = "", data = data)
+    texcol <- ifelse(BCmax[x] < 0, "red", "black") 
+    title(main = paste("constant=", round(ranges[x], 4), 
+                       ", boxcox=", round(BCmax[x], 4)),
+          col.main = texcol)
+  })
+  par(par.def) # set the graphic conditions back
+}
