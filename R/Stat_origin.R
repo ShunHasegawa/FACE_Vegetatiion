@@ -1,12 +1,18 @@
 ################
 # plant origin #
 ################
-# glm
+# create data frame for the analysis (also remove moss and lichen)
+OrgnDat <- cast(subset(FACE.veg.rslt, !form %in% c("Moss", "Lichen")), year + co2 + block + ring + plot + id ~ origin, function(x) sum(x, na.rm = TRUE))
 
-OrgnDat <- cast(FACE.veg.rslt, year + co2 + ring + plot ~ origin, function(x) sum(x, na.rm = TRUE))
-OrgnDat <- OrgnDat[, c("year", "co2", "ring", "plot", "native", "naturalised"), drop = TRUE]
-OrgnDat$yv <- cbind(OrgnDat$native, OrgnDat$naturalised*2)
-OrgnDat$id <- OrgnDat$ring:OrgnDat$plot
+colSums(OrgnDat[, c("native", "naturalised", "NA")])
+# some NA observations, but only a few so ignore for the time being
+
+OrgnDat[names(OrgnDat) == "NA"] <- NULL
+
+########
+# GLMM #
+########
+OrgnDat$yv <- cbind(OrgnDat$native, OrgnDat$naturalised)
 
 # different rondom factor structure
 m1 <- glmer(yv ~ year * co2 + (1|ring/plot/id), family = "binomial", data = OrgnDat, 
