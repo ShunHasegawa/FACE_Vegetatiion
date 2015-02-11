@@ -85,7 +85,7 @@ CL_PfgPlotSum <- subsetD(PfgPlotSum, PFG %in% c("c3", "c4", "legume", "Non_legum
 
 pfgR <- ddply(CL_PfgPlotSum, .(year, ring, plot),
               function(x) {
-               c43R <- with(x, value[PFG == "c4"]/value[PFG == "c3"])
+               c43R     <- with(x, value[PFG == "c4"]/value[PFG == "c3"])
                lgNonlgR <- with(x, value[PFG == "legume"]/value[PFG == "Non_legume"])
                # there one c4 observation which is 0, so put c4 on numerator
                return(data.frame(c43R, lgNonlgR))
