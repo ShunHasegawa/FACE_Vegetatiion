@@ -14,26 +14,53 @@ OrgnDat[names(OrgnDat) == "NA"] <- NULL
 ########
 OrgnDat$yv <- cbind(OrgnDat$native, OrgnDat$naturalised)
 
-# different rondom factor structure
-m1 <- glmer(yv ~ year * co2 + (1|ring/plot/id), family = "binomial", data = OrgnDat, 
-            control=glmerControl(optimizer="bobyqa"))
-m2 <- glmer(yv ~ year * co2 + (1|ring/plot), family = "binomial", data = OrgnDat, 
-            control=glmerControl(optimizer="bobyqa"))
-m3 <- glmer(yv ~ year * co2 + (1|ring), family = "binomial", data = OrgnDat, 
-            control=glmerControl(optimizer="bobyqa"))
-m4 <- glmer(yv ~ year * co2 + (1|id), family = "binomial", data = OrgnDat, 
-            control=glmerControl(optimizer="bobyqa"))
-anova(m1, m2, m3, m4)
-#use m4
+# add Residual id for each observation (i.e., each observation has individual
+# ids)
+OrgnDat$ResID <- factor(1:nrow(OrgnDat))
 
-m4_2 <- glmer(yv ~ year + co2 + (1|id), family = "binomial", data = OrgnDat, 
-              control=glmerControl(optimizer="bobyqa"))
-anova(m4, m4_2, test = "Chi")
+glm1 <- glmer(yv ~ year * co2 + (1|block) +(1|ring) + (1|id), 
+              family = "binomial", 
+              data = OrgnDat)
+summary(glm1)
+plot(glm1)
+# deviance >> df.resid, so it's highly overdispersed..
 
-summary(m4)
-#df.resid <<< deviance... overdispersion..?
+glm2 <- glmer(yv ~ year * co2 + (1|block) +(1|ring) + (1|id) + (1|ResID), 
+              family = "binomial", 
+              data = OrgnDat)
+summary(glm2)
+# slightly improved, but still overdispersed
 
-# model diagnosis
-plot(m4)
-qqnorm(resid(m4))
-qqline(resid(m4))
+# ring donesn't seeme to be needed so remove
+glm3 <- glmer(yv ~ year * co2 + (1|block) + (1|id) + (1|ResID), 
+              family = "binomial", 
+              data = OrgnDat)
+summary(glm3)
+# still overdispersed
+
+#######################################################
+# no good solution now so, just simply use proportion #
+#######################################################
+
+OrgnDat$NatPr <- with(OrgnDat, native/(native + naturalised))
+
+par(mfrow = c(1, 2))
+boxplot(NatPr ~ year:ring, data = OrgnDat)
+boxplot(asin(NatPr) ~ year:ring, data = OrgnDat)
+
+pm1 <- lmer(NatPr ~ year * co2 + (1|block) +  (1|ring) + (1|id), data = OrgnDat)
+summary(pm1)
+Anova(pm1)
+Anova(pm1, test.statistic = "F")
+plot(pm1)
+
+# arc sin transformation
+pm2 <- lmer(asin(NatPr) ~ year * co2 + (1|block) +  (1|ring) + (1|id), data = OrgnDat)
+summary(pm2)
+Anova(pm2)
+Anova(pm2, test.statistic = "F")
+plot(pm2)
+# slightly improved...
+qqnorm(resid(pm2))
+qqline(resid(pm2))
+# no co2 effect
