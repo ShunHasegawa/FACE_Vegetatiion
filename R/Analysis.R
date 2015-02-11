@@ -17,9 +17,6 @@ load("output//Data//FACE_Vegetation_PFG.RData")
 # remove unknown spp
 veg <- FACE.veg.rslt[!grepl("Unknown", FACE.veg.rslt$variable), ]
 
-# natrualised(?) -> NA for the time beting
-veg$origin[which(veg$origin == "naturalised(?)")] <- NA
-
 ########
 # Figs #
 ########
