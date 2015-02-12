@@ -1,5 +1,8 @@
 summary(DivDF)
 
+# load DivDF
+load("output//Data/DiversityDF.RData")
+
 # orgnaise data frame
 DivDF <- within(DivDF, {
   co2 <- factor(ifelse(ring %in% c(1, 4, 5), "elev", "amb"))
