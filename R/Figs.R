@@ -1,10 +1,12 @@
+theme_set(theme_bw())
+
+###########
+# Barplot #
+###########
+
 # remove rows with value of 0 as stat = bin (the number of cases in each group)
 # will be used
-veg <- veg[which(veg$value != 0), ]
-
-veg <- droplevels(veg)
-
-theme_set(theme_bw())
+BarplDF <- subsetD(veg, value != 0)
 
 ###########
 # All Spp #
@@ -12,7 +14,7 @@ theme_set(theme_bw())
 pfgLabs <- c("C[3]", "C[3-4]", "C[4]", "Legume", "Lichen", "Moss", "Non_legume", "wood")
 orgnLabs <- c("Native", "Introduced")
 
-Spplt <- PltVeg(xval = "variable", size = 8) +
+Spplt <- PltVeg(data = BarplDF, xval = "variable", size = 8) +
   theme(strip.text.x = element_text(size = 6)) +
   expand_limits(x = 4.5) 
 #     set minimum size of the graphic areas of each group 
@@ -22,7 +24,8 @@ Spplt <- PltVeg(xval = "variable", size = 8) +
 ## Ring ##
 p2 <- Spplt +
   facet_grid(ring ~ form + PFG + origin, scale = "free_x", space = "free_x", labeller = label_parsed)
-ggsavePP(filename = "output/figs/FACE_vegetation_Ring", plot = p2, width= 17, height = 11)
+ggsavePP(filename = "output/figs/FACE_vegetation_Ring", plot = p2, 
+         width= 17, height = 11)
 
 ## CO2 ##
 p2 <- Spplt +
@@ -32,7 +35,7 @@ ggsavePP(filename = "output/figs/FACE_vegetation_CO2", plot = p2, width= 17, hei
 #######
 # PFG #
 #######
-PFGplt <- PltVeg(xval = "PFG", xlab = "PFG", size = 8) +
+PFGplt <- PltVeg(data = BarplDF, xval = "PFG", xlab = "PFG", size = 8) +
   theme(strip.text.x = element_text(size = 9)) +
   scale_x_discrete(breaks = pfgLabs,
                    labels=c(expression(C[3]), 
@@ -54,7 +57,7 @@ ggsavePP(filename = "output/figs/FACE_PFG_CO2", plot = p, width= 8, height = 6)
 ########################
 # Native or introduced #
 ########################
-Orgnplt  <- PltVeg(xval = "origin", xlab = "Orgin", size = 8) +
+Orgnplt  <- PltVeg(data = BarplDF, xval = "origin", xlab = "Orgin", size = 8) +
   theme(strip.text.x = element_text(size = 7)) +
   expand_limits(x = 2)
   
@@ -76,31 +79,48 @@ ggsavePP(filename = "output/figs/FACE_Origin_CO2", plot = p, width= 8, height = 
 ## biodiversity indices ##
 ##########################
 
-# C4:C3 & legume:Non_legume
+# C3:C4 & legume:Non_legume----
 
-PfgPlotSum <- ddply(veg, .(year, ring, plot, PFG), summarise, value = sum(value))
+PFGRingSum <- ddply(subset(veg, form %in% c("Grass", "Forb") & PFG != "c3_4"), 
+                    .(year, co2, ring, PFG), summarise, value = sum(value))
 
-# subset required rows
-CL_PfgPlotSum <- subsetD(PfgPlotSum, PFG %in% c("c3", "c4", "legume", "Non_legume"))
+# PfgPlotSum <- ddply(veg, .(year, co2, ring, plot, PFG, form), summarise, value = sum(value))
 
-pfgR <- ddply(CL_PfgPlotSum, .(year, ring, plot),
+# subset required rows (use only grass for c3 and c4, forb for legume and
+# non-legume)
+CL_PfgPlotSum <- subsetD(PfgPlotSum, form %in% c("Grass", "Forb") &
+                           PFG %in% c("c3", "c4", "legume", "Non_legume"))
+
+
+
+
+
+
+pfgR <- ddply(CL_PfgPlotSum, .(year, co2, ring, plot),
               function(x) {
-               c43R     <- with(x, value[PFG == "c4"]/value[PFG == "c3"])
-               lgNonlgR <- with(x, value[PFG == "legume"]/value[PFG == "Non_legume"])
+               c3R     <- with(x, value[PFG == "c3"]/sum(value[form == "Grass"]))
+               legR <- with(x, value[PFG == "legume"]/sum(value[form == "Forb"]))
                # there one c4 observation which is 0, so put c4 on numerator
-               return(data.frame(c43R, lgNonlgR))
+               return(data.frame(c3R, legR))
              })
 
-# native:introduced
-OgnPlotSum <- ddply(veg, .(year, ring, plot, origin), summarise, value = sum(value))
-orgn <- ddply(subset(OgnPlotSum, origin %in% c("naturalised", "native")), 
-                     .(year, ring, plot),
+# native:introduced----
+complete.cases(OgnPlotSum)
+
+OgnPlotSum <- ddply(veg, .(year, co2, ring, plot, origin), summarise, value = sum(value))
+orgn <- ddply(OgnPlotSum[complete.cases(OgnPlotSum), ], .(year, co2, ring, plot),
                      function(x){
-                       IntNatR <- with(x, value[origin == "naturalised"]/value[origin == "native"])
-                       return(data.frame(IntNatR))
+                       NativeR <- with(x, value[origin == "native"]/sum(value))
+                       return(data.frame(NativeR))
                      })
 
-# biodiversity indices
+# merge above data frames
+PFGPropdf <- merge(pfgR, orgn, by = c("year", "co2", "ring", "plot"))
+
+
+
+
+# Diversity indices----
 summary(veg.face)
 
 SiteName <- c("year", "ring", "plot", "position", "cell")
@@ -112,17 +132,28 @@ vegDF <- plt.veg[, SppName]
 siteDF <- plt.veg[, c("year", "ring", "plot")]
 
 DivDF <- within(siteDF,{
+  co2 <- factor(ifelse(ring %in% c(1, 4, 5), "elev", "amb"))
   H <- diversity(vegDF) # Shannon's index
   S <- specnumber(vegDF) # number of spp
   J <- H/log(S)  # Pielou's evenness
 })
+save(DivDF, file = "output//Data/DiversityDF.RData")
+
+# Mean and SE
+DivDF_mlt <- melt(DivDF, id = c("year", "co2","ring", "plot"))
+RngSmmry_DivDF <- ddply(DivDF_mlt, .(year, co2, ring, variable), summarise, value = mean(value))
+Smmry_DivDF <- ddply(RngSmmry_DivDF, .(year, co2, variable), summarise, 
+                     Mean = mean(value),
+                     SE = ci(value)[4],
+                     N = sum(!is.na(value)))
+
 
 # merge above data frames
-BioDivDF <- Reduce(function(...) merge(..., by = c("year", "ring", "plot")), 
+BioDivDF <- Reduce(function(...) merge(..., by = c("year", "co2", "ring", "plot")), 
                    list(pfgR, orgn, DivDF))
 
 # melt for making figure
-BioDivDF_mlt <- melt(BioDivDF, id = c("year", "ring", "plot"))
+BioDivDF_mlt <- melt(BioDivDF, id = c("year", "co2", "ring", "plot"))
 
 # Mean and Se
 RngSmmryBioDivDF <- ddply(BioDivDF_mlt, .(year, ring, variable), summarise, 
