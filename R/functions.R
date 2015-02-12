@@ -101,10 +101,7 @@ ggsavePP <- function(filename, plot, width, height){
 ####################
 # Create bargraphs #
 ####################
-PltVeg <- function(data = veg, 
-                   xval, 
-                   xlab = NULL, 
-                   ..., 
+PltVeg <- function(data, xval, xlab = NULL, ..., 
                    pfgLabs = c("C[3]", "C[3-4]", "C[4]", "Legume", "Lichen", "Moss", "Non_legume", "wood"),
                    orgnLabs = c("Native", "Introduced")){
   # change factor lablles for labbeling in figs
