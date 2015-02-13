@@ -82,7 +82,90 @@ ggsavePP(filename = "output/figs/FACE_Origin_CO2", plot = p, width= 8, height = 
 # C3:C4 & legume:Non_legume----
 
 PFGRingSum <- ddply(subset(veg, form %in% c("Grass", "Forb") & PFG != "c3_4"), 
-                    .(year, co2, ring, PFG), summarise, value = sum(value))
+                    .(year, co2, ring, PFG, form), summarise, value = sum(value))
+
+SmmryPFGRing <- ddply(PFGRingSum, .(year, co2, ring, form), function(x){
+  Mean <- with(x, value[PFG %in% c("c4", "legume")] / sum(value))
+  return(data.frame(Mean))
+  })
+
+SmmryPFGRing <- within(SmmryPFGRing, {
+  variable <- recode(SmmryPFGRing$form, "'Grass' = 'C4/(C3+C4)'; 'Forb' = 'Legume/(Legume+Non_legume)'")
+  co2 <- factor(co2, labels = c("Ambient", expression(eCO[2])))
+  yco <- factor(co2:year, labels = c("Ambient\n2013", "Ambient\n2014", "eCO2\n2013","eCO2\n2014"))
+})
+
+p <- ggplot(SmmryPFGRing, aes(x = yco, y = Mean))
+p2 <- p + geom_boxplot(position = position_dodge(2)) + 
+  geom_point(aes(shape = year), size = 5, alpha = .7) + 
+  geom_line(aes(group = ring), linetype = 2) + 
+  facet_grid(variable ~ ., scales = "free_y", labeller = label_parsed) +
+  labs(y = "Proportion", x = NULL)
+p2
+
+
+
+SmmryPFGCo2Sum <- ddply(PFGCo2Sum, .(year, co2, form), function(x) {
+  Mean <- with(x, value[PFG %in% c("c4", "legume")] / sum(value))
+  SE <- sqrt(Mean * (1 - Mean) / 3)
+  return(data.frame(Mean, SE))
+})
+SmmryPFGCo2Sum$variable <- factor(ifelse(SmmryPFGCo2Sum$form == "Forb", "Legume:Non_legume", "C4:C3"))
+
+
+
+PFGPlotSum_cst <- dcast(year + co2 + ring + plot ~ PFG, data = PFGPlotSum)
+PFGPlotSum_cst <- within(PFGPlotSum_cst, {
+  totalGrass <- c3 + c4
+  c4Pr <- c4/totalGrass
+  totalForb <- legume + Non_legume
+  lgmPr <- legume/totalForb
+})
+boxplot(c4Pr ~ co2:year, data = PFGPlotSum_cst)
+
+PFGCo2Sum <- ddply(subset(veg, form %in% c("Grass", "Forb") & PFG != "c3_4"), 
+                    .(year, co2, form, PFG), summarise, value = sum(value))
+
+# C4:C3, legume:non_legume ratios and associated ses
+SmmryPFGCo2Sum <- ddply(PFGCo2Sum, .(year, co2, form), function(x) {
+  Mean <- with(x, value[PFG %in% c("c4", "legume")] / sum(value))
+  SE <- sqrt(Mean * (1 - Mean) / 3)
+  return(data.frame(Mean, SE))
+  })
+SmmryPFGCo2Sum$variable <- factor(ifelse(SmmryPFGCo2Sum$form == "Forb", "Legume:Non_legume", "C4:C3"))
+
+p <- ggplot(SmmryPFGCo2Sum, aes(x = year, y = Mean, col = co2))
+p + geom_point(size = 3, position = position_dodge(1)) +
+  geom_errorbar(aes(x= year, ymin = Mean - SE, ymax = Mean + SE), position = position_dodge(1)) +
+# Se goes beyond 0....
+  
+  
+  
+
+# compute Mean and SE----
+
+# check if min(np, n(1-p)) > 5 
+
+# n = sum(totalGras)/4 for grass. 4 is number of sub-plots for each ring.
+# totalGrass is the sum of all observed grass. Four subplots are 
+# psuedoreplication so sum(totalGras) was devided by 4 to get ring-average
+# values but not sure if it's correct
+ddply(PFGRingSum_cst, .(year, co2), summarise,
+      MinGrass = (sum(totalGrass)/4) * min(sum(c3)/sum(totalGrass), 
+                                           sum(c4)/sum(totalGrass)),
+      MinForb = (sum(totalForb)/4) * min(sum(legume)/sum(totalForb), 
+                                         sum(Non_legume)/sum(totalForb)))
+  # a lot larger than 5 so should be fine..(?)
+
+SmmryPFGdf <- ddply(PFGRingSum_cst, .(year, co2), summarise, 
+                    C4PrMean = sum(c4)/sum(totalGrass),
+                    C4PrSE = sqrt(C4PrMean * (1 - C4PrMean)/
+                                    (sum(totalGrass)/4)),
+                    LgmPrMean = sum(legume)/sum(totalForb),
+                    LgmPrSE = sqrt(LgmPrMean * (1 - LgmPrMean)/
+                                     (sum(totalForb)/4)))
+
+
 
 # PfgPlotSum <- ddply(veg, .(year, co2, ring, plot, PFG, form), summarise, value = sum(value))
 
@@ -90,7 +173,6 @@ PFGRingSum <- ddply(subset(veg, form %in% c("Grass", "Forb") & PFG != "c3_4"),
 # non-legume)
 CL_PfgPlotSum <- subsetD(PfgPlotSum, form %in% c("Grass", "Forb") &
                            PFG %in% c("c3", "c4", "legume", "Non_legume"))
-
 
 
 
