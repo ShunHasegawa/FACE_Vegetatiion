@@ -66,7 +66,7 @@ Anova(pm1, test.statistic = "F")
 plot(pm1)
 # little bit wedge patter
 
-# arc sin transformation
+# arc sin transformation----
 pm2 <- lmer(asin(C3Pr) ~ year * co2 + (1|block) +  (1|ring) + (1|id), data = C34grassDF)
 summary(pm2)
 Anova(pm2)
@@ -78,10 +78,32 @@ qqline(resid(pm2))
 
 plot(allEffects(pm2))
 
-# contrast
+# logit transformation----
+# arc sin transformation
+pm3 <- lmer(logit(C3Pr, adjust = 0.05) ~ year * co2 + (1|block) +  (1|ring) + (1|id), data = C34grassDF)
+summary(pm3)
+Anova(pm3)
+Anova(pm3, test.statistic = "F")
+plot(pm3)
+plot(allEffects(pm3))
+# slightly improved...
+qqnorm(resid(pm3))
+qqline(resid(pm3))
+
+# try different adjust values
+logFun <- function(x){
+  pm3 <- lmer(logit(C3Pr, adjust = x) ~ year * co2 + (1|block) +  (1|ring) + (1|id), data = C34grassDF)
+  qqnorm(resid(pm3), main = x)
+  qqline(resid(pm3))
+}
+par(mfrow = c(3, 3))
+sapply(seq(0.02, 0.06, length = 9), logFun)
+# adjust = 0.05 looks good
+
+# contrast----
 
 # contrast doesn't work with lmer. so use lme
-lmeMod <- lme(asin(C3Pr) ~ year * co2, random = ~1|block/ring/id, data = C34grassDF)
+lmeMod <- lme(logit(C3Pr, adjust = 0.05) ~ year * co2, random = ~1|block/ring/id, data = C34grassDF)
 
 cntrst<- contrast(lmeMod, 
                   a = list(year = levels(C34grassDF$year), co2 = "amb"),
@@ -90,3 +112,15 @@ cntrst
 # no significant differece between treatments, but still c3 proportion decreased
 # at amb
 
+cdf <- confint(pm3, method = "boot")
+?Effect
+cdf
+sumdf <- summary(pm3)
+sumdf$coefficients
+predict(pm3, newdata = expand.grid(year = c("2012", "2014")))
+
+
+
+
+
+str(sumdf)
