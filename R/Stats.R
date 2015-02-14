@@ -3,16 +3,21 @@
 ###########
 
 # organise data frame
-FACE.veg.rslt <- within(FACE.veg.rslt, {
-  co2 <- factor(ifelse(ring %in% c(1, 4, 5), "elev", "amb"))
-  block <- recode(ring, "1:2 = 'A'; 3:4 = 'B'; 5:6 = 'C'")
-  id <- ring:plot
-})
+SiteName <- c("year", "ring", "plot", "position", "cell")
+SppName <- names(veg.face)[!names(veg.face) %in% SiteName]
+
+SiteMatrix <- veg.face[, SiteName]
+SppMatrix <- veg.face[, SppName]
 
 ######
 # CA #
 ######
 source("R/CA.analysis.R")
+
+#######
+# RDA #
+#######
+
 
 #######
 # GLM #
