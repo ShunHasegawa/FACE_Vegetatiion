@@ -1,5 +1,13 @@
 theme_set(theme_bw())
 
+# define graphic background
+science_theme <- theme(panel.grid.major = element_blank(), 
+                       panel.grid.minor = element_blank(), 
+                       legend.position = c(.91, .91),
+                       # legend.text = element_text(size = 2),
+                       legend.title = element_blank(),
+                       legend.background = element_blank())
+
 ###########
 # Barplot #
 ###########
@@ -79,127 +87,42 @@ ggsavePP(filename = "output/figs/FACE_Origin_CO2", plot = p, width= 8, height = 
 ## biodiversity indices ##
 ##########################
 
-# C3:C4 & legume:Non_legume----
+# C3:C4 & legume:Non_legume
+SmmryPFGRing <- ddply(subset(veg, form %in% c("Grass", "Forb") & PFG != "c3_4"), 
+                    .(year, co2, ring, form), summarise, 
+                    Mean = sum(value[PFG %in% c("c4", "legume")]) / sum(value))
+SmmryPFGRing$variable <- factor(SmmryPFGRing$form, levels = c("Forb", "Grass"), 
+                                labels = c("Legume/(Legume+Non_legume)", "C4/(C3+C4)"))
+# native:introduced
+SmmryOrgnRing <- ddply(subset(veg, !is.na(origin)), .(year, co2, ring), summarise, 
+  Mean = sum(value[origin == "native"])/sum(value),
+  variable = "Native/(Native+Introduced)")
 
-PFGRingSum <- ddply(subset(veg, form %in% c("Grass", "Forb") & PFG != "c3_4"), 
-                    .(year, co2, ring, PFG, form), summarise, value = sum(value))
-
-SmmryPFGRing <- ddply(PFGRingSum, .(year, co2, ring, form), function(x){
-  Mean <- with(x, value[PFG %in% c("c4", "legume")] / sum(value))
-  return(data.frame(Mean))
-  })
-
-SmmryPFGRing <- within(SmmryPFGRing, {
-  variable <- recode(SmmryPFGRing$form, "'Grass' = 'C4/(C3+C4)'; 'Forb' = 'Legume/(Legume+Non_legume)'")
+# merge the above data frames
+SmmryPropDf <- rbind.fill(SmmryPFGRing, SmmryOrgnRing)
+SmmryPropDf <- within(SmmryPropDf, {
+  form <- NULL
   co2 <- factor(co2, labels = c("Ambient", expression(eCO[2])))
-  yco <- factor(co2:year, labels = c("Ambient\n2013", "Ambient\n2014", "eCO2\n2013","eCO2\n2014"))
+  yco <- factor(co2:year, labels = c("Ambient\n2013\n(Pre-CO2)", "Ambient\n2014", 
+                                     "eCO2\n2013\n(Pre-CO2)","eCO2\n2014"))
 })
 
-p <- ggplot(SmmryPFGRing, aes(x = yco, y = Mean))
-p2 <- p + geom_boxplot(position = position_dodge(2)) + 
-  geom_point(aes(shape = year), size = 5, alpha = .7) + 
+# create a plot
+p <- ggplot(SmmryPropDf, aes(x = yco, y = Mean))
+p2 <- p + 
+  geom_boxplot(width = .2, position = position_dodge(.5)) + 
+  geom_point(aes(shape = co2, fill = co2), size = 3, alpha = .7, position = position_dodge(.5)) + 
+  scale_shape_manual(values = c(21, 21), labels = c("Ambient", expression(eCO[2]))) +
+  scale_fill_manual(values = c("black", "white"), 
+                    labels = c("Ambient", expression(eCO[2]))) +
   geom_line(aes(group = ring), linetype = 2) + 
-  facet_grid(variable ~ ., scales = "free_y", labeller = label_parsed) +
-  labs(y = "Proportion", x = NULL)
-p2
-
-
-
-SmmryPFGCo2Sum <- ddply(PFGCo2Sum, .(year, co2, form), function(x) {
-  Mean <- with(x, value[PFG %in% c("c4", "legume")] / sum(value))
-  SE <- sqrt(Mean * (1 - Mean) / 3)
-  return(data.frame(Mean, SE))
-})
-SmmryPFGCo2Sum$variable <- factor(ifelse(SmmryPFGCo2Sum$form == "Forb", "Legume:Non_legume", "C4:C3"))
-
-
-
-PFGPlotSum_cst <- dcast(year + co2 + ring + plot ~ PFG, data = PFGPlotSum)
-PFGPlotSum_cst <- within(PFGPlotSum_cst, {
-  totalGrass <- c3 + c4
-  c4Pr <- c4/totalGrass
-  totalForb <- legume + Non_legume
-  lgmPr <- legume/totalForb
-})
-boxplot(c4Pr ~ co2:year, data = PFGPlotSum_cst)
-
-PFGCo2Sum <- ddply(subset(veg, form %in% c("Grass", "Forb") & PFG != "c3_4"), 
-                    .(year, co2, form, PFG), summarise, value = sum(value))
-
-# C4:C3, legume:non_legume ratios and associated ses
-SmmryPFGCo2Sum <- ddply(PFGCo2Sum, .(year, co2, form), function(x) {
-  Mean <- with(x, value[PFG %in% c("c4", "legume")] / sum(value))
-  SE <- sqrt(Mean * (1 - Mean) / 3)
-  return(data.frame(Mean, SE))
-  })
-SmmryPFGCo2Sum$variable <- factor(ifelse(SmmryPFGCo2Sum$form == "Forb", "Legume:Non_legume", "C4:C3"))
-
-p <- ggplot(SmmryPFGCo2Sum, aes(x = year, y = Mean, col = co2))
-p + geom_point(size = 3, position = position_dodge(1)) +
-  geom_errorbar(aes(x= year, ymin = Mean - SE, ymax = Mean + SE), position = position_dodge(1)) +
-# Se goes beyond 0....
-  
-  
-  
-
-# compute Mean and SE----
-
-# check if min(np, n(1-p)) > 5 
-
-# n = sum(totalGras)/4 for grass. 4 is number of sub-plots for each ring.
-# totalGrass is the sum of all observed grass. Four subplots are 
-# psuedoreplication so sum(totalGras) was devided by 4 to get ring-average
-# values but not sure if it's correct
-ddply(PFGRingSum_cst, .(year, co2), summarise,
-      MinGrass = (sum(totalGrass)/4) * min(sum(c3)/sum(totalGrass), 
-                                           sum(c4)/sum(totalGrass)),
-      MinForb = (sum(totalForb)/4) * min(sum(legume)/sum(totalForb), 
-                                         sum(Non_legume)/sum(totalForb)))
-  # a lot larger than 5 so should be fine..(?)
-
-SmmryPFGdf <- ddply(PFGRingSum_cst, .(year, co2), summarise, 
-                    C4PrMean = sum(c4)/sum(totalGrass),
-                    C4PrSE = sqrt(C4PrMean * (1 - C4PrMean)/
-                                    (sum(totalGrass)/4)),
-                    LgmPrMean = sum(legume)/sum(totalForb),
-                    LgmPrSE = sqrt(LgmPrMean * (1 - LgmPrMean)/
-                                     (sum(totalForb)/4)))
-
-
-
-# PfgPlotSum <- ddply(veg, .(year, co2, ring, plot, PFG, form), summarise, value = sum(value))
-
-# subset required rows (use only grass for c3 and c4, forb for legume and
-# non-legume)
-CL_PfgPlotSum <- subsetD(PfgPlotSum, form %in% c("Grass", "Forb") &
-                           PFG %in% c("c3", "c4", "legume", "Non_legume"))
-
-
-
-
-
-pfgR <- ddply(CL_PfgPlotSum, .(year, co2, ring, plot),
-              function(x) {
-               c3R     <- with(x, value[PFG == "c3"]/sum(value[form == "Grass"]))
-               legR <- with(x, value[PFG == "legume"]/sum(value[form == "Forb"]))
-               # there one c4 observation which is 0, so put c4 on numerator
-               return(data.frame(c3R, legR))
-             })
-
-# native:introduced----
-complete.cases(OgnPlotSum)
-
-OgnPlotSum <- ddply(veg, .(year, co2, ring, plot, origin), summarise, value = sum(value))
-orgn <- ddply(OgnPlotSum[complete.cases(OgnPlotSum), ], .(year, co2, ring, plot),
-                     function(x){
-                       NativeR <- with(x, value[origin == "native"]/sum(value))
-                       return(data.frame(NativeR))
-                     })
-
-# merge above data frames
-PFGPropdf <- merge(pfgR, orgn, by = c("year", "co2", "ring", "plot"))
-
-
+  facet_wrap(~ variable, scales = "free_y") +
+  labs(y = "Proportion", x = NULL) +
+  science_theme +
+  theme(strip.text.x = element_text(size = 8), 
+        axis.text.x = element_text(size = 7),
+        legend.position = c(.55, .83))
+ggsavePP(filename = "output//figs/FACE_CO2_PFGProportion", plot = p2,  width = 7, height = 3)
 
 
 # Diversity indices----
@@ -229,48 +152,15 @@ Smmry_DivDF <- ddply(RngSmmry_DivDF, .(year, co2, variable), summarise,
                      SE = ci(value)[4],
                      N = sum(!is.na(value)))
 
-
-# merge above data frames
-BioDivDF <- Reduce(function(...) merge(..., by = c("year", "co2", "ring", "plot")), 
-                   list(pfgR, orgn, DivDF))
-
-# melt for making figure
-BioDivDF_mlt <- melt(BioDivDF, id = c("year", "co2", "ring", "plot"))
-
-# Mean and Se
-RngSmmryBioDivDF <- ddply(BioDivDF_mlt, .(year, ring, variable), summarise, 
-                          value = mean(value, na.rm = TRUE))
-RngSmmryBioDivDF <- within(RngSmmryBioDivDF, {
-  co2 = factor(ifelse(ring %in% c(1, 4, 5), "elev", "amb"))
-  block = recode(ring, "1:2 = 'A'; 3:4 = 'B'; 5:6 = 'C'")
-})
-
-SmmryBioDivDF <- ddply(RngSmmryBioDivDF, .(year, co2, variable), summarise,
-                       Mean = mean(value),
-                       SE = ci(value)[4],
-                       N = sum(!is.na(value)))
-
 # make a plot
 
-# define graphic background
-science_theme <- theme(panel.grid.major = element_blank(), 
-                       panel.grid.minor = element_blank(), 
-                       legend.position = c(.91, .91),
-                       # legend.text = element_text(size = 2),
-                       legend.title = element_blank())
-
 # change variable names
-vars <- c("C4:C3", "Legume:Non_legume",
-          "Introduced:Native", "Evenness", "Species Richness", "Diversity (H')")
-df <- within(SmmryBioDivDF, {
-  variable <- factor(variable, 
-                     levels = c("c43R", "lgNonlgR", "IntNatR", "J", "S", "H"),
-                     labels = vars)
-  year <- factor(year, levels = c("2012", "2014"), 
-                 labels = c("2013\n(Pre-CO2)", "2014"))
+Smmry_DivDF <- within(Smmry_DivDF, {
+  variable <- factor(variable, labels = c("Evenness", "Species Richness", "Diversity (H')"))
+  year <- factor(year, levels = c("2012", "2014"), labels = c("2013\n(Pre-CO2)", "2014"))
 })
 
-p <- ggplot(df, aes(x = year, y = Mean, group = co2))
+p <- ggplot(Smmry_DivDF, aes(x = year, y = Mean, group = co2))
 p2 <- p + 
   geom_errorbar(aes(x = year, ymin = Mean - SE, ymax = Mean + SE), 
                         position = position_dodge(.5),
@@ -281,8 +171,9 @@ p2 <- p +
   scale_fill_manual(values = c("black", "white"), 
                     labels = c("Ambient", expression(eCO[2]))) +
   facet_wrap(~variable, scales = "free_y") +
-  science_theme
-ggsavePP(filename = "output/figs/FACE_CO2_Biodiversity", width = 6, height = 5, plot = p2)
+  science_theme +
+  theme(legend.position = c(.55, .85))
+ggsavePP(filename = "output/figs/FACE_CO2_DiversityIndx", width = 6, height = 3, plot = p2)
 
 #################################
 ## Dissimilarity between years ##
