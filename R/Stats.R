@@ -3,11 +3,17 @@
 ###########
 
 # organise data frame
-SiteName <- c("year", "ring", "plot", "position", "cell")
+veg.face <- within(veg.face, {
+  co2 = factor(ifelse(ring %in% c(1, 4, 5), "elev", "amb"))
+})
+SiteName <- c("year", "ring", "co2", "plot", "position", "cell")
 SppName <- names(veg.face)[!names(veg.face) %in% SiteName]
 
-SiteMatrix <- veg.face[, SiteName]
-SppMatrix <- veg.face[, SppName]
+# plot sum
+PlotSumVeg <- ddply(veg.face, .(year, co2, ring, plot), function(x) colSums(x[, SppName]))
+
+# ring sum
+RingSumVeg <- ddply(PlotSumVeg, .(year, co2, ring), function(x) colSums(x[, SppName]))
 
 ######
 # CA #
