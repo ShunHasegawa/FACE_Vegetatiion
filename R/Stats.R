@@ -23,7 +23,12 @@ source("R/CA.analysis.R")
 #######
 # RDA #
 #######
+source("R/RDA.analysis.R")
 
+########
+# CAP  #
+########
+source("R/CAP.analysis.R")
 
 #######
 # GLM #
