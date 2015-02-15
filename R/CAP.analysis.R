@@ -45,7 +45,8 @@ p + geom_point(size = 4) + facet_grid(.~year)
 
 # create distance matrix
 DisMatrix_co2 <- dlply(RingSumVeg, .(co2), 
-                       function(x) vegdist(x[, SppName], method = "altGower")) # ln(x + 1)
+                       function(x) vegdist(log(x[, SppName] + 1), 
+                                           method = "bray"))
 
 # run CAP
 capList_co2 <- list()
@@ -103,7 +104,9 @@ p + geom_point(size = 4) + facet_grid(.~year)
 
 # create distance matrix
 PFG_DisMatrix_co2 <- dlply(RingSumPFGMatrix, .(co2),
-                           function(x) vegdist(x[, PFGName], method = "bray")) # ln(x + 1)
+                           function(x) vegdist(log(x[, PFGName] + 1),
+                                               method = "bray")) 
+  # altGower causes error when CAP is performed...
 
 PFGcapList_co2 <- list()
 
