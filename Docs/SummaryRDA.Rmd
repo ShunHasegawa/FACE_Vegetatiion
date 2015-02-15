@@ -5,7 +5,7 @@ date: "Saturday, February 14, 2015"
 output: pdf_document
 ---
 
-Here's the summary of redundancy analysis (RDA). I performed RDA for the whole data set, but due to huge spatial variation before the commencement of CO2 treatments, eCO2 effects are not very clear. So I also run RDA for 1) 2013 and 2014 separtely and saw the difference between CO2 treatments in each year, and 2) ambient and eCO2 separately and saw teh difference between 2013 and 2014 in each treatments.
+Here's the summary of redundancy analysis (RDA). I performed RDA for the whole data set, but due to huge spatial variation before the commencement of CO2 treatments, eCO2 effects are not very clear. So I also run RDA for 1) 2013 and 2014 separtely and saw the difference between CO2 treatments in each year, and 2) ambient and eCO2 separately and saw the difference between 2013 and 2014 in each treatments.
 
 In addition to species composition, I also assessed plant functional gorup (PFG) composition by RDA.
 
@@ -77,7 +77,7 @@ par(mfrow = c(1, 2))
 l_ply(names(rdaList_year), function(x) plot(rdaList_year[[x]], main = x))
 ````
 
-Species scores are really really small,,, but here are the species showting highest or lower three species scores.
+Here are the species showting highest or lower three species scores.
 
 ```{r, echo=FALSE, results='markup'}
 Smmry_rdaList_year <- llply(rdaList_year, summary)
@@ -158,21 +158,21 @@ PfgYearSppdf <- ldply(names(SmmryPfgYear), function(x) {
   data.frame(rda1 = SmmryPfgYear[[x]]$species[, 1], 
              PFG = row.names(SmmryPfgYear[[x]]$species),
              co2 = x, 
-             year = "Species score")})
+             year = "Species score\nx5")})
 PfgYearSppdf$co2 <- factor(PfgYearSppdf$co2, labels = c("Ambient RDA(7.9%)", "eCO2 RDA(4.1%)"))
 
 theme_set(theme_bw())
 p <- ggplot(PfgYearSitedf, aes(x = year, y = rda1))
 p2 <- p + geom_point(aes(shape = year), size = 5, alpha = .7) + 
   geom_line(aes(group = ring), linetype = 3) + 
-  geom_point(data = PfgYearSppdf, aes(x = year, y = rda1, col = PFG), 
+  geom_point(data = PfgYearSppdf, aes(x = year, y = rda1 * 5, col = PFG), 
              size = 5, alpha = .7, position = position_dodge(.5)) +
   facet_grid(~co2) +
   labs(x = NULL, y = "RDA1") +
   geom_hline(aes(yintercept = 0), linetype = "dashed", alpha = .7)
 p2
 ```
-Species scores for each PFG are really small; however, at Ambient C4 grass increased, but not in eCO2 which is consistent with the analysis of the ratio of C3:C4. 
+The differences are subtle; however, at Ambient C4 grass increased, but not in eCO2 which is consistent with the analysis of the ratio of C3:C4. 
 
 ## All together
 
