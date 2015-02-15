@@ -1,0 +1,56 @@
+---
+title: "Sumamry of CAP analysis"
+author: "Shun Hasegawa"
+date: "Sunday, February 15, 2015"
+output: pdf_document
+---
+
+Here're the summary of canonical analysis of principle coordinate (CAP). The analysis has been done in the same way as RDA. Species composition was anlysed for each year separately and also each CO2 treatments separately. Also plant functional group composition was analysed in the same way. Data is transformed by log(x + 1) before the analysis, and then Bray-Cutis dissimilarity was used (c.f., RDA uses Euclidean dissimilarity).
+
+```{r, echo=FALSE, results='hide', include=FALSE}
+source("../R/Packages.R")
+load("../output//Data/CAP_Object.RData")
+````
+
+# All species
+
+## Each year separtely
+
+```{r, echo=FALSE, results='markup', message=FALSE}
+p <- ggplot(CapYeardf, aes(x = co2, y = CAP1))
+p + geom_point(size = 4) + facet_grid(.~year)
+```
+
+## Each CO2 treatment separately
+
+```{r, echo=FALSE, results='markup', message=FALSE}
+p <- ggplot(CapCo2df, aes(x = year, y = CAP1))
+p + geom_point(size = 4) + 
+  geom_text(data = CapCo2SppScore[abs(CapCo2SppScore$CAP1) > .7, ], 
+            aes(x = year, y = CAP1 * 10, 
+            label = CapCo2SppScore$Spp[abs(CapCo2SppScore$CAP1) > .7],
+            group = year),
+            size = 4) +
+  facet_grid(.~co2)
+```
+Only species with absolute species score (coorelation with CAP axis) > 0.7 are shown in the plot. Quite similar yet slightly different species contributed to the comunity changes between CO2 treatments.
+
+# Plant functional groups
+
+## Each year separately
+
+```{r, echo=FALSE, results='markup', message=FALSE}
+p <- ggplot(PFGCapYeardf, aes(x = co2, y = CAP1))
+p + geom_point(size = 4) + facet_grid(.~year)
+```
+
+## Each CO2 treatments separately
+
+```{r, echo=FALSE, message=FALSE, results='markup'}
+p <- ggplot(PFGCapCo2df, aes(x = year, y = CAP1))
+p + geom_point(size = 4) + 
+  geom_text(data = PFGCapCo2SppScore, aes(x = year, y = CAP1 * 10, label = PFG)) +
+  facet_grid(.~co2)
+```
+
+PFG composition changed at ambient in a year but not at eCO2 treatment. Increases in C4 and decreases in C3 and moss seems to have contributed to this change in ambient rings.
