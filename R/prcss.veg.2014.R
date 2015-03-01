@@ -1,16 +1,3 @@
-# function which reads worksheet from an xcel file
-read.veg.xlx <- function(sheetName) {
-  a <- read.xlsx2("Data/Result_FACE_Vegetation_Datasheet_2014.xlsx", sheetName,
-                  header = TRUE, startRow = 4, endRow = 29, stringsAsFactors = FALSE)
-  a <- a[ ,!grepl("X.", names(a))]
-  a$position <- sheetName
-  a[a == ""]  <- 0 # empty cell -> 0
-  xlcFreeMemory() # Frees Java Virtual Machine (JVM) memory
-  # it's not normally necessary to do this every time but the file size is 
-  # really huge and cannot read all the worksheets at once so free memory every time 
-  return(a)
-}
-
 # produce sheetname
 a <- as.vector(outer(1:6, 1:4, paste, sep = "."))
 shts <- as.vector(outer(a, LETTERS[1:4], paste, sep = "."))
