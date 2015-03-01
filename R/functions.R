@@ -195,8 +195,8 @@ bxcxplts <- function(value, xval, data, sval, fval){
 ####################################################
 # function which reads worksheet from an xcel file #
 ####################################################
-read.veg.xlx <- function(sheetName) {
-  a <- read.xlsx2("Data/Result_FACE_Vegetation_Datasheet_2014.xlsx", sheetName,
+read.veg.xlx <- function(sheetName, file) {
+  a <- read.xlsx2(file, sheetName,
                   header = TRUE, startRow = 4, endRow = 29, stringsAsFactors = FALSE)
   a <- a[ ,!grepl("X.", names(a))]
   a$position <- sheetName
@@ -206,3 +206,14 @@ read.veg.xlx <- function(sheetName) {
   # really huge and cannot read all the worksheets at once so free memory every time 
   return(a)
 }
+
+####################################################
+# organise species in a data frame read from excel #
+####################################################
+OrgSpp <- function(df, KeepCol, CombineCol){
+  df[KeepCol] <- rowSums(df[CombineCol])
+  RemoveCol <- CombineCol[CombineCol != KeepCol]
+  df <- df[!names(df) %in% RemoveCol]
+  return(df)
+}
+

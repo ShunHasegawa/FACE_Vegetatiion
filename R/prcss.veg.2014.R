@@ -4,7 +4,11 @@ shts <- as.vector(outer(a, LETTERS[1:4], paste, sep = "."))
 
 # raed all files
 options(java.parameters = "-Xmx100m") # increase java memory
-fls <- llply(shts, read.veg.xlx, .progress = "text")
+
+fls <- llply(shts, function(x) 
+  read.veg.xlx(file = "Data/Result_FACE_Vegetation_Datasheet_2014.xlsx",
+               sheetName = x),
+             .progress = "text")
 
 # combine
 veg.2014.raw <- rbind.fill(fls) 
