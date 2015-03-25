@@ -2,7 +2,6 @@
 # CAP #
 #######
 
-
 ###############
 # All species #
 ###############
@@ -11,7 +10,7 @@
 
 # create distance matrix
 DisMatrix_Year <- dlply(RingSumVeg, .(year), 
-                        function(x) vegdist(x[, SppName], method = "altGower")) # ln(x + 1)
+                        function(x) vegdist(log(x[, SppName] + 1), method = "bray"))
 
 
 # Run cap for each dataset.
@@ -22,7 +21,7 @@ DisMatrix_Year <- dlply(RingSumVeg, .(year),
 
 capList <- list()
 
-for (i in 1:2){
+for (i in 1:3){
   disMatrix <- DisMatrix_Year[[i]]
   capList[[i]] <- CAPdiscrim(disMatrix ~ co2, 
                                  data = subset(RingSumVeg, 
@@ -31,7 +30,7 @@ for (i in 1:2){
 }
 
 # create a plot
-names(capList) <- c("2012", "2014")
+names(capList) <- c("2012", "2014", "2015")
 
 CapYeardf <- ldply(names(capList), function(x) {
   lst <- capList[[x]]
@@ -67,23 +66,22 @@ names(capSppScore_co2) <- c("amb", "elev")
 # site scores
 CapCo2df <- ldply(c("amb", "elev"), function(x) {
   lst <- capList_co2[[x]]
-  data.frame(CAP1 = lst$x[, 1], year = lst$group, co2 = x)
+  data.frame(CAP1 = lst$x[, 1], CAP2 = lst$x[, 2], year = lst$group, co2 = x)
 })
 
 # species score (correlation between ld1 and species abundance (after
 # transformation))
 CapCo2SppScore <- ldply(c("amb", "elev"), function(x) {
   df <- capSppScore_co2[[x]]
-  spdf <- data.frame(CAP1 = df[, 1], Spp = row.names(df), co2 = x, year = "Sp Score x 10")
-  spdf[complete.cases(spdf), ]
+  spdf <- data.frame(CAP1 = df[, 1], CAP2 = df[, 2], Spp = row.names(df), co2 = x, year = "Scaled species Score")
+  spdf <- spdf[complete.cases(spdf), ]
+  # set threshhold for correlation
+  subset(spdf, abs(CAP1) > .6|abs(CAP2) > .6)
 })  
-  
-p <- ggplot(CapCo2df, aes(x = year, y = CAP1))
+
+p <- ggplot(CapCo2df, aes(x = CAP1, y = CAP2, fill = year, col = year))
 p + geom_point(size = 4) + 
-  geom_text(data = CapCo2SppScore[abs(CapCo2SppScore$CAP1) > .7, ], 
-            aes(x = year, y = CAP1 * 10, 
-            label = CapCo2SppScore$Spp[abs(CapCo2SppScore$CAP1) > .7],
-            group = year),
+  geom_text(data = CapCo2SppScore, aes(x = CAP1 * 6, y = CAP2 * 2, label = Spp),
             size = 4) +
   facet_grid(.~co2)
 
@@ -95,11 +93,11 @@ p + geom_point(size = 4) +
 
 # create distance matrix
 PFG_DisMatrix_Year <- dlply(RingSumPFGMatrix, .(year), 
-                            function(x) vegdist(x[, PFGName], method = "altGower")) # ln(x + 1)
+                            function(x) vegdist(log(x[, PFGName] + 1), method = "bray"))
 
 PFGcapList <- list()
 
-for (i in 1:2){
+for (i in 1:3){
   disMatrix <- PFG_DisMatrix_Year[[i]]
   PFGcapList[[i]] <- CAPdiscrim(disMatrix ~ co2, 
                              data = subset(RingSumPFGMatrix,
@@ -108,7 +106,7 @@ for (i in 1:2){
 }
 
 # create a plot
-names(PFGcapList) <- c("2012", "2014")
+names(PFGcapList) <- c("2012", "2014", "2015")
 
 PFGCapYeardf <- ldply(names(PFGcapList), function(x) {
   lst <- PFGcapList[[x]]
@@ -133,7 +131,7 @@ for (i in 1:2){
   envDF <- subset(RingSumPFGMatrix, co2 == names(PFG_DisMatrix_co2)[i])
   PFGcapList_co2[[i]] <- CAPdiscrim(disMatrix ~ year, data = envDF, permutations = 1000)
   PFGcapSppScore_co2[[i]] <- add.spec.scores(PFGcapList_co2[[i]], log(envDF[, PFGName] + 1))$cproj
-  rm(df, disMatrix)
+  rm(envDF, disMatrix)
 }
 
 # create a plot
@@ -142,26 +140,32 @@ names(PFGcapSppScore_co2) <- c("amb", "elev")
 
 PFGCapCo2df <- ldply(names(PFGcapList_co2), function(x) {
   lst <- PFGcapList_co2[[x]]
-  data.frame(CAP1 = lst$x[, 1], year = lst$group, co2 = x)
+  data.frame(CAP1 = lst$x[, 1], CAP2 = lst$x[, 2], year = lst$group, co2 = x)
 })
 
 # species score
 PFGCapCo2SppScore <- ldply(c("amb", "elev"), function(x) {
   df <- PFGcapSppScore_co2[[x]]
-  spdf <- data.frame(CAP1 = df[, 1], PFG = row.names(df), 
-                     co2 = x,  year = "Sp Score x 10")
-  spdf[complete.cases(spdf), ]
+  spdf <- data.frame(CAP1 = df[, 1],
+                     CAP2 = df[, 2],
+                     PFG = row.names(df), 
+                     co2 = x,  
+                     year = "Scaled species score")
+  spdf <- spdf[complete.cases(spdf), ]
+  spdf
 })  
 
-p <- ggplot(PFGCapCo2df, aes(x = year, y = CAP1))
+p <- ggplot(PFGCapCo2df, aes(x = CAP1, y = CAP2, col = year))
 p + geom_point(size = 4) + 
-  geom_text(data = PFGCapCo2SppScore, aes(x = year, y = CAP1 * 10, label = PFG)) +
+  geom_text(data = PFGCapCo2SppScore, aes(x = CAP1 * 2.5, y = CAP2, label = PFG)) +
   facet_grid(.~co2)
 
 # save all objects to create summary document later
 save.image(file = "output//Data/CAP_Object.RData")
 
 # vegan
-vegDF <- capscale(transDF ~ YR, sites, dist = "bray")
+transDF <- log(RingSumPFGMatrix[, PFGName] + 1)
+sites <- RingSumPFGMatrix[, !names(RingSumPFGMatrix) %in% PFGName]
+vegDF <- capscale(transDF ~ yco, sites, dist = "bray")
 plot(vegDF)
 summary(vegDF)
