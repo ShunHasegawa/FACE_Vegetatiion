@@ -115,7 +115,7 @@ PltVeg <- function(data, xval, xlab = NULL, ...,
                         labels = orgnLabs)
   data$xv <- data[, xval]
   p <- ggplot(data, aes(x = xv, fill = year))
-  p2 <- p + geom_bar(alpha = 0.6, position = "identity") + 
+  p2 <- p + geom_bar(alpha = 0.4, position = position_dodge(width = .4)) + 
     theme(axis.text.y = element_text(...)) +
     theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5, ...)) +
     labs(x = xlab, y = "Frequency")
