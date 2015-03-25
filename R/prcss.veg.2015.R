@@ -1,3 +1,7 @@
+######################
+# Organise 2015 data #
+######################
+
 # produce sheetname
 a <- as.vector(outer(1:6, 1:4, paste, sep = "."))
 shts <- as.vector(outer(a, LETTERS[1:4], paste, sep = "."))
@@ -173,5 +177,18 @@ write.csv(spp, file = "output/Data/spp_2015.csv", row.names = FALSE)
 
 # Spp which were found only in 2015
 YearSum <- ddply(vdf, .(year), function(x) colSums(x[Spp]))
-newSp <- names(YearSum)[apply(YearSum, 2, function(x) all(c(x[1:2] == 0), x[3] != 0))]
+newSp <- names(YearSum)[apply(rbind(YearSum[1:2, ] == 0, YearSum[3, ] != 0), 2, all)]
 YearSum[newSp] # very small..
+
+########################################################
+# Create df including plant characteristis (e.g. PFGs) #
+########################################################
+
+# # plant properties
+# spList <- read.csv("Data//FACE_Vegetation_sp.list.csv")
+# 
+# FACE.veg.rslt <- merge(veg.face.mlt, spList, by.x = "variable", by.y = "sp", all.x = TRUE)
+# 
+# save(FACE.veg.rslt, file = "output/Data/FACE_Vegetation_PFG.RData")
+
+
