@@ -166,12 +166,8 @@ vdf <- vdf[c(NotSpp, Spp)]
 
 all(vdf[Spp] <= 1)
 
-# save
-save(vdf, file = "output//Data/FACE_Vegetation_Raw_2013_2015.RData")
-
-# Spp list
+# Spp list----
 vdf.mlt <- melt(vdf, id = c("year", "ring", "plot", "position", "cell"))
-
 spp <- data.frame(sp = sort(levels(vdf.mlt$variable)))
 write.csv(spp, file = "output/Data/spp_2015.csv", row.names = FALSE)
 
@@ -180,15 +176,25 @@ YearSum <- ddply(vdf, .(year), function(x) colSums(x[Spp]))
 newSp <- names(YearSum)[apply(rbind(YearSum[1:2, ] == 0, YearSum[3, ] != 0), 2, all)]
 YearSum[newSp] # very small..
 
+# remove Lichen and Carex.breviformis for the time being----
+vdf <- within(vdf, {
+  Lichen <- NULL
+  Carex.breviformis <- NULL
+})
+
+# save----
+save(vdf, file = "output//Data/FACE_Vegetation_Raw_2013_2015.RData")
+
 ########################################################
 # Create df including plant characteristis (e.g. PFGs) #
 ########################################################
+vdf.mlt <- melt(vdf, id = c("year", "ring", "plot", "position", "cell"))
 
-# # plant properties
-# spList <- read.csv("Data//FACE_Vegetation_sp.list.csv")
-# 
-# FACE.veg.rslt <- merge(veg.face.mlt, spList, by.x = "variable", by.y = "sp", all.x = TRUE)
-# 
-# save(FACE.veg.rslt, file = "output/Data/FACE_Vegetation_PFG.RData")
+# plant properties
+spList <- read.csv("Data//FACE_Vegetation_sp.list.csv")
+
+VegRes15 <- merge(vdf.mlt, spList, by.x = "variable", by.y = "sp", all.x = TRUE)
+
+save(VegRes15, file = "output/Data/FACE_Vegetation_PFG_2015.RData")
 
 
