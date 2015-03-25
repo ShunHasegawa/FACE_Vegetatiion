@@ -285,10 +285,9 @@ ggsavePP(filename = "output/figs/FACE_DissmVs.Moist", width = 4, height = 4,
 
 # ring sum
 SppName
-RngVegdf <- ddply(veg.face, .(year, ring), function(x) colSums(x[, SppName]))
+RngVegdf <- ddply(veg.face, .(year, ring, co2), function(x) colSums(x[, SppName]))
 RngSppDF <- RngVegdf[, SppName]
 RngSiteDF <- RngVegdf[, !names(RngVegdf) %in% SppName]
-RngSiteDF$co2 <- factor(ifelse(RngSiteDF$ring %in% c(1, 4, 5), "elev", "amb"))
 
 # peform MDS
 
@@ -321,6 +320,9 @@ MDSDF$variable <- factor(MDSDF$variable, levels = c("MDS2", "MDS3"),
 
 # make plots ----
 
+# reorder df according to year
+MDSDF <- MDSDF[order(MDSDF$year), ]
+
 # connect the same ring in different years
 p <- ggplot(data = MDSDF, aes(x = MDS1, y = value, shape = year, col = co2))
 p2 <- p + 
@@ -333,8 +335,8 @@ p2 <- p +
         legend.box = "horizontal",
         legend.box.just = "left") +
   facet_grid(. ~variable)
-p3 <- p2 + geom_line(aes(group = ring))
-ggsavePP(filename = "output/figs/FACE_Vegetation_MDS_Ring", width = 4, height = 4, 
+p3 <- p2 + geom_path(aes(group = ring))
+ggsavePP(filename = "output/figs/FACE_Vegetation_MDS_Ring", width = 6, height = 6, 
          plot = p3)
 
 # make area for each pairs of amb and elev for each year
@@ -343,14 +345,14 @@ chulDF <- ddply(MDSDF, .(year, co2, variable),
                              chxDF <- data.frame(rbind(x[chx,], x[chx[1], ]))
                              return(chxDF)})
 p4 <- p2 + geom_polygon(data = chulDF, alpha = .1)
-ggsavePP(filename = "output/figs/FACE_Vegetation_MDS_CO2", width = 4, height = 4, 
+ggsavePP(filename = "output/figs/FACE_Vegetation_MDS_CO2", width = 6, height = 6, 
          plot = p4)
 
 # different colors for each ring
 p <- ggplot(data = MDSDF, aes(x = MDS1, y = value, shape = year, col = ring))
 p2 <- p + 
   geom_point(size = 3) + 
-  geom_line(aes(group = ring)) +
+  geom_path(aes(group = ring)) +
   science_theme +
   labs(x = paste("MDS1 (", ExpVars[1]," %)", sep = ""), 
        y = "MDS axis") +
@@ -358,5 +360,5 @@ p2 <- p +
         legend.box = "horizontal",
         legend.box.just = "left") +
   facet_grid(. ~variable) 
-ggsavePP(filename = "output/figs/FACE_Vegetation_MDS_EachRing", width = 4, height = 4, 
+ggsavePP(filename = "output/figs/FACE_Vegetation_MDS_EachRing", width = 6, height = 6, 
          plot = p2)
