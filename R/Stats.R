@@ -3,7 +3,9 @@
 ###########
 
 # organise data frame
-veg.face <- within(veg.face, {
+
+# all spp----
+veg.face <- within(vdf, {
   co2 = factor(ifelse(ring %in% c(1, 4, 5), "elev", "amb"))
 })
 SiteName <- c("year", "ring", "co2", "plot", "position", "cell")
@@ -14,6 +16,19 @@ PlotSumVeg <- ddply(veg.face, .(year, co2, ring, plot), function(x) colSums(x[, 
 
 # ring sum
 RingSumVeg <- ddply(PlotSumVeg, .(year, co2, ring), function(x) colSums(x[, SppName]))
+
+# PFG matrix----
+RingSumPFGMatrix <- dcast(year + co2 + ring ~ PFG, data = subset(veg, !is.na(PFG)), sum)
+colSums(RingSumPFGMatrix[4:11])
+
+# remove lichen and wood, also add interaction term
+RingSumPFGMatrix <- within(RingSumPFGMatrix, {
+  Lichen = NULL
+  wood = NULL
+  c3_4 = NULL
+  yco = year:co2
+})
+PFGName <- c("c3", "c4", "legume", "moss", "Non_legume")
 
 ######
 # CA #

@@ -37,19 +37,7 @@ RDAres
 # PFG #
 #######
 
-# PFG matrix
-RingSumPFGMatrix <- dcast(year + co2 + ring ~ PFG, data = subset(veg, !is.na(PFG)), sum)
-
-# remove lichen and wood, also add interaction term
-RingSumPFGMatrix <- within(RingSumPFGMatrix, {
-  Lichen = NULL
-  wood = NULL
-  c3_4 = NULL
-  yco = year:co2
-})
-
 # rda
-PFGName <- c("c3", "c4", "legume", "moss", "Non_legume")
 
 # each year separately----
 pfg_co2 <- dlply(RingSumPFGMatrix, .(year), function(x) rda(log(x[, PFGName] + 1) ~ co2, data = x))
