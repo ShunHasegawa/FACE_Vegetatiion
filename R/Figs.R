@@ -126,16 +126,18 @@ SmmryPropDfAll$co2 <- factor(SmmryPropDfAll$co2,
 # create a plot
 p <- ggplot(SmmryPropDfRing, aes(x = year, y = Mean))
 p2 <- p + 
-  geom_point(aes(fill = co2, group = co2), alpha = .7, shape = 21, size = 1.5) + 
-  geom_line(data = SmmryPropDfAll, aes(group = co2)) +
-  geom_point(data = SmmryPropDfAll, aes(fill = co2), shape = 21, size = 3) + 
+  geom_line(data = SmmryPropDfAll, aes(group = co2, linetype = co2)) +
+  geom_point(aes(fill = co2, group = co2), alpha = .7, shape = 21, size = 3) + 
+  scale_linetype_manual(values = c(1, 2), 
+                        labels = c("Ambient", expression(eCO[2])))+
   scale_fill_manual(values = c("black", "white"), 
                     labels = c("Ambient", expression(eCO[2]))) +
   facet_wrap(~prop, ncol = 2, scales = "free_y") +
   labs(y = "Proportion", x = NULL) +
   science_theme +
   theme(strip.text.x = element_text(size = 7),
-        legend.position = c(.75, .25))
+        legend.position = c(.75, .25),
+        legend.key.width = unit(2.5, "lines"))
 ggsavePP(filename = "output//figs/FACE_CO2_PFGProportion", plot = p2,  
          width = 5, height = 4)
 
