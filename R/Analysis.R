@@ -30,20 +30,23 @@ veg <- within(VegRes15, {
 
 # all spp----
 veg.face <- within(vdf, {
-  co2 = factor(ifelse(ring %in% c(1, 4, 5), "elev", "amb"))
+  co2 <- factor(ifelse(ring %in% c(1, 4, 5), "elev", "amb"))
+  block <- recode(ring, "1:2 = 'A'; 3:4 = 'B'; 5:6 = 'C'")
+  id <- ring:plot
 })
-SiteName <- c("year", "ring", "co2", "plot", "position", "cell")
+SiteName <- c("year", "block", "ring", "co2", "plot", "id", "position", "cell")
 SppName <- names(veg.face)[!names(veg.face) %in% SiteName]
 
 # plot sum
-PlotSumVeg <- ddply(veg.face, .(year, co2, ring, plot), function(x) colSums(x[, SppName]))
+PlotSumVeg <- ddply(veg.face, .(year, block, co2, ring, plot, id), function(x) colSums(x[, SppName]))
 
 # ring sum
-RingSumVeg <- ddply(PlotSumVeg, .(year, co2, ring), function(x) colSums(x[, SppName]))
+RingSumVeg <- ddply(PlotSumVeg, .(year, block, co2, ring), function(x) colSums(x[, SppName]))
 
 # PFG matrix----
-RingSumPFGMatrix <- dcast(year + co2 + ring ~ PFG, data = subset(veg, !is.na(PFG)), sum)
-colSums(RingSumPFGMatrix[4:11])
+RingSumPFGMatrix <- dcast(year + block + co2 + ring ~ PFG, 
+                          data = subset(veg, !is.na(PFG)), sum)
+colSums(RingSumPFGMatrix[,5:12])
 
 # remove lichen and wood, also add interaction term
 RingSumPFGMatrix <- within(RingSumPFGMatrix, {
@@ -54,6 +57,15 @@ RingSumPFGMatrix <- within(RingSumPFGMatrix, {
 })
 PFGName <- c("c3", "c4", "legume", "moss", "Non_legume")
 
+# Diversity & eveness----
+vegDF <- PlotSumVeg[, SppName]
+siteDF <- PlotSumVeg[, !names(PlotSumVeg) %in% SppName]
+
+DivDF <- within(siteDF,{
+  H <- diversity(vegDF) # Shannon's index
+  S <- specnumber(vegDF) # number of spp
+  J <- H/log(S)  # Pielou's evenness
+})
 
 ########
 # Figs #
