@@ -6,7 +6,7 @@ source("R/functions.R")
 ################
 # Process Data #
 ################
-source("R/FACE_VegetationDataSheet2015.R")
+# source("R/FACE_VegetationDataSheet2015.R")
 
 # Raw data for multi variate analysis
 load("output/Data//FACE_Vegetation_Raw_2013_2015.RData")
