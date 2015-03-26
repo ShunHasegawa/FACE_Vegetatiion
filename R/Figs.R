@@ -1,12 +1,14 @@
 theme_set(theme_bw())
 
 # define graphic background
-science_theme <- theme(panel.grid.major = element_blank(), 
+science_theme <- theme(panel.border = element_rect(color = "black"),
+                       panel.grid.major = element_blank(), 
                        panel.grid.minor = element_blank(), 
                        legend.position = c(.91, .91),
                        # legend.text = element_text(size = 2),
                        legend.title = element_blank(),
-                       legend.background = element_blank())
+                       legend.background = element_blank(),
+                       legend.key = element_blank())
 
 ###########
 # Barplot #
@@ -126,26 +128,10 @@ ggsavePP(filename = "output//figs/FACE_CO2_PFGProportion", plot = p2,  width = 7
 
 
 # Diversity indices----
-summary(veg.face)
-
-SiteName <- c("year", "ring", "plot", "position", "cell")
-SppName <- names(veg.face)[!names(veg.face) %in% SiteName]
-
-plt.veg <- ddply(veg.face, .(year, ring, plot), function(x) colSums(x[, SppName]))
-
-vegDF <- plt.veg[, SppName]
-siteDF <- plt.veg[, c("year", "ring", "plot")]
-
-DivDF <- within(siteDF,{
-  co2 <- factor(ifelse(ring %in% c(1, 4, 5), "elev", "amb"))
-  H <- diversity(vegDF) # Shannon's index
-  S <- specnumber(vegDF) # number of spp
-  J <- H/log(S)  # Pielou's evenness
-})
-save(DivDF, file = "output//Data/DiversityDF.RData")
+summary(DivDF)
 
 # Mean and SE
-DivDF_mlt <- melt(DivDF, id = c("year", "co2","ring", "plot"))
+DivDF_mlt <- melt(DivDF, id = c("year", "block", "co2", "ring", "plot", "id"))
 RngSmmry_DivDF <- ddply(DivDF_mlt, .(year, co2, ring, variable), summarise, value = mean(value))
 Smmry_DivDF <- ddply(RngSmmry_DivDF, .(year, co2, variable), summarise, 
                      Mean = mean(value),
@@ -157,23 +143,28 @@ Smmry_DivDF <- ddply(RngSmmry_DivDF, .(year, co2, variable), summarise,
 # change variable names
 Smmry_DivDF <- within(Smmry_DivDF, {
   variable <- factor(variable, labels = c("Evenness", "Species Richness", "Diversity (H')"))
-  year <- factor(year, levels = c("2012", "2014"), labels = c("2013\n(Pre-CO2)", "2014"))
+  year <- factor(year, levels = c("2012", "2014", "2015"), 
+                 labels = c("2013\n(Pre-CO2)", "2014", "2015"))
 })
 
-p <- ggplot(Smmry_DivDF, aes(x = year, y = Mean, group = co2))
+p <- ggplot(Smmry_DivDF, aes(x = year, y = Mean, group = co2, fill = co2))
 p2 <- p + 
   geom_errorbar(aes(x = year, ymin = Mean - SE, ymax = Mean + SE), 
-                        position = position_dodge(.5),
+                        position = position_dodge(.3),
                 width = 0) +
-  geom_point(aes(fill = co2, shape = co2), position = position_dodge(.5), size = 5) + 
+  geom_line(aes(linetype = co2), position = position_dodge(.3)) + 
+  geom_point(position = position_dodge(.3), size = 3, shape = 21) + 
   labs(x = "Year", y = NULL) + 
-  scale_shape_manual(values = c(21, 21), labels = c("Ambient", expression(eCO[2]))) +
   scale_fill_manual(values = c("black", "white"), 
                     labels = c("Ambient", expression(eCO[2]))) +
+  scale_linetype_manual(values = c("solid", "dashed"), 
+                        labels = c("Ambient", expression(eCO[2]))) +
   facet_wrap(~variable, scales = "free_y") +
   science_theme +
-  theme(legend.position = c(.55, .85))
-ggsavePP(filename = "output/figs/FACE_CO2_DiversityIndx", width = 6, height = 3, plot = p2)
+  theme(legend.position = c(.51, .9),
+        legend.key.width = unit(2.5, "lines"))
+ggsavePP(filename = "output/figs/FACE_CO2_DiversityIndx", 
+         width = 6, height = 3, plot = p2)
 
 #################################
 ## Dissimilarity between years ##
