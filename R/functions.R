@@ -217,3 +217,19 @@ OrgSpp <- function(df, KeepCol, CombineCol){
   return(df)
 }
 
+##########################################
+# compute canonical correlation from CAP #
+##########################################
+CanonicalCor <- function(CAPRes, EnvDF, term){
+  m <- CAPRes$m
+  xv <- EnvDF[, term]
+  ml <- lm(CAPRes$PCoA[, 1:m] ~ xv)
+  if (m != 1){ # you can't run candisc when m = 1
+  cdaRes <- candisc(ml, term = "xv")
+  cdaRes$canrsq
+  } else {
+    warning("m = 1")
+    return(summary(ml)$r.squared)
+  }
+}
+# also look at CAP_CanonicalCorrelation.pdf
