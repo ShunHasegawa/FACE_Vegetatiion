@@ -1,25 +1,13 @@
-summary(DivDF)
-
-# load DivDF
-load("output//Data/DiversityDF.RData")
-
-# orgnaise data frame
-DivDF <- within(DivDF, {
-  co2 <- factor(ifelse(ring %in% c(1, 4, 5), "elev", "amb"))
-  block <- recode(ring, "1:2 = 'A'; 3:4 = 'B'; 5:6 = 'C'")
-  id <- ring:plot
-})
-
 ###########
 # Eveness #
 ###########
 bxplts(value = "J", xval = "co2", data = DivDF)
 bxplts(value = "J", xval = "ring", data = DivDF)
-par(mfrow = c(2,2))
-boxplot(J ~ ring:year, data= DivDF, main = "raw")
 
 Eml1 <- lmer(J ~ co2 * year + (1|block) + (1|ring) + (1|id), data = DivDF)
+Anova(Eml1)
 Eml2 <- stepLmer(Eml1)
+Anova(Eml2)
 summary(Eml2)
 plot(Eml2)
 qqnorm(resid(Eml2))
@@ -32,77 +20,65 @@ bxplts(value = "H", xval = "co2", data = DivDF)
 bxplts(value = "H", xval = "ring", data = DivDF)
 
 Dml1 <- lmer(H ~ co2 * year + (1|block) + (1|ring) + (1|id), data = DivDF)
-Dml2 <- stepLmer(Dml1)
+Anova(Dml1)
+Anova(Dml1, test.statistic = "F")
+plot(Dml1)
+qqnorm(resid(Dml1))
+qqline(resid(Dml1))
+# One on the left bottom is quite out of the line. what if I remove it.
+which(qqnorm(resid(Dml1))$y == min(qqnorm(resid(Dml1))$y))
+Dml2 <- lmer(H ~ co2 * year + (1|block) + (1|ring) + (1|id), data = DivDF[-6, ])
+plot(Dml2)
+qqnorm(resid(Dml2))
+qqline(resid(Dml2))
+# looks a lot better. Need to inspect more about this point.
 Anova(Dml2)
 Anova(Dml2, test.statistic = "F")
+plot(allEffects(Dml2))
+ # Diversity decreased in eCO2
+
+# contrast----
+# contrast doesn't work with lmer so rewrite the model with lme
+tdf <- DivDF[-6, ]
+Dml_lme <- lme(H ~ co2 * year, random = ~1|block/ring/id, data = tdf)
+
+cntrst <- contrast(Dml_lme,
+                   a = list(year = levels(tdf$year), co2 = "amb"),
+                   b = list(year = levels(tdf$year), co2 = "elev"))
+H_CntrstRes <- cntrstTbl(cntrst, data = tdf, variable = "H", digit = 2)
+H_CntrstRes
 
 ####################
 # Species richness #
 ####################
 bxplts(value = "S", xval = "co2", data = DivDF)
 bxplts(value = "S", xval = "ring", data = DivDF)
-
 Sml1 <- glmer(S ~ co2 * year + (1|block) + (1|ring) + (1|id), data = DivDF,
               family = "poisson")
 summary(Sml1)
+plot(Sml1)
 # Devience >> df; highly overdispersed
 
 Sml2 <- lmer(log(S) ~ co2 * year + (1|block) + (1|ring) + (1|id), data = DivDF)
-Sml3 <- stepLmer(Sml2)
-Anova(Sml3)
+Anova(Sml2, test.statistic = "F")
+plot(Sml2)
+qqnorm(resid(Sml2))
+qqline(resid(Sml2))
+# left bottom is off the line. what if I remove
+which(qqnorm(resid(Sml2))$y == min(qqnorm(resid(Sml2))$y))
+Sml3 <- lmer(log(S) ~ co2 * year + (1|block) + (1|ring) + (1|id), data = DivDF[-6,])
+Anova(Sml3, test.statistic = "F")
 plot(Sml3)
 qqnorm(resid(Sml3))
 qqline(resid(Sml3))
+# improved a lot. but need to inspect more
 
-##########
-# Ancova #
-##########
-# reorganise data frame
-DivDF_mlt <- melt(DivDF, id = c("year", "block", "co2", "ring", "plot", "id"))
-DivDF_cst <- dcast(DivDF_mlt, block + co2 + ring + plot + id  + variable ~ year)
-names(DivDF_cst)[7:8] <- c("Init", "Fin")
+# contrast----
+tdf <- DivDF[-6, ]
+Sml_lme <- lme(log(S) ~ co2 * year, random = ~1|block/ring/id, data = tdf)
 
-p <- ggplot(DivDF_cst, aes(x = Init, y = Fin, col = co2))
-p2 <- p + 
-  geom_point(size = 3) + 
-  geom_smooth(method = "lm", aes(group = co2)) +
-  facet_wrap(~ variable, scales =  "free")
-p2
-
-Hdf <- subsetD(DivDF_cst, variable == "H")
-Jdf <- subsetD(DivDF_cst, variable == "J")
-Sdf <- subsetD(DivDF_cst, variable == "S")
-
-# Diveristy ----
-h1 <- lmer(Fin ~ co2 * Init + (1|block) + (1|ring), data = Hdf)
-summary(h1)
-# no variation is explained by ring and block
-h2 <- lm(Fin ~ co2 * Init, data = Hdf)
-summary(h2)
-par(mfrow = c(2, 2))
-plot(h2)
-# no co2 effect
-
-# Eveness----
-j1 <- lmer(Fin ~ co2 * Init + (1|block) + (1|ring), data = Jdf)
-summary(j1)
-# no variation is explained by ring and block
-j2 <- lm(Fin ~ co2 * Init, data = Jdf)
-summary(j2)
-par(mfrow = c(2, 2))
-plot(j2)
-# no co2 effect
-
-# Species----
-s1 <- glmer(Fin ~ co2 * Init + (1|block) + (1|ring), data = Sdf, family = "poisson")
-summary(s1)
-# highly overdispersed
-plot(s1)
-
-# log transformation
-par(mfrow = c(1, 2))
-plot(Fin ~ Init, pch = 16, col = co2, data = Sdf)
-plot(log(Fin) ~ Init, pch = 16, col = co2, data = Sdf)
-s2 <- lmer(log(Fin) ~ co2 * Init + (1|block) + (1|ring), data = Sdf)
-summary(s2)
-# no co2 effect
+cntrst <- contrast(Sml_lme,
+                   a = list(year = levels(tdf$year), co2 = "amb"),
+                   b = list(year = levels(tdf$year), co2 = "elev"))
+S_CntrstRes <- cntrstTbl(cntrst, data = tdf, variable = "S", digit = 2)
+S_CntrstRes
