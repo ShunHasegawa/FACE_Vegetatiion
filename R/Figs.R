@@ -298,7 +298,7 @@ MDS$GOF
 MDS$eig
 ExpVars <- round(MDS$eig[1:3] * MDS$GOF[2]/(sum(MDS$eig[1:3])) * 100, 2)
 
-# Note: GOF is given as belos 
+# Note: GOF is given as belows 
 # MDS$GOF[1] at k = 3
 sum(MDS$eig[1:3])/sum(abs(MDS$eig))
 
