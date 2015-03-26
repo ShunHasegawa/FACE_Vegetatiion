@@ -85,49 +85,63 @@ ggsavePP(filename = "output/figs/FACE_Origin_CO2", plot = p, width= 8, height = 
 # Figure for thesis #
 #####################
 
-##########################
-## biodiversity indices ##
-##########################
+###############
+## PFG ratio ##
+###############
 
-# C3:C4 & legume:Non_legume
-SmmryPFGRing <- ddply(subset(veg, form %in% c("Grass", "Forb") & PFG != "c3_4"), 
-                    .(year, co2, ring, form), summarise, 
-                    Mean = sum(value[PFG %in% c("c4", "legume")]) / sum(value))
-SmmryPFGRing$variable <- factor(SmmryPFGRing$form, levels = c("Forb", "Grass"), 
-                                labels = c("Legume/(Legume+Non_legume)", "C4/(C3+C4)"))
-# native:introduced
+# C3:C4 & legume:Non_legume----
+# susbset df of Grass and Form
+GFdf <- subsetD(veg, form %in% c("Grass", "Forb") & PFG != "c3_4")
+GFdf$prop <- factor(GFdf$form, labels = c("Legume/(Legume+Non_legume)", "C3/(C3+C4)"))
+
+# Ring mean
+SmmryPFGRing <- ddply(GFdf, .(year, co2, ring, prop), summarise, 
+                    Mean = sum(value[PFG %in% c("c3", "legume")]) / sum(value)
+                    )
+
+# overall mean
+SmmryPFGRAll <- ddply(GFdf, .(year, co2, prop), summarise, 
+                      Mean = sum(value[PFG %in% c("c3", "legume")]) / sum(value))
+
+# native:introduced----
+# Ring mean
 SmmryOrgnRing <- ddply(subset(veg, !is.na(origin)), .(year, co2, ring), summarise, 
   Mean = sum(value[origin == "native"])/sum(value),
-  variable = "Native/(Native+Introduced)")
+  prop = "Native/(Native+Introduced)")
 
-# merge the above data frames
-SmmryPropDf <- rbind.fill(SmmryPFGRing, SmmryOrgnRing)
-SmmryPropDf <- within(SmmryPropDf, {
-  form <- NULL
-  co2 <- factor(co2, labels = c("Ambient", expression(eCO[2])))
-  yco <- factor(co2:year, labels = c("Ambient\n2013\n(Pre-CO2)", "Ambient\n2014", 
-                                     "eCO2\n2013\n(Pre-CO2)","eCO2\n2014"))
-})
+# Overall mean
+SmmryOrgnAll <- ddply(subset(veg, !is.na(origin)), .(year, co2), summarise, 
+  Mean = sum(value[origin == "native"])/sum(value),
+  prop = "Native/(Native+Introduced)")
+
+# merge the above data frames----
+SmmryPropDfRing <- rbind.fill(SmmryPFGRing, SmmryOrgnRing)
+SmmryPropDfRing$co2 <- factor(SmmryPropDfRing$co2, 
+                              labels = c("Ambient", expression(eCO[2])))
+
+SmmryPropDfAll <- rbind.fill(SmmryPFGRAll, SmmryOrgnAll)
+SmmryPropDfAll$co2 <- factor(SmmryPropDfAll$co2, 
+                             labels = c("Ambient", expression(eCO[2])))
 
 # create a plot
-p <- ggplot(SmmryPropDf, aes(x = yco, y = Mean))
+p <- ggplot(SmmryPropDfRing, aes(x = year, y = Mean))
 p2 <- p + 
-  geom_boxplot(width = .2, position = position_dodge(.5)) + 
-  geom_point(aes(shape = co2, fill = co2), size = 3, alpha = .7, position = position_dodge(.5)) + 
-  scale_shape_manual(values = c(21, 21), labels = c("Ambient", expression(eCO[2]))) +
+  geom_point(aes(fill = co2, group = co2), alpha = .7, shape = 21, size = 1.5) + 
+  geom_line(data = SmmryPropDfAll, aes(group = co2)) +
+  geom_point(data = SmmryPropDfAll, aes(fill = co2), shape = 21, size = 3) + 
   scale_fill_manual(values = c("black", "white"), 
                     labels = c("Ambient", expression(eCO[2]))) +
-  geom_line(aes(group = ring), linetype = 2) + 
-  facet_wrap(~ variable, scales = "free_y") +
+  facet_wrap(~prop, ncol = 2, scales = "free_y") +
   labs(y = "Proportion", x = NULL) +
   science_theme +
-  theme(strip.text.x = element_text(size = 8), 
-        axis.text.x = element_text(size = 7),
-        legend.position = c(.55, .83))
-ggsavePP(filename = "output//figs/FACE_CO2_PFGProportion", plot = p2,  width = 7, height = 3)
+  theme(strip.text.x = element_text(size = 7),
+        legend.position = c(.75, .25))
+ggsavePP(filename = "output//figs/FACE_CO2_PFGProportion", plot = p2,  
+         width = 5, height = 4)
 
-
-# Diversity indices----
+#######################
+## Diversity indices ##
+#######################
 summary(DivDF)
 
 # Mean and SE
