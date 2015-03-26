@@ -233,3 +233,38 @@ CanonicalCor <- function(CAPRes, EnvDF, term){
   }
 }
 # also look at CAP_CanonicalCorrelation.pdf
+
+
+################################
+# Return star based on P value #
+################################
+FormatPval <- function(Pval) {
+  stars <- ifelse(Pval > .1, "",
+                  ifelse(Pval > .05, "scriptstyle('\u2020')",
+                         ifelse(Pval > .01, "*",
+                                ifelse(Pval > .001, "**",
+                                       c("***")))))
+  
+  p <- as.character(ifelse(Pval > .1, round(Pval, 3),
+                           ifelse(Pval < .001, "bold('<0.001')", 
+                                  # shown with bold font. Note that inside of
+                                  # bold needs to be in ''
+                                  paste("bold(", round(Pval, 3), ")", sep = "'"))))
+  return(data.frame(stars, p))
+} 
+
+####################################
+# create table of contrast results #
+####################################
+cntrstTbl <- function(cntrstRes, data, variable, ...){
+  Df <- data.frame(
+    year = unique(data[, "year"]),
+    contrast  =  cntrstRes$Contrast,
+    SE = cntrstRes$SE,
+    t = cntrstRes$testStat,
+    df = cntrstRes$df,
+    P.value = cntrstRes$Pvalue,
+    FormatPval(cntrstRes$Pvalue),
+    variable = variable)
+  return(Df)
+}
