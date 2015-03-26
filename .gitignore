@@ -6,3 +6,4 @@ Oldscript
 output
 library
 packrat/lib*/
+*.pdf
