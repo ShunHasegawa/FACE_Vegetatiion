@@ -31,10 +31,10 @@ I run CAP for each treatment separately and look at if there's separation betwee
 % CAP for all sp for each CO2
 \begin{figure}[H]\label{figure:CAPvsYearbyCO2_AllSp}
 \includegraphics{../output/figs/FACE_CAPvsYear_byCO2.pdf}
-\caption{Results of CAP against years by CO$_2$ for species}
+\caption{Results of CAP against years by CO$_2$ for species. $\sigma^2_1$ and $\sigma^2_2$ are canonical correlation for CAP1 and CAP2, respectively. }
 \end{figure}
 
-$\sigma^2_1$ and $\sigma^2_2$ are canonical correlation for CAP1 and CAP2, respectively. In ambient rings, species composition change from 2012 to 2014, probably due to increases in \textit{Commelina cyanea}, but not from 2014 to 2015. In eCO$_2$ rings, species composition changed every year. \textit{Commelina cyanea} increased in 2014 and 2015 compared to 2012. Also \textit{Hypoxis hygrometrica}, \textit{Hypochaeris.radicata} and \textit{Echinopogon.caespitosus} may be related to species changes between 2014 and 2015.
+In ambient rings, species composition changed from 2012 to 2014, probably due to increases in \textit{Commelina cyanea}, but not from 2014 to 2015. In eCO$_2$ rings, species composition changed every year. \textit{Commelina cyanea} increased in 2014 and 2015 compared to 2012. Also \textit{Hypoxis hygrometrica}, \textit{Hypochaeris.radicata} and \textit{Echinopogon.caespitosus} may be related to species changes between 2014 and 2015.
 
 %%%%%%%
 % PFG %
