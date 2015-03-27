@@ -27,7 +27,6 @@ opts_knit$set(root.dir=normalizePath('../'))
 % source("R/functions.R")
 % @
 
-
 %%%
 %%%
 %%%
@@ -63,5 +62,83 @@ analysis.
 
 \end{center}
 \end{landscape}
+\clearpage
+%%%%%%%%%%%%%%%%%%%%%
+% Data organisation %
+%%%%%%%%%%%%%%%%%%%%%
+\section{Data organisation}
+Here, I show the code manipulating the data set from 2015 survey and combing with 
+the previous data sets from 2013 and 2014. The origianl excel file is untouched 
+but modified on R. I needed to combine some of the columns and remove 
+unncecessary ones. It is because slightly different names are occasionally used 
+for even the same species in different excel sheets, for instance, Anagallis, Anagallis.arvensis or Anagallis.arvensis.sp. You can see the arrangements I made by following 
+the code (prcss.veg.2015.R).
+
+<<ReadScript_Process2015Data, cache=FALSE, include=FALSE>>=
+read_chunk('R/prcss.veg.2015.R')
+@
+
+<<Process2015Data, echo=TRUE, cache=FALSE, eval=FALSE, results='markup'>>=
+@
+
+\clearpage
+%%%%%%%
+% MDS %
+%%%%%%%
+\section{Multidimensional scaling (MDS)}
+MDS is also known as Principal Coordinates Analysis (PCoA). Here I present MDS results. First three axes of MDS explain 67\% of variability in original data set. Firstly, different colors are used to depict CO$_2$ treatments.
+
+% MDS for CO2 treatment
+\begin{figure}[H]\label{figure:MDS_CO2}
+\includegraphics{../output/figs/FACE_Vegetation_MDS_CO2.pdf}
+\caption{Results of MDS, showing MDS2 and 3 against MDS1}
+\end{figure}
+
+There is no evidence of CO$_2$ treatments affecting variablity in species composition. Below I show the same figure as the above, but rings are shown by different colors.
+
+% MDS for CO2 treatment
+\begin{figure}[H]\label{figure:MDS_Ring}
+\includegraphics{../output/figs/FACE_Vegetation_MDS_EachRing.pdf}
+\caption{Results of MDS for each rings}
+\end{figure}
+
+MDS1 is driven by ring differences, suggesting that variability in species composition is mainly due to spatial variability. MDS2 is driven by Year, and MDS3 is by Block (i.e., Ring 1\&2, 3\&4 and 5\&6).
+
+%%%%%%%
+% CAP %
+%%%%%%%
+\clearpage
+\Sexpr{knit_child('FACE_UnderstoreyVegetationReport_CAP.Rnw')}
+
+%%%%%%%%%%%%%
+% PFG ratio %
+%%%%%%%%%%%%%
+\section{PFG ratio}
+
+\begin{center}
+\begin{figure}[H]\label{figure:PFGRatio}
+\includegraphics{../output/figs/FACE_CO2_PFGProportion.pdf}
+\caption{Chages in proportion of PFG. Grass (C3 proportion), Forb (Legume proportion), Native plant proportion}
+\end{figure}
+\end{center}
+
+
+%%%%%%%%%%%%%
+% Diversity %
+%%%%%%%%%%%%%
+\section{Diversity index}
+
+\begin{center}
+\begin{figure}[H]\label{figure:DieversityInd}
+\includegraphics{../output/figs/FACE_CO2_DiversityIndx.pdf}
+\caption{Chages in diversity indices}
+\end{figure}
+\end{center}
+
+%%%%%%%%%%%%%%%%
+% List of figs %
+%%%%%%%%%%%%%%%%
+\clearpage
+\listoffigures
 
 \end{document}
