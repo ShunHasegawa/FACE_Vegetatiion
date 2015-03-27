@@ -226,8 +226,37 @@ p2 <- p + geom_point(size = 4) +
 
 ggsavePP(filename = "output//figs/FACE_CAPvsYear_byCO2_PFG", plot = p2,  width = 6, height = 6)
 
+# PERMANOVA----
+ambDF <- subsetD(RingSumPFGMatrix, co2 == "amb")
+ambPFG <- ambDF[, PFGName]
+ambSite <- ambDF[, !names(ambDF) %in% PFGName]
+disMatrix <- vegdist(log(ambPFG + 1), method = "bray")
+
+a2 <- adonis(disMatrix ~ year, data = ambSite, permutations = 9999)
+a2
+
+tdf <- log(ambPFG+1)
+
+n1 <- nested.npmanova(tdf ~ year + ring, data = ambSite, perm=10, method = "bray")
+
+
+?nested.npmanova
+
+disMatrix <- vegdist(log(RingSumPFGMatrix[, PFGName] + 1), method = "bray")
+Sitetdf <- RingSumPFGMatrix[, !names(RingSumPFGMatrix) %in% PFGName]
+a2 <- adonis(disMatrix ~ year + co2, data = Sitetdf, strata = Sitetdf$ring, 
+             permutations = 9999)
+a2
+
+
+
 # save all objects to create summary document later
 save.image(file = "output//Data/CAP_Object.RData")
+
+
+
+
+
 
 # vegan
 transDF <- log(RingSumPFGMatrix[, PFGName] + 1)
