@@ -73,7 +73,8 @@ pm2 <- lmer(logit(C3Pr) ~ year * co2 + (1|block) +  (1|ring) + (1|id), data = C3
 plot(pm2)
 qqnorm(resid(pm2))
 qqline(resid(pm1))
-Anova(pm2, test.statistic = "F")
+AnvF_PropC3 <- Anova(pm2, test.statistic = "F")
+AnvF_PropC3
 # improved a lot. but needs to inspect more
 
 # try different adjust values for logit transformation
@@ -98,3 +99,21 @@ PropC3_CntrstRes <- cntrstTbl(cntrst, data = tdf, variable = "C3Prop")
 PropC3_CntrstRes
 # no significant differece between treatments, but still c3 proportion decreased
 # at amb
+
+## ---- Stats_C34PropSmmry
+# The model
+pm2@call
+
+# Chisq
+Anova(pm2)
+
+# F test
+AnvF_PropC3
+
+# Contrast
+PropC3_CntrstRes
+
+# Model diagnosis
+plot(pm2)
+qqnorm(resid(pm2))
+qqline(resid(pm1))

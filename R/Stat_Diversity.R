@@ -6,8 +6,8 @@ bxplts(value = "J", xval = "ring", data = DivDF)
 
 Eml1 <- lmer(J ~ co2 * year + (1|block) + (1|ring) + (1|id), data = DivDF)
 Anova(Eml1)
-Eml2 <- stepLmer(Eml1)
-Anova(Eml2)
+AnvF_Eml <- Anova(Eml1, test.statistic = "F")
+AnvF_Eml
 summary(Eml2)
 plot(Eml2)
 qqnorm(resid(Eml2))
@@ -33,7 +33,8 @@ qqnorm(resid(Dml2))
 qqline(resid(Dml2))
 # looks a lot better. Need to inspect more about this point.
 Anova(Dml2)
-Anova(Dml2, test.statistic = "F")
+AnvF_Dml <- Anova(Dml2, test.statistic = "F")
+AnvF_Dml
 plot(allEffects(Dml2))
  # Diversity decreased in eCO2
 
@@ -67,7 +68,8 @@ qqline(resid(Sml2))
 # left bottom is off the line. what if I remove
 which(qqnorm(resid(Sml2))$y == min(qqnorm(resid(Sml2))$y))
 Sml3 <- lmer(log(S) ~ co2 * year + (1|block) + (1|ring) + (1|id), data = DivDF[-6,])
-Anova(Sml3, test.statistic = "F")
+AnvF_Sml <- Anova(Sml3, test.statistic = "F")
+AnvF_Sml
 plot(Sml3)
 qqnorm(resid(Sml3))
 qqline(resid(Sml3))
@@ -82,3 +84,36 @@ cntrst <- contrast(Sml_lme,
                    b = list(year = levels(tdf$year), co2 = "elev"))
 S_CntrstRes <- cntrstTbl(cntrst, data = tdf, variable = "S", digit = 2)
 S_CntrstRes
+
+## ---- Stats_DiversityInx_Evenness
+# Evenness
+# The initial model
+Eml1@call
+Anova(Eml1)
+# F
+AnvF_Eml
+
+## ---- Stats_DiversityInx_Diversity
+# Shannon's index
+# The model
+Dml2@call
+# Chisq
+Anova(Dml2)
+# F
+AnvF_Dml
+# Contrast
+H_CntrstRes
+
+## ---- Stats_DiversityInx_SpRichness
+Sml3@call
+# Chisq
+Anova(Sml3)
+# F test
+AnvF_Sml
+# Contrast
+S_CntrstRes
+
+# Model diagnosis
+plot(Sml3)
+qqnorm(resid(Sml3))
+qqline(resid(Sml3))

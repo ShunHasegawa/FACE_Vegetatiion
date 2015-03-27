@@ -5,12 +5,12 @@
 ######
 # CA #
 ######
-source("R/CA.analysis.R")
+# source("R/CA.analysis.R")
 
 #######
 # RDA #
 #######
-source("R/RDA.analysis.R")
+# source("R/RDA.analysis.R")
 
 ########
 # CAP  #
@@ -30,4 +30,9 @@ source("R/Stats_C3_4_Grass.R")
 #########################
 # native vs. introduced #
 #########################
-source("R/Stat_origin.R")
+# source("R/Stat_origin.R")
+
+################### 
+# Diversity index #
+###################
+source("R/Stat_Diversity.R")
