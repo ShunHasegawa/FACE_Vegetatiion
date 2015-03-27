@@ -1,10 +1,12 @@
 \documentclass[11pt]{article}
 
+% Packages
 \usepackage{fullpage}
 \usepackage{pdfpages}
 \usepackage{float}
 \usepackage[hidelinks]{hyperref}
 \usepackage{pdflscape}
+\usepackage[super]{nth} % add superscript for numbers (ex. 1st, 2nd)
 
 \title{EucFACE understorey vegetation survey}
 \author{Shun Hasegawa}
@@ -51,8 +53,8 @@ At the end I'll explain how I organised data. I'll show the code manipulating th
 \paragraph{Main preliminary findings}
 
 \begin{itemize}
-  \item Species composition changed between 1st and 2nd year in both CO$_2$ treatments
-  \item Species composition changed between 2nd and 3nd year in eCO$_2$ rings, but not in ambient
+  \item Species composition changed between \nth{1} and \nth{2} year in both CO$_2$ treatments
+  \item Species composition changed between \nth{2} and \nth{3} year in eCO$_2$ rings, but not in ambient
   \item Variability in species composition was mainly driven by Rings followed by Years and Blocks
   \item Composition of PFG changed over the years with increases in C3 grass in ambient
   \item Yearly changes in PFG composition in eCO$_2$ was not as clear as in ambient, but small indication of decreases in C4 grass. 
