@@ -7,3 +7,7 @@ output
 library
 packrat/lib*/
 *.pdf
+*tex
+*log
+*gz
+*toc
