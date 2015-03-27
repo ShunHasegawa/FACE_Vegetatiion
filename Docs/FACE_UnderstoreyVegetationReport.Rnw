@@ -1,0 +1,67 @@
+\documentclass[11pt]{article}
+
+\usepackage{fullpage}
+\usepackage{pdfpages}
+\usepackage{float}
+\usepackage[hidelinks]{hyperref}
+\usepackage{pdflscape}
+
+\title{EucFACE understorey vegetation survey}
+\author{Shun Hasegawa}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+\clearpage
+\tableofcontents
+\clearpage
+
+<<setup, include=FALSE>>=
+opts_chunk$set(concordance = TRUE, warning = FALSE, tidy = TRUE, tidy.opts = list(width.cutoff = 60))
+opts_knit$set(root.dir=normalizePath('../'))
+@
+
+% <<readFiles, include=FALSE>>=
+% source("R/Packages.R")
+% source("R/functions.R")
+% @
+
+
+%%%
+%%%
+%%%
+
+%%%%%%%%%%%%%%%%
+% Introduction %
+%%%%%%%%%%%%%%%%
+
+\section{Introduction}
+Here I sumamrise the results of EucFACE understorey vegetation survey in 2013,
+2014 and 2015. I'll start with how I organised data, then move onto statistical 
+analysis. 
+\clearpage
+
+%%%%%%%%%%%
+% Sumamry %
+%%%%%%%%%%%
+\begin{landscape}
+\section{Summary of EucFACE undersotrey vegetation survey}
+
+% Bar graph for all species
+\begin{center}
+\begin{figure}[!ht]\label{figure:VegetationBarAllSp}
+\includegraphics[height = 5.5in]{../output/figs/FACE_vegetation_CO2.pdf}
+\caption{Results of understorey vegetation for all species}
+\end{figure}
+
+% Bar graph for PFGs
+\begin{figure}[!ht]\label{figure:VegetationBarPFG}
+\includegraphics[height = 5.5in]{../output/figs/FACE_PFG_CO2.pdf}
+\caption{Results of understorey vegetation for plant functional groups}
+\end{figure}
+
+\end{center}
+\end{landscape}
+
+\end{document}
