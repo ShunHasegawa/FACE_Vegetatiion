@@ -1,3 +1,5 @@
+## ---- Process2015Data
+
 ######################
 # Organise 2015 data #
 ######################
@@ -8,9 +10,10 @@ shts <- as.vector(outer(a, LETTERS[1:4], paste, sep = "."))
 
 # raed all files
 options(java.parameters = "-Xmx100m") # increase java memory
-veg.2015.raw <- ldply(shts, function(x) 
-  read.veg.xlx(file = "Data/Result_FACE_Vegetation_Datasheet_2015.xlsx",
-               sheetName = x), .progress = "text")
+veg.2015.raw <- ldply(shts, function(x){ 
+  read.veg.xlx(file = "Data/Result_FACE_Vegetation_Datasheet_2015.xlsx", 
+               sheetName = x)}, 
+  .progress = "text")
 
 Spp <- names(veg.2015.raw)[!names(veg.2015.raw) %in% c("cell", "position")]
 
@@ -185,9 +188,10 @@ vdf <- within(vdf, {
 # save----
 save(vdf, file = "output//Data/FACE_Vegetation_Raw_2013_2015.RData")
 
-########################################################
-# Create df including plant characteristis (e.g. PFGs) #
-########################################################
+##############################
+# Create df including plant  #
+# characteristis (e.g. PFGs) #
+##############################
 vdf.mlt <- melt(vdf, id = c("year", "ring", "plot", "position", "cell"))
 
 # plant properties
