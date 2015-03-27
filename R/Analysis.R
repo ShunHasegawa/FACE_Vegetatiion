@@ -76,3 +76,6 @@ source("R//Figs.R")
 # Stats #
 #########
 source("R/Stats.R")
+
+# save all objects. This will be used when creating a summary document
+save.image(file = "output//Data/AllObj.RData")
