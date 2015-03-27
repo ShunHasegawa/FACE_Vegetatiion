@@ -24,7 +24,7 @@ capList <- list()
 for (i in 1:3){
   disMatrix <- DisMatrix_Year[[i]]
   envDF <- subset(RingSumVeg, year == names(DisMatrix_Year)[i])
-  capList[[i]] <- CAPdiscrim(disMatrix ~ co2, data = envDF, permutations = 9999)
+  capList[[i]] <- CAPdiscrim(disMatrix ~ co2, data = envDF, permutations = 1000)
   
   # add canonical correlation
   capList[[i]]$CanonicalCorSq <- CanonicalCor(CAPRes = capList[[i]], EnvDF = envDF, 
