@@ -41,14 +41,14 @@ library(car)
 %%%%%%%%%%%%%%%%
 
 \section{Introduction}
-Here I sumamrise the results of EucFACE understorey vegetation survey in 2013,
-2014 and 2015. I performed multivariate analysis (MDS and CAP). I also anlaysed proportion of plant functional groups (PFG) and diversity indices. 
-At the end I'll explain how I organised data. I'll show the code manipulating the data set from 2015 survey and combining with the previous data sets from 2013 and 2014. I needed to combine some of the columns and remove unncecessary ones. It is because slightly different names are occasionally used for even the same species in different excel sheets.
+Here I summarise the results of EucFACE understorey vegetation survey in 2013,
+2014 and 2015. I performed multivariate analysis (MDS and CAP). I also analysed proportion of plant functional groups (PFG) and diversity indices. 
+At the end I'll explain how I organised data. I'll show the code manipulating the data set from 2015 survey and combining with the previous data sets from 2013 and 2014. I needed to combine some of the columns and remove unnecessary ones. It is because slightly different names are occasionally used for even the same species in different excel sheets.
 
 %%%%%%%%%%%
 % Sumamry %
 %%%%%%%%%%%
-\section{Summary of EucFACE undersotrey vegetation survey}
+\section{Summary of EucFACE understorey vegetation survey}
 
 \paragraph{Main preliminary findings}
 
@@ -92,7 +92,7 @@ MDS is also known as Principal Coordinates Analysis (PCoA). Here I present MDS r
 \caption{Results of MDS, showing MDS2 and 3 against MDS1}
 \end{figure}
 
-There is no evidence of CO$_2$ treatments affecting variablity in species composition. Below I show the same figure as the above, but rings are shown by different colors.
+There is no evidence of CO$_2$ treatments affecting variability in species composition. Below I show the same figure as the above, but rings are shown by different colors.
 
 % MDS for CO2 treatment
 \begin{figure}[H]\label{figure:MDS_Ring}
@@ -113,12 +113,12 @@ MDS1 is driven by ring differences, suggesting that variability in species compo
 %%%%%%%%%%%%%
 
 \section{PFG ratio}
-The above CAP analysis showed a small indication of CO$_2$ effects on changes in PFG composition. Hence here I explore proportion of PFG. In order analyise proportion data with random factors, I should use generalised linear mixced model (GLMM), but the results indicate overdispersion of the data. There is no straightforwad solution for GLMM with overdispersion, so I conducted linear mixed-effects models (LMM) after logit-transforming data and checked constant variance and normality of errors (that are often highly violated with proportion data) by inspecting a residual-fitted plot and q-q plot. 
+The above CAP analysis showed a small indication of CO$_2$ effects on changes in PFG composition. Hence here I explore proportion of PFG. In order analyse proportion data with random factors, I should use generalised linear mixed model (GLMM), but the results indicate overdispersion of the data. There is no straightforward solution for GLMM with overdispersion, so I conducted linear mixed-effects models (LMM) after logit-transforming data and checked constant variance and normality of errors (that are often highly violated with proportion data) by inspecting a residual-fitted plot and q-q plot. 
 
 \begin{center}
 \begin{figure}[H]\label{figure:PFGRatio}
 \includegraphics{../output/figs/FACE_CO2_PFGProportion.pdf}
-\caption{Chages in proportion of PFG. Grass (C3 proportion), Forb (Legume proportion), Native plant proportion}
+\caption{Changes in proportion of PFG. Grass (C3 proportion), Forb (Legume proportion), Native plant proportion}
 \end{figure}
 \end{center}
 
@@ -140,7 +140,7 @@ I analysed three diversity indices: Pielou's evenness, species richness (number 
 \begin{center}
 \begin{figure}[H]\label{figure:DieversityInd}
 \includegraphics{../output/figs/FACE_CO2_DiversityIndx.pdf}
-\caption{Chages in diversity indices}
+\caption{Changes in diversity indices}
 \end{figure}
 \end{center}
 
@@ -152,25 +152,25 @@ There was no evidence of CO$_2$ effect on evenness.
 \subsection{Diversity}
 <<Stats_DiversityInx_Diversity, cache=FALSE, results='markup'>>=
 @
-There was a signifincat Year$\times$CO$_2$ interaction. Although post-hoc test showed that there was no difference between CO$_2$ treatments for each year, diversity decreased over the years in eCO$_2$ rings.
+There was a significant Year$\times$CO$_2$ interaction. Although post-hoc test showed that there was no difference between CO$_2$ treatments for each year, diversity decreased over the years in eCO$_2$ rings.
 
 \subsection{Species richness}
-Species richness, or the number os species, is a count, so I should use GLMM. However the data were hihgly overdispersed. As mentioned above for proportion data, I run LMM with log transformation and checked model assumptions with a residual-fitted plot and q-q plot
+Species richness, or the number of species, is a count, so I should use GLMM. However the data were highly overdispersed. As mentioned above for proportion data, I run LMM with log transformation and checked model assumptions with a residual-fitted plot and q-q plot
 
 <<Stats_DiversityInx_SpRichness, cache=FALSE, results='markup', fig.width=3, fig.height=3, fig.show='hold'>>=
 @
 
-There was a significant Year$\times$CO$_2$ interaction effect. Post-hoc test showed no significant difference between treatmetns for each year, but species richness decreased more in eCO$_2$ rings.
+There was a significant Year$\times$CO$_2$ interaction effect. Post-hoc test showed no significant difference between treatments for each year, but species richness decreased more in eCO$_2$ rings.
 
 %%%%%%%%%%%%%%%%%%%%%
 % Data organisation %
 %%%%%%%%%%%%%%%%%%%%%
 \clearpage
 \section{Data organisation}
-Here, I show the code manipulating the data set from 2015 survey and combiningg with 
-the previous data sets from 2013 and 2014. The origianl excel file is untouched 
+Here, I show the code manipulating the data set from 2015 survey and combining with 
+the previous data sets from 2013 and 2014. The original excel file is untouched 
 but modified on R. I needed to combine some of the columns and remove 
-unncecessary ones. It is because slightly different names are occasionally used 
+unnecessary ones. It is because slightly different names are occasionally used 
 for even the same species in different excel sheets, for instance, Anagallis, Anagallis.arvensis or Anagallis.arvensis.sp. You can see the arrangements I made by following 
 the code (prcss.veg.2015.R). Please note that data inspection has not been completed. I just did a quick modification to make it good enough to get the idea how the whole data look like. Please let me know if you find something weird or wrong, for example wrong spelling, wrong species name, combining wrong species etc.
 
