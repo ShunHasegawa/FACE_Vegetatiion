@@ -1,122 +1,124 @@
-plt.veg <- within(plt.veg, {
-  co2 <- factor(ifelse(ring %in% c(1, 4, 5), "elev", "amb"))
-  block <- recode(ring, "1:2 = 'A'; 3:4 = 'B'; 5:6 = 'C'")
-})
-
-Spp <- names(plt.veg)[!grepl("year|ring|plot|block|co2", names(plt.veg))]
-spDF <- plt.veg[, Spp]
-
-Sites <- names(plt.veg)[grepl("year|ring|plot|block|co2", names(plt.veg))]
-siteDF <- plt.veg[, Sites]
+head(PlotSumVeg)
 
 #################
 # Dissimilarity #
 #################
-# Compute dissimiliraity for each plot between 2012 and 2013
+# Compute dissimiliraity for each plot between 2012 & 2014 and 2014 & 2015
+
+tdf <- PlotSumVeg[1:2, ]
+
+vegdist(log(tdf[, SppName] + 1), method = "bray")
 
 # compute dissimilarity for each plot
-disDF <- ddply(plt.veg, .(block, ring, co2, plot), 
-               function(x) vegdist(x[, Spp], method = "altGower"))
-names(disDF)[5] <- "BC"
+disDF <- ddply(PlotSumVeg, .(block, ring, co2, plot), 
+               function(x) {
+                 df1 <- subset(x, year %in% c(2012, 2014))
+                 dis1 <- vegdist(log(df1[, SppName] + 1), method = "bray")
+                 df2 <- subset(x, year %in% c(2014, 2015))
+                 dis2 <- vegdist(log(df2[, SppName] + 1), method = "bray")
+                 dfs <- data.frame(year = c("Year1", "Year2"), BC = c(dis1, dis2))
+                 return(dfs)
+                 })
 
-boxplot(BC ~ ring, data = disDF)
+# perform LMM----
+boxplot(BC ~ ring:year, data = disDF)
+bxplts(value = "BC", xval = "co2", data = disDF)
+bxplts(value = "BC", xval = "ring", data = disDF)
+  # log seems better
 
-# perform LMM
-m1 <- lmer(BC ~ co2 + (1|block), data = disDF)
-summary(m1)
-Anova(m1)
-Anova(m1, test.statistic = "F")
-plot(m1)
-# no co2 effect, but dissimlarity was slightly higher at eCO2
+disDF$id <- disDF$ring:disDF$plot
+m1 <- lmer(log(BC) ~ co2 * year + (1|block) + (1|ring) + (1|id), data = disDF)
+m2 <- lmer(log(BC) ~ co2 + year + (1|block) + (1|ring) + (1|id), data = disDF)
+anova(m1, m2)
+summary(m2)
+Anova(m2)
+Anova(m2, test.statistic = "F")
+plot(m2)
+qqnorm(resid(m2))
+qqline(resid(m2))
+# one obvious outlier. what if I remove
+which(qqnorm(resid(m2))$x == max(qqnorm(resid(m2))$x))
+m3 <- lmer(log(BC) ~ co2 * year + (1|block) + (1|ring) + (1|id), data = disDF[-32, ])
+plot(m3)
+qqnorm(resid(m3))
+qqline(resid(m3))
+# improved
+summary(m3)
+Anova(m3)
+# result is not hugely different to the above. so just stay with the above
 
-# fit soil moisture data
+# fit soil moisture data---
 
 # load soil moisture data
 load("Data/FACE_TDR_ProbeDF.RData")
 summary(FACE_TDR_ProbeDF)
 soilDF <- subsetD(FACE_TDR_ProbeDF, Sample == "vegetation" & 
-                    Date <= as.Date("2013-12-31") &
-                    Date >= as.Date("2013-1-1"))
-soilDF$plot <- as.factor(soilDF$plot)
-MoistDF <- ddply(soilDF, .(ring, plot), summarise, Moist = mean(Moist, na.rm = TRUE))
-plot(Moist ~ ring, data = MoistDF)
+                    Date >= as.Date("2013-1-1") &
+                    Date <= as.Date("2014-12-31"))
+
+soilDF <- within(soilDF, {
+  plot <- factor(plot)
+  year <- factor(ifelse(year(Date) == "2013", "Year1", "Year2"))
+})
+
+MoistDF <- ddply(soilDF, .(year, ring, plot), summarise, Moist = mean(Moist, na.rm = TRUE))
+boxplot(Moist ~ year:ring, data = MoistDF)
 
 # merge data frame
-vsDF <- merge(disDF, MoistDF, by = c("ring", "plot"))
+vsDF <- merge(disDF, MoistDF, by = c("ring", "plot", "year"))
 
 # fit to the model
-plot(BC ~ Moist, vsDF, col = co2, pch = 16)
-plot(log(BC) ~ log(Moist), vsDF, col = co2, pch = 16)
+theme_set(theme_bw())
+p <- ggplot(data = vsDF, aes(x = log(Moist), y = BC, col = co2, shape = year))
+p <- ggplot(data = vsDF, aes(x = log(Moist), y = BC, col = co2))
+p <- ggplot(data = vsDF, aes(x = Moist, y = BC, col = co2))
+p2 <- p + geom_point(size = 4) + geom_smooth(aes(fill = co2), method  = "lm") + 
+  facet_grid(.~block)
+p2
 
-m1 <- lmer(log(BC) ~ co2 * log(Moist) + (1|block) + (1|ring), data = vsDF)
-m2 <- lmer(log(BC) ~ co2 + log(Moist) + (1|block) + (1|ring), data = vsDF)
+
+
+
+m1 <- lmer(BC ~ year * co2 * log(Moist) + (1|block) + (1|ring) + (1|id), data = vsDF)
+mm2 <- lmer(BC ~ (year + co2 + log(Moist))^2 + (1|block) + (1|ring) + (1|id), data = vsDF)
+mm_1 <- lmer(BC ~ year + co2 + Moist + I(Moist^2) + (1|block) + (1|ring) + (1|id), data = vsDF)
+mm_2 <- lmer(BC ~ year + co2 + Moist + (1|block) + (1|ring) + (1|id), data = vsDF)
+mm_3 <- lmer(BC ~ year + co2 + (1|block) + (1|ring) + (1|id), data = vsDF)
+Anova(mm_1)
+Anova(mm_2)
+Anova(mm4)
+AIC(mm_1, mm4, mm_2, mm_3)
+
+
+
+AIC(mm4)
+drop1(mm2)
+mm3 <- update(mm2, ~.-year:co2)
+drop1(mm3)
+mm4 <- update(mm3, ~.-co2:log(Moist))
+drop1(mm4)
+Anova(mm4, test.statistic = "F")
+plot(allEffects(mm4))
+plot(mm4)
+
+
+
+anova(m1, mm2)
+Anova(mm2)
+
+
+m2 <- lmer(log(BC) ~ co2 + log(Moist) + (1|block) + (1|ring) + (1|id), data = vsDF)
+anova(m1, m2)
 Anova(m2)
 Anova(m2, test.statistic = "F")
 summary(m2)
-# no variation is explained by random factors
-m3 <- lm(log(BC) ~ log(Moist), data = vsDF)
-summary.lm(m3)
+plot(m2)
+qqnorm(resid(m2))
+qqline(resid(m2))
+plot(allEffects(m2))
 library(visreg)
-visreg(m3, trans = exp)
-# negative correlation with moisture
+visreg(m2)
 
-#######################
-# Diversity & eveness #
-#######################
-vegDF <- plt.veg[, Spp]
-siteDF <- plt.veg[, Sites]
-siteDF$id <- siteDF$ring:siteDF$plot
-
-DivDF <- within(siteDF,{
-  H <- diversity(vegDF) # Shannon's index
-  S <- specnumber(vegDF) # number of spp
-  J <- H/log(S)  # Pielou's evenness
-})
-
-###############
-## Diversity ##
-###############
-boxplot(H ~ co2*year, data = DivDF)
-boxplot(H ~ year * ring, data = DivDF)
-h1 <- lmer(H ~ co2 * year + (1|block) + (1|ring) + (1|id), data = DivDF)
-Anova(h1)
-Anova(h1, test.statistic = "F")
-  # diversity slightly dicreased at eCO2
-
-####################
-## number of spp. ##
-####################
-boxplot(S ~ co2*year, data = DivDF)
-boxplot(S ~ year * ring, data = DivDF)
-boxplot(log(S) ~ year * ring, data = DivDF)
-
-s1 <- glmer(S ~ co2 * year + (1|block) + (1|ring) + (1|id), family = poisson(), 
-            data = DivDF)
-s2 <- glmer(S ~ co2 + year + (1|block) + (1|ring) + (1|id), family = poisson(), 
-            data = DivDF)
-anova(s1, s2)
-anova(s1)
-anova(s2)
-# number of spp decreased in thd 2nd year but no significant co2 effect
-
-s3 <- lmer(log(S) ~ co2 * year + (1|block) + (1|ring) + (1|id), data = DivDF)
-anova(s3)
-
-#############
-## eveness ##
-#############
-boxplot(J ~ co2*year, data = DivDF)
-boxplot(J ~ year * ring, data = DivDF)
-
-j1 <- lmer(J ~ co2 * year + (1|block) + (1|ring) + (1|id), data = DivDF)
-j2 <- lmer(J ~ co2 + year + (1|block) + (1|ring) + (1|id), data = DivDF)
-anova(j1, j2)
-Anova(j2)
-Anova(j2, test.statistic = "F")
-plot(j1) # not very good..
-# no significant co2 effect, but may decreased eveness slightly
-
-plot(H ~ J, data = DivDF)
 
 #############
 # PERMANOVA #
