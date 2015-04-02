@@ -44,18 +44,26 @@ PlotSumVeg <- ddply(veg.face, .(year, block, co2, ring, plot, id), function(x) c
 RingSumVeg <- ddply(PlotSumVeg, .(year, block, co2, ring), function(x) colSums(x[, SppName]))
 
 # PFG matrix----
-RingSumPFGMatrix <- dcast(year + block + co2 + ring ~ PFG, 
+
+# plot
+PlotSumPFGMatrix <- dcast(year + block + co2 + ring + plot ~ PFG, 
                           data = subset(veg, !is.na(PFG)), sum)
-colSums(RingSumPFGMatrix[,5:12])
+colSums(PlotSumPFGMatrix[,6:13])
 
 # remove lichen and wood, also add interaction term
-RingSumPFGMatrix <- within(RingSumPFGMatrix, {
+PlotSumPFGMatrix <- within(PlotSumPFGMatrix, {
   Lichen = NULL
   wood = NULL
   c3_4 = NULL
   yco = year:co2
 })
+
 PFGName <- c("c3", "c4", "legume", "moss", "Non_legume")
+
+# ring
+RingSumPFGMatrix <- ddply(PlotSumPFGMatrix, .(year, block, ring, co2, yco), 
+                          function(x) colSums(x[, PFGName]))
+  
 
 # Diversity & eveness----
 vegDF <- PlotSumVeg[, SppName]
