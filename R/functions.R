@@ -268,3 +268,8 @@ cntrstTbl <- function(cntrstRes, data, variable, ...){
     variable = variable)
   return(Df)
 }
+
+#######################
+# Compute R2 for GLMM #
+#######################
+source("R/rsquaredglmm.R")
