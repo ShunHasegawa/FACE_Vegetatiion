@@ -1,0 +1,9 @@
+2/4/2015
+-Dissimilarity seems to have negative correlation with moisture in each year, but when a whole data is analysed it showed a positive correlation.
+-Which transformation should I use
+  -log-log
+  -2nd polynomial
+-Moisture is completely different bewteen years
+-Shuld I try to fit other environmental variables?
+  -Light
+  -Temperature
