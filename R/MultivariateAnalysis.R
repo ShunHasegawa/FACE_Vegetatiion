@@ -3,18 +3,6 @@ head(PlotSumVeg)
 #################
 # Dissimilarity #
 #################
-# Compute dissimiliraity for each plot between 2012 & 2014 and 2014 & 2015
-
-
-YearDssmlrty <- function(x, spp) {
-  df1 <- subset(x, year %in% c(2012, 2014))
-  dis1 <- vegdist(log(df1[, spp] + 1), method = "bray")
-  df2 <- subset(x, year %in% c(2014, 2015))
-  dis2 <- vegdist(log(df2[, spp] + 1), method = "bray")
-  dfs <- data.frame(year = c("Year1", "Year2"), BC = c(dis1, dis2))
-  return(dfs)
-}
-
 
 # compute dissimilarity for each plot
 disDF <- ddply(PlotSumVeg, .(block, ring, co2, plot), function(x) YearDssmlrty(x, spp = SppName))
@@ -60,15 +48,20 @@ soilDF <- within(soilDF, {
   year <- factor(ifelse(year(Date) == "2013", "Year1", "Year2"))
 })
 
-MoistDF <- ddply(soilDF, .(year, ring, plot), summarise, Moist = mean(Moist, na.rm = TRUE))
-boxplot(Moist ~ year:ring, data = MoistDF)
+MoistTempDF <- ddply(soilDF, .(year, ring, plot), summarise, 
+                     Moist = mean(Moist, na.rm = TRUE),
+                     Temp = mean(Temp_Mean, na.rm = TRUE))
+boxplot(Moist ~ year:ring, data = MoistTempDF)
 
 # merge data frame
-vsDF <- merge(disDF, MoistDF, by = c("ring", "plot", "year"))
+vsDF <- merge(disDF, MoistTempDF, by = c("ring", "plot", "year"))
 vsDF$id <- with(vsDF, ring:plot)
 
 # fit to the model
 theme_set(theme_bw())
+
+# against Moist----
+# raw data
 p <- ggplot(data = vsDF, aes(x = Moist, y = BC, col = co2, shape = year))
 p2 <- p + geom_point(size = 4) + geom_smooth(aes(fill = co2), method  = "lm") 
 p2
@@ -76,38 +69,66 @@ p2
 p <- ggplot(data = vsDF, aes(x = log(Moist), y = log(BC), col = co2, shape = year))
 p2 <- p + geom_point(size = 4) + geom_smooth(aes(fill = co2), method  = "lm") 
 p2
-# log or 2nd polynomial
 
+# against Temp----
+# raw
+p <- ggplot(data = vsDF, aes(x = Temp, y = BC, col = co2, shape = year))
+p2 <- p + geom_point(size = 4) + geom_smooth(aes(fill = co2), method  = "lm") 
+p2
 # log
-Sp1 <- lmer(log(BC) ~ co2 * log(Moist) + (1|block) + (1|ring) + (1|id), data = vsDF)
-Sp2 <- update(Sp1, ~. -co2:log(Moist))
-Anova(Sp2)
-plot(Sp2)
+p <- ggplot(data = vsDF, aes(x = log(Temp), y = log(BC), col = co2, shape = year))
+p2 <- p + geom_point(size = 4) + geom_smooth(aes(fill = co2), method  = "lm") 
+p2
+# not much difference in temperature between years
 
-# 2nd polynomial
-Sp_pl1 <- lmer(BC ~ co2 * (Moist + I(Moist^2)) + (1|block) + (1|ring) + (1|id), data = vsDF)
-Sp_pl2 <- stepLmer(Sp_pl1)
-summary(Sp_pl2)
-Anova(Sp_pl2)
-plot(Sp_pl2)
+# There's small indication of positive correlation in Year2 adn negative
+# correlation in Year1.
+# Analyse each year separately----
+vsDF$logMoist <- log(vsDF$Moist)
+mls <- dlply(vsDF, .(year), function(x) {
+  tdf <- x
+  lmer(log(BC) ~ co2 + logMoist + (1|block) + (1|ring), data = tdf)
+})
+llply(mls, Anova)
+# moisture effects are not significant when analysed separately, so do not worry
+# about yearly difference in correlation for the time being
+
+################
+## Fit models ##
+################
+# log----
+m1 <- lmer(log(BC) ~ co2 * logMoist + (1|block) + (1|ring) + (1|id), data = vsDF)
+Anova(m1)
+m2 <- update(m1, ~. - co2:logMoist)
+Anova(m2)
+Anova(m2, test.statistic = "F")
+
+# 2nd polynomial----
+m3 <- lmer(BC ~ co2 * (Moist + I(Moist^2)) + (1|block) + (1|ring) + (1|id), data = vsDF)
+Anova(m3)
+m4 <- lmer(BC ~ co2 + Moist + I(Moist^2) + (1|block) + (1|ring) + (1|id), data = vsDF)
+Anova(m4)
+Anova(m4, test.statistic = "F")
+
+# compare two models
+ListMl <- list(m2, m4)
+names(ListMl) <- c("log", "2nd Polynomial")
 
 # model diagnosis
-MList <- list(Sp2, Sp_pl2)
-names(MList) <- c("log-log", "2nd polynomial")
-
+plot(m2)
+plot(m4)
 par(mfrow = c(1, 2))
-l_ply(names(MList), function(x) {
-  ls <- MList[[x]]
-  qqnorm(resid(ls), main = x)
-  qqline(resid(ls))
+l_ply(names(ListMl), function(x) {
+  l <- ListMl[[x]]
+  qqnorm(resid(l), main = x)
+  qqline(resid(l))
 })
+ldply(ListMl, r.squared)
 
-# squared r
-ldply(MList, r.squared.merMod)
+visreg(m2, xvar = "logMoist", xtrans = exp, trans = exp, by = "co2", overlay = TRUE)
+visreg(m4, xvar = "Moist", by = "co2", overlay = TRUE)
+# no huge difference but log seems slightly better so use log
 
-# log-log is better
-visreg(Sp2, xvar = "Moist", by = "co2", overlay = TRUE, 
-       line = list(col = c("blue", "red")), points = list(col = c("blue", "red")))
 
 ###########################
 # Plant Functional Groups #
@@ -122,18 +143,19 @@ disDF <- ddply(PlotSumPFGMatrix, .(block, ring, co2, plot),
 disDF$id <- with(disDF, ring:plot)
 
 # combine with moisture data
-summary(MoistDF)
-PFG_vsDF <- merge(disDF, MoistDF, by = c("ring", "plot", "year"))
+summary(MoistTempDF)
+PFG_vsDF <- merge(disDF, MoistTempDF, by = c("ring", "plot", "year"))
 
 theme_set(theme_bw())
 p <- ggplot(data = PFG_vsDF, aes(x = log(Moist), y = log(BC), col = co2, shape = year))
-p2 <- p + geom_point(size = 4) + geom_smooth(method = "lm") + facet_grid(.~ block)
+p2 <- p + geom_point(size = 4) + geom_smooth(method = "lm")
 p2
 # it seems that BC goes up till moisture of 0.1, then goes down. may be
 # secon-plynomial might be appropriate
 p <- ggplot(data = PFG_vsDF, aes(x = Moist, y = BC, col = co2))
 p2 <- p + geom_point(size = 4) + 
   geom_smooth(method = "lm", formula = y ~ poly(x, 2, raw = TRUE))
+p2
 
 #################
 ## perform LMM ##
@@ -141,63 +163,59 @@ p2 <- p + geom_point(size = 4) +
 
 # log-log----
 Pfg_ll1 <- lmer(log(BC) ~ co2 * log(Moist) + (1|block) + (1|ring) + (1|id), data = PFG_vsDF)
-plot(Pfg_ll1)
 Anova(Pfg_ll1)
 Anova(Pfg_ll1, test.statistic = "F")
 
 # 2nd polynomial----
 Pfg_pl1 <- lmer(BC ~ co2 * (Moist + I(Moist^2)) + (1|block) + (1|ring) + (1|id), data = PFG_vsDF)
-Pfg_pl2 <- stepLmer(Pfg_pl1)
-summary(Pfg_pl2)
+Pfg_pl2 <- update(Pfg_pl1, ~. - co2:I(Moist^2))
+anova(Pfg_pl1, Pfg_pl2)
 Anova(Pfg_pl2)
+
+# model diagnosis----
+ListMl <- list(Pfg_ll1, Pfg_pl2)
+names(ListMl) <- c("log-log", "2nd polynomial")
+
+plot(Pfg_ll1)
 plot(Pfg_pl2)
-
-# model diagnosis
-Pfg_pl2 <- lmer(BC ~ co2 * I(Moist^2) + Moist + (1|block) + (1|ring) + (1|id), data = PFG_vsDF)
-pfgMlList <- list(Pfg_ll1, Pfg_pl2)
-names(pfgMlList) <- c("log-log", "2nd polynomial")
-
+  # indication of curvature..
 par(mfrow = c(1, 2))
-l_ply(names(pfgMlList), function(x) {
-  ls <- MList[[x]]
-  qqnorm(resid(ls), main = x)
-  qqline(resid(ls))
+l_ply(names(ListMl), function(x) {
+  l <- ListMl[[x]]
+  qqnorm(resid(l), main = x)
+  qqline(resid(l))
 })
+# squared R
+ldply(ListMl, r.squared)
+llply(ListMl, summary)
 
-# what about squared r
-ldply(pfgMlList, r.squared.merMod)
-# 2n polynomial is very slightly better, it also uses one more parameter than
-# the log-log
-
-# not much difference betwween the above two models so just stay with log-log to
-# be consisitent with species dissimilarity
-
-# predicted values
 par(mfrow = c(1, 2))
-l_ply(names(pfgMlList), function(x) {
-  visreg(pfgMlList[[x]], xvar = "Moist", by = "co2", overlay = TRUE, 
-       line = list(col = c("blue", "red")), 
-       points = list(col = c("blue", "red")),
-       main = x,
-       legend = FALSE)
-  legend("bottomright", legend = c("amb", "co2"), col = c("blue", "red"), 
-         lty = 1, bty = "n")
-  })
+visreg()
+
+# although r.squared is slightly higher for 2nd plynomial, the number of 
+# parameters is also bigger (5 vs. 4). Also, qqplot looks slightly better (?)
+# for log-log. So use log.
+visreg(Pfg_ll1, xvar = "Moist", trans = exp, by = "co2", overlay = TRUE)
+visreg(Pfg_pl2, xvar = "Moist", by = "co2", overlay = TRUE)
 
 # create a plot with confidense intervals
 range(PFG_vsDF$Moist)
-expDF <- expand.grid(co2 = c("amb", "elev"), Moist = seq(0.03, 0.2, length.out = 100))
+expDF <- expand.grid(co2 = c("amb", "elev"), Moist = seq(0.03, 0.2, length.out = 50))
 bb <- bootMer(Pfg_ll1, FUN = function(x) predict(x, expDF, re.form = NA), nsim=500)
-lci <- apply(bb$t, 2, quantile, 0.025)
-uci <- apply(bb$t, 2, quantile, 0.975)
+lci <- exp(apply(bb$t, 2, quantile, 0.025))
+uci <- exp(apply(bb$t, 2, quantile, 0.975))
 BC <- exp(bb$t0)
 predDF <- cbind(lci, uci, BC, expDF)
 
 p <- ggplot(data = PFG_vsDF, aes(x = log(Moist), y = log(BC), col = co2, fill = co2))
-p2 <- p + geom_point(size = 4) +
-  geom_ribbon(aes(ymin = lci, x = log(Moist), ymax = uci), alpha = .4, data = predDF)
+p2 <- p + geom_point(size = 3) +
+  geom_line(aes(x = log(Moist), y = log(BC)), data = predDF) +
+  geom_ribbon(aes(ymin = log(lci), ymax = log(uci), x = log(Moist)), 
+              alpha = .2, color = NA, data = predDF) +
+  scale_color_manual(values = c("blue", "red")) +
+  scale_fill_manual(values = c("blue", "red"))
 p2
-
+ggsavePP(filename = "output//figs/PFG_DissimPredVal_Moist", plot = p2, width = 6, height = 4)
 
 #############
 # PERMANOVA #
