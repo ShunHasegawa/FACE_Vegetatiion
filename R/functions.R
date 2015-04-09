@@ -273,3 +273,17 @@ cntrstTbl <- function(cntrstRes, data, variable, ...){
 # Compute R2 for GLMM #
 #######################
 source("R/rsquaredglmm.R")
+
+
+########################
+# Yearly dissimilarity #
+########################
+# Compute dissimilarity for each plot between 2012 & 2014 and 2014 & 2015
+YearDssmlrty <- function(x, spp) {
+  df1 <- subset(x, year %in% c(2012, 2014))
+  dis1 <- vegdist(log(df1[, spp] + 1), method = "bray")
+  df2 <- subset(x, year %in% c(2014, 2015))
+  dis2 <- vegdist(log(df2[, spp] + 1), method = "bray")
+  dfs <- data.frame(year = c("Year1", "Year2"), BC = c(dis1, dis2))
+  return(dfs)
+}
