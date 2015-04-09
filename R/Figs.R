@@ -287,7 +287,7 @@ ggsavePP(filename = "output/figs/FACE_DissmVs.Moist", width = 4, height = 4,
          plot = p2)
 
 #######
-# MDS #
+# PCoA #
 #######
 
 # ring sum
@@ -296,76 +296,76 @@ RngVegdf <- ddply(veg.face, .(year, ring, co2), function(x) colSums(x[, SppName]
 RngSppDF <- RngVegdf[, SppName]
 RngSiteDF <- RngVegdf[, !names(RngVegdf) %in% SppName]
 
-# peform MDS
+# peform PCoA
 
-# MDS <- cmdscale(d = vegdist(RngSppDF, method = "altGower"), eig = TRUE)
+# PCoA <- cmdscale(d = vegdist(RngSppDF, method = "altGower"), eig = TRUE)
 
-MDS <- cmdscale(d = vegdist(log(RngSppDF + 1), method = "bray"), eig = TRUE, k = 3)
-MDS$GOF
-MDS$eig
-ExpVars <- round(MDS$eig[1:3] * MDS$GOF[2]/(sum(MDS$eig[1:3])) * 100, 2)
+PCoA <- cmdscale(d = vegdist(log(RngSppDF + 1), method = "bray"), eig = TRUE, k = 3)
+PCoA$GOF
+PCoA$eig
+ExpVars <- round(PCoA$eig[1:3] * PCoA$GOF[2]/(sum(PCoA$eig[1:3])) * 100, 2)
 
 # Note: GOF is given as belows 
-# MDS$GOF[1] at k = 3
-sum(MDS$eig[1:3])/sum(abs(MDS$eig))
+# PCoA$GOF[1] at k = 3
+sum(PCoA$eig[1:3])/sum(abs(PCoA$eig))
 
-# MDS$GOF[2] at k = 2
-eig2 <- ifelse(MDS$eig < 0, 0, MDS$eig)
-sum(MDS$eig[1:3])/sum(eig2)
+# PCoA$GOF[2] at k = 2
+eig2 <- ifelse(PCoA$eig < 0, 0, PCoA$eig)
+sum(PCoA$eig[1:3])/sum(eig2)
 
-# MDS <- cmdscale(d = vegdist(log(RngSppDF + 1), method = "bray"), eig = TRUE, k = 11)
+# PCoA <- cmdscale(d = vegdist(log(RngSppDF + 1), method = "bray"), eig = TRUE, k = 11)
 
 
 # this transformation and dissimilarity is more interpretable than above...
 
-MDSs <- cbind(RngSiteDF, MDS1 = MDS$points[, 1], 
-                          MDS2 = MDS$points[, 2],
-                          MDS3 = MDS$points[, 3])
-MDSDF <- melt(MDSs, id = c("year", "ring", "co2", "MDS1"))
-MDSDF$variable <- factor(MDSDF$variable, levels = c("MDS2", "MDS3"), 
-                         labels = paste("MDS",  c(2, 3), " (", ExpVars[2:3], " %)", sep = ""))
+PCoAs <- cbind(RngSiteDF, PCoA1 = PCoA$points[, 1], 
+                          PCoA2 = PCoA$points[, 2],
+                          PCoA3 = PCoA$points[, 3])
+PCoADF <- melt(PCoAs, id = c("year", "ring", "co2", "PCoA1"))
+PCoADF$variable <- factor(PCoADF$variable, levels = c("PCoA2", "PCoA3"), 
+                         labels = paste("PCoA",  c(2, 3), " (", ExpVars[2:3], " %)", sep = ""))
 
 # make plots ----
 
 # reorder df according to year
-MDSDF <- MDSDF[order(MDSDF$year), ]
+PCoADF <- PCoADF[order(PCoADF$year), ]
 
 # connect the same ring in different years
-p <- ggplot(data = MDSDF, aes(x = MDS1, y = value, shape = year, col = co2))
+p <- ggplot(data = PCoADF, aes(x = PCoA1, y = value, shape = year, col = co2))
 p2 <- p + 
   geom_point(size = 3) + 
   scale_color_manual(values = c("blue", "red"), labels = c("Ambient", expression(eCO[2]))) +
   science_theme +
-  labs(x = paste("MDS1 (", ExpVars[1]," %)", sep = ""), 
-       y = "MDS axis") +
+  labs(x = paste("PCoA1 (", ExpVars[1]," %)", sep = ""), 
+       y = "PCoA axis") +
   theme(legend.position = "top",
         legend.box = "horizontal",
         legend.box.just = "left") +
   facet_grid(. ~variable)
 p3 <- p2 + geom_path(aes(group = ring))
-ggsavePP(filename = "output/figs/FACE_Vegetation_MDS_Ring", width = 6, height = 6, 
+ggsavePP(filename = "output/figs/FACE_Vegetation_PCoA_Ring", width = 6, height = 6, 
          plot = p3)
 
 # make area for each pairs of amb and elev for each year
-chulDF <- ddply(MDSDF, .(year, co2, variable), 
-                function(x) {chx <- chull(x[c("MDS1", "value")]) 
+chulDF <- ddply(PCoADF, .(year, co2, variable), 
+                function(x) {chx <- chull(x[c("PCoA1", "value")]) 
                              chxDF <- data.frame(rbind(x[chx,], x[chx[1], ]))
                              return(chxDF)})
 p4 <- p2 + geom_polygon(data = chulDF, alpha = .1)
-ggsavePP(filename = "output/figs/FACE_Vegetation_MDS_CO2", width = 6, height = 6, 
+ggsavePP(filename = "output/figs/FACE_Vegetation_PCoA_CO2", width = 6, height = 6, 
          plot = p4)
 
 # different colors for each ring
-p <- ggplot(data = MDSDF, aes(x = MDS1, y = value, shape = year, col = ring))
+p <- ggplot(data = PCoADF, aes(x = PCoA1, y = value, shape = year, col = ring))
 p2 <- p + 
   geom_point(size = 3) + 
   geom_path(aes(group = ring)) +
   science_theme +
-  labs(x = paste("MDS1 (", ExpVars[1]," %)", sep = ""), 
-       y = "MDS axis") +
+  labs(x = paste("PCoA1 (", ExpVars[1]," %)", sep = ""), 
+       y = "PCoA axis") +
   theme(legend.position = "top",
         legend.box = "horizontal",
         legend.box.just = "left") +
   facet_grid(. ~variable) 
-ggsavePP(filename = "output/figs/FACE_Vegetation_MDS_EachRing", width = 6, height = 6, 
+ggsavePP(filename = "output/figs/FACE_Vegetation_PCoA_EachRing", width = 6, height = 6, 
          plot = p2)
