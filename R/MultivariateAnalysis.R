@@ -157,9 +157,34 @@ p2 <- p + geom_point(size = 4) +
   geom_smooth(method = "lm", formula = y ~ poly(x, 2, raw = TRUE))
 p2
 
+############################
+## what if I include year ##
+############################
+PFG_vsDF$logMoist <- log(PFG_vsDF$Moist)
+m1 <- lmer(log(BC) ~ co2 * year * logMoist + (1|block) + (1|ring) + (1|id), data = PFG_vsDF)
+m2 <- stepLmer(m1)
+Anova(m2)
+Anova(m2, test.statistic = "F")
+plot(allEffects(m2))
+# no moisture effect. Large proportion of variability is explained by moisture
+
+# each year----
+Mlist <- dlply(PFG_vsDF, .(year), function(x) {
+  dfs <- x
+  lmer(log(BC) ~ co2 + logMoist + (1|block) + (1|ring), data = x)
+  })
+llply(Mlist, Anova)
+llply(Mlist, summary)
+# negative moisture effect only in the first year... this is contradictive to
+# the overall trend (i.e., it was really dry in the Year2 and dissimilarity was
+# quite low compared to Year1, so overall treand of dissimilarity against
+# moisture is positive)--> need more inspection
+
 #################
 ## perform LMM ##
 #################
+
+# fit log and 2nd polynomial
 
 # log-log----
 Pfg_ll1 <- lmer(log(BC) ~ co2 * log(Moist) + (1|block) + (1|ring) + (1|id), data = PFG_vsDF)
