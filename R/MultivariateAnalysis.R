@@ -178,7 +178,7 @@ llply(Mlist, summary)
 # negative moisture effect only in the first year... this is contradictive to
 # the overall trend (i.e., it was really dry in the Year2 and dissimilarity was
 # quite low compared to Year1, so overall treand of dissimilarity against
-# moisture is positive)--> need more inspection
+# moisture is positive)--> need more inspection 
 
 #################
 ## perform LMM ##
@@ -223,7 +223,9 @@ visreg()
 visreg(Pfg_ll1, xvar = "Moist", trans = exp, by = "co2", overlay = TRUE)
 visreg(Pfg_pl2, xvar = "Moist", by = "co2", overlay = TRUE)
 
-# create a plot with confidense intervals
+# create a plot with confidense intervals----
+
+# DF for predicted values
 range(PFG_vsDF$Moist)
 expDF <- expand.grid(co2 = c("amb", "elev"), Moist = seq(0.03, 0.2, length.out = 50))
 bb <- bootMer(Pfg_ll1, FUN = function(x) predict(x, expDF, re.form = NA), nsim=500)
@@ -233,7 +235,7 @@ BC <- exp(bb$t0)
 predDF <- cbind(lci, uci, BC, expDF)
 
 p <- ggplot(data = PFG_vsDF, aes(x = log(Moist), y = log(BC), col = co2, fill = co2))
-p2 <- p + geom_point(size = 3) +
+p2 <- p + geom_point(size = 3) + 
   geom_line(aes(x = log(Moist), y = log(BC)), data = predDF) +
   geom_ribbon(aes(ymin = log(lci), ymax = log(uci), x = log(Moist)), 
               alpha = .2, color = NA, data = predDF) +
