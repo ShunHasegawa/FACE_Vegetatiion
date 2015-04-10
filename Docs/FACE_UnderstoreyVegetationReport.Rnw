@@ -115,12 +115,11 @@ PCoA1 is driven by ring differences, suggesting that variability in species comp
 \section{PFG ratio}
 The above CAP analysis showed a small indication of CO$_2$ effects on changes in PFG composition. Hence here I explore proportion of PFG. In order analyse proportion data with random factors, I should use generalised linear mixed model (GLMM), but the results indicate overdispersion of the data. There is no straightforward solution for GLMM with overdispersion, so I conducted linear mixed-effects models (LMM) after logit-transforming data and checked constant variance and normality of errors (that are often highly violated with proportion data) by inspecting a residual-fitted plot and q-q plot. 
 
-\begin{center}
 \begin{figure}[H]\label{figure:PFGRatio}
-\includegraphics{../output/figs/FACE_CO2_PFGProportion.pdf}
-\caption{Changes in proportion of PFG. Grass (C3 proportion), Forb (Legume proportion), Native plant proportion}
+  \centering
+  \includegraphics{../output/figs/FACE_CO2_PFGProportion.pdf}
+  \caption{Changes in proportion of PFG. Grass (C3 proportion), Forb (Legume proportion),     Native plant proportion}
 \end{figure}
-\end{center}
 
 \subsection{C3:C4 ratio}
 Here I analyse C3 and C4 grass proportion.
@@ -137,12 +136,11 @@ There was a significant Year$\times$CO$_2$ interaction. Although post-hoc test s
 \section{Diversity index}
 I analysed three diversity indices: Pielou's evenness, species richness (number of species) and Shannon's index (\textit{H'}).
 
-\begin{center}
 \begin{figure}[H]\label{figure:DieversityInd}
-\includegraphics{../output/figs/FACE_CO2_DiversityIndx.pdf}
-\caption{Changes in diversity indices}
+  \centering
+  \includegraphics{../output/figs/FACE_CO2_DiversityIndx.pdf}
+  \caption{Changes in diversity indices}
 \end{figure}
-\end{center}
 
 \subsection{Evenness}
 <<Stats_DiversityInx_Evenness, cache=FALSE, results='markup'>>=
@@ -161,6 +159,19 @@ Species richness, or the number of species, is a count, so I should use GLMM. Ho
 @
 
 There was a significant Year$\times$CO$_2$ interaction effect. Post-hoc test showed no significant difference between treatments for each year, but species richness decreased more in eCO$_2$ rings.
+
+%%%%%%%%%%%%%%%%%
+% Dissimilarity %
+%%%%%%%%%%%%%%%%%
+\clearpage
+\section{Dissimilarity}
+Dissimilarity between each year, or yearly changes of plant community, was computed for each plot, compared between CO$_2$ treatments. I analysed dissimilarity in species composition  and also PFG composition. Dissimilarity dramatically decreased in the 2nd year, indicating vegetation did not change in 2014 compared to 2013. This was probably because 2014 was very dry year. The change in plant community in 2013 likely to have resulted in a decrease in diversity as shown above.  
+
+\begin{figure}[H]\label{figure:Dissimilarity_AllSpp}
+  \centering
+  \includegraphics{../output/figs/FACE_BC_Dissimilarity_CO2.pdf}
+  \caption{Changes in Bray-Curtis dissimilarity}
+\end{figure}
 
 %%%%%%%%%%%%%%%%%%%%%
 % Data organisation %
