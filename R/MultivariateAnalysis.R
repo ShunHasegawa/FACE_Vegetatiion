@@ -7,6 +7,10 @@ head(PlotSumVeg)
 # compute dissimilarity for each plot
 disDF <- ddply(PlotSumVeg, .(block, ring, co2, plot), function(x) YearDssmlrty(x, spp = SppName))
 
+################
+## CO2 x Year ##
+################
+
 # perform LMM----
 boxplot(BC ~ ring:year, data = disDF)
 bxplts(value = "BC", xval = "co2", data = disDF)
@@ -33,6 +37,10 @@ qqline(resid(m3))
 summary(m3)
 Anova(m3)
 # result is not hugely different to the above. so just stay with the above
+
+############
+## ANCOVA ##
+############
 
 # fit soil moisture data---
 
@@ -138,13 +146,13 @@ PFGName
 
 # compute dissimilarity for each plot
 
-disDF <- ddply(PlotSumPFGMatrix, .(block, ring, co2, plot), 
+Pfg_disDF <- ddply(PlotSumPFGMatrix, .(block, ring, co2, plot), 
                function(x) YearDssmlrty(x, spp = PFGName))
-disDF$id <- with(disDF, ring:plot)
+Pfg_disDF$id <- with(Pfg_disDF, ring:plot)
 
 # combine with moisture data
 summary(MoistTempDF)
-PFG_vsDF <- merge(disDF, MoistTempDF, by = c("ring", "plot", "year"))
+PFG_vsDF <- merge(Pfg_disDF, MoistTempDF, by = c("ring", "plot", "year"))
 
 theme_set(theme_bw())
 p <- ggplot(data = PFG_vsDF, aes(x = log(Moist), y = log(BC), col = co2, shape = year))
@@ -243,6 +251,38 @@ p2 <- p + geom_point(size = 3) +
   scale_fill_manual(values = c("blue", "red"))
 p2
 ggsavePP(filename = "output//figs/PFG_DissimPredVal_Moist", plot = p2, width = 6, height = 4)
+
+##########
+# Figure #
+##########
+# summary df---
+disDF$type <- "All species"
+PFG_vsDF$type <- "PFG"
+
+disDF_Ring <- ldply(list(disDF, PFG_vsDF), function(x) {
+  ddply(x, .(type, year, co2, ring), summarise, BC = mean(BC))
+})
+
+disDF_CO2 <- ddply(disDF_Ring, .(type, year, co2), summarise, 
+                   Mean = mean(BC), 
+                   SE = ci(BC)[4], 
+                   N = sum(!is.na(BC)))
+
+# plot----
+PsDdg <- .3
+p <- ggplot(data = disDF_CO2, aes(x = year, y = Mean, fill = co2))
+p2 <- p +  
+  geom_errorbar(aes(x = year, ymax = Mean + SE, ymin = Mean - SE), 
+                position = position_dodge(PsDdg), 
+                width = 0) +
+  geom_point(size = 3, position = position_dodge(PsDdg), shape = 21) +
+  scale_fill_manual(values = c("white", "black"), labels = c("Ambient", expression(eCO[2]))) + 
+  labs(x = "Year", y = "Bray–Curtis dissimilarity") + 
+  facet_wrap(~ type, scale = "free_y") + 
+  science_theme + 
+  theme(legend.position = c(.85, .85))
+ggsavePP(filename = "output/figs/FACE_BC_Dissimilarity_CO2", plot = p2,
+         width = 4, height = 2.5)
 
 #############
 # PERMANOVA #
