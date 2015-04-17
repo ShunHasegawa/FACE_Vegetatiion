@@ -99,19 +99,21 @@ l_ply(seq(0.001, 0.002, length.out = 9), TryAdj)
 
 summary(PropFm3)
 Anova(PropFm3)
-# model simplification
-PropFm4 <- stepLmer(PropFm3)
-summary(PropFm4)
-plot(PropFm4)
-qqnorm(resid(PropFm4))
-qqline(resid(PropFm4))
+Anv_PropLeg <- Anova(PropFm3, test.statistic = "F")
+Anv_PropLeg
+# nothing is significant
 
 ## ---- Stats_ForbPropSmmry
 # The model
-PropFm4@call
-  # nothing was significant
+PropFm3@call
+
+# Chi-sq
+Anova(PropFm3)
+
+# F test
+Anv_PropLeg
 
 # model diagnosis
-plot(PropFm4)
-qqnorm(resid(PropFm4))
-qqline(resid(PropFm4))
+plot(PropFm3)
+qqnorm(resid(PropFm3))
+qqline(resid(PropFm3))
