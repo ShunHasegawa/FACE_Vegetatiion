@@ -1,4 +1,6 @@
-theme_set(theme_bw())
+theme_set(theme_bw() + 
+            theme(panel.grid.major = element_blank(), 
+                  panel.grid.minor = element_blank()))
 
 # define graphic background
 science_theme <- theme(panel.border = element_rect(color = "black"),
