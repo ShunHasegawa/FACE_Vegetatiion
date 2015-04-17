@@ -1,19 +1,7 @@
-head(FACE.veg.rslt)
-
-# Create legume, non_legume summary DF
-
-# Only forbs (remove shrubs)
-
-# PFG_plot sum for legume and non_legume forbes wihtought unknown spp
-PFGPltSum <- ddply(subsetD(FACE.veg.rslt, form == "Forb" & PFG %in% c("legume", "Non_legume")),
-                   .(year, co2, block, ring, plot, id, PFG), summarise, 
-                   value = sum(value, na.rm = TRUE))
-
-# cast and make data frame for anlysis
-LgmDF <- cast(PFGPltSum, year + co2 + block +  ring + plot + id ~ PFG)
+head(PlotSumPFGMatrix)
 
 # y value for glm
-LgmDF$yv <- cbind(LgmDF$legume, LgmDF$Non_legume)
+LgmDF <- within(PlotSumPFGMatrix,{yv <- cbind(legume, Non_legume)})
 
 ##################################
 # try glm without rondom factors #
@@ -23,11 +11,7 @@ summary(glm1)
 # highly overdispersed
 glm2 <- glm(yv ~ year * co2, data = LgmDF, family = quasibinomial)
 summary(glm2)
-glm3 <- update(glm2, ~. - year:co2)
-anova(glm2, glm3, test = "Chisq")
-anova(glm2, glm3, test = "F")
-par(mfrow = c(2, 2))
-plot(glm3)
+plot(glm2)
 # no co2 effect
 
 ##########################
@@ -55,55 +39,79 @@ plot(m2)
 #######################################################
 # no good solution now so, just simply use proportion #
 #######################################################
-
 LgmDF$LegPr <- with(LgmDF, legume/(legume + Non_legume))
 
-par(mfrow = c(2, 2))
+# plot var against mean
+tdf <- ddply(LgmDF, .(year, ring), summarise, 
+             Mean = mean(LegPr), Var = var(LegPr))
+plot(Var ~ Mean, data = tdf) # not looking like binormial pattern
 
+# boxplot
+par(mfrow = c(2, 2))
 boxplot(LegPr ~ year:ring, data = LgmDF, main = "raw")
 boxplot(asin(LegPr) ~ year:ring, data = LgmDF, main = "arcsin")
 boxplot(logit(LegPr) ~ year:ring, data = LgmDF, main = "logit")
+# no distictive difference, try one by one
 
-pm1 <- lmer(LegPr ~ year * co2 + (1|block) +  (1|ring) + (1|id), data = LgmDF)
-summary(pm1)
-Anova(pm1)
-Anova(pm1, test.statistic = "F")
-plot(pm1)
-# little bit wedge patter
+# raw
+PropFm1 <- lmer(LegPr ~ year * co2 + (1|block) +  (1|ring) + (1|id), data = LgmDF)
+plot(PropFm1)
+qqnorm(resid(PropFm1))
+qqline(resid(PropFm1))
+# wedged pattern
 
 # arc sin transformation
-pm2 <- lmer(asin(LegPr) ~ year * co2 + (1|block) +  (1|ring) + (1|id), data = LgmDF)
-summary(pm2)
-Anova(pm2)
-Anova(pm2, test.statistic = "F")
-plot(pm2)
-qqnorm(resid(pm2))
-qqline(resid(pm2))
-# slightly improved...
+PropFm2 <- lmer(asin(LegPr) ~ year * co2 + (1|block) +  (1|ring) + (1|id), data = LgmDF)
+plot(PropFm2)
+qqnorm(resid(PropFm2))
+qqline(resid(PropFm2))
+# no difference from the above
 
 # logit
-pm3 <- lmer(logit(LegPr, adjust = 0.001) ~ year * co2 + (1|block) +  (1|ring) + (1|id), data = LgmDF)
-summary(pm3)
-Anova(pm3)
-plot(pm3)
-qqnorm(resid(pm3))
-qqline(resid(pm3))
-# slightly better than above
-Anova(pm3)
-# there don't seem to be co2 effect anyway
+PropFm3 <- lmer(logit(LegPr, adjust = 0.001) ~ year * co2 + (1|block) +  (1|ring) + (1|id), data = LgmDF)
+plot(PropFm3)
+qqnorm(resid(PropFm3))
+qqline(resid(PropFm3))
+# improved a lot so use this
+summary(PropFm3)
+Anova(PropFm3)
+# no co2 effect
 
+# what if I remove one value off the q-q line
+which(qqnorm(resid(PropFm3))$y == max(qqnorm(resid(PropFm3))$y))
+tdf <- LgmDF[-4, ]
+PropFm3_2 <- lmer(logit(LegPr, adjust = 0.001) ~ year * co2 + (1|block) +  (1|ring) + (1|id), data = tdf)
+plot(PropFm3_2)
+qqnorm(resid(PropFm3_2))
+qqline(resid(PropFm3_2))
+Anova(PropFm3_2)
+# no difference
+
+# different adjustment value
+TryAdj <- function(adj) {
+  m <- lmer(logit(LegPr, adjust = adj) ~ year * co2 + (1|block) +  (1|ring) + (1|id), data = LgmDF)
+  qqnorm(resid(m), main = paste("Adjust = ", adj))
+  qqline(resid(m))
+}
+par(mfrow = c(3, 3))
+l_ply(seq(0.001, 0.002, length.out = 9), TryAdj)
+# not much difference around .001 so just sty with .001
+
+summary(PropFm3)
+Anova(PropFm3)
 # model simplification
-pm4 <- stepLmer(pm3)
-summary(pm4)
-plot(pm4)
-qqnorm(resid(pm4))
-qqline(resid(pm4))
+PropFm4 <- stepLmer(PropFm3)
+summary(PropFm4)
+plot(PropFm4)
+qqnorm(resid(PropFm4))
+qqline(resid(PropFm4))
 
-# anothe glm which handles overdispersion(?)
-library(MASS)
-t1 <- glmmPQL(yv ~ co2 * year, random = ~1|block/ring/id, family = binomial, 
-              data = LgmDF)
-summary(t1)
-plot(t1)
-qqnorm(resid(t1))
-qqline(resid(t1))
+## ---- Stats_ForbPropSmmry
+# The model
+PropFm4@call
+  # nothing was significant
+
+# model diagnosis
+plot(PropFm4)
+qqnorm(resid(PropFm4))
+qqline(resid(PropFm4))
