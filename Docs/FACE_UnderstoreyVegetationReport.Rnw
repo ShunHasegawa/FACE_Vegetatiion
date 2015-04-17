@@ -27,6 +27,7 @@ opts_knit$set(root.dir=normalizePath('../'))
 <<ReadScripts, cache=FALSE, include=FALSE>>=
 read_chunk('R/prcss.veg.2015.R')
 read_chunk("R/Stats_C3_4_Grass.R")
+read_chunk("R/Stats_Legume.R")
 read_chunk("R/Stat_Diversity.R")
 load("output//Data/AllObj.RData")
 library(car)
@@ -128,6 +129,14 @@ Here I analyse C3 and C4 grass proportion.
 @
 
 There was a significant Year$\times$CO$_2$ interaction. Although post-hoc test showed no significant difference between CO$_2$ treatments for each year, C3 ratio seems to have increased in eCO$_2$ in relative to ambient rings. This is consistent with the above CAP analysis.
+
+\subsection{Legume:Non-legume ratio}
+<<Stats_ForbPropSmmry, echo=TRUE, message=FALSE, results='markup', fig.width = 3, fig.height=3, fig.show='hold'>>=
+@
+There was no Year or CO$_2$ effects on the proportion of legume and non-leguminous forbs.
+
+\subsection{Native:Introduced ratio}
+The ratio of native and introduced species have not been analysed yet as there are some species that I still haven't figured out native or introduced. 
 
 %%%%%%%%%%%%%%%%%%%
 % Diversity Index %
