@@ -8,10 +8,10 @@ Eml1 <- lmer(J ~ co2 * year + (1|block) + (1|ring) + (1|id), data = DivDF)
 Anova(Eml1)
 AnvF_Eml <- Anova(Eml1, test.statistic = "F")
 AnvF_Eml
-summary(Eml2)
-plot(Eml2)
-qqnorm(resid(Eml2))
-qqline(resid(Eml2))
+summary(Eml1)
+plot(Eml1)
+qqnorm(resid(Eml1))
+qqline(resid(Eml1))
 
 #############
 # Diversity #
