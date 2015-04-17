@@ -287,3 +287,119 @@ YearDssmlrty <- function(x, spp) {
   dfs <- data.frame(year = c("Year1", "Year2"), BC = c(dis1, dis2))
   return(dfs)
 }
+
+#######################################
+# Use special symbols with facet_wrap #
+#######################################
+facet_wrap_labeller <- function(gg.plot,labels=NULL) {
+  #works with R 3.0.1 and ggplot2 0.9.3.1
+  require(gridExtra)
+  
+  g <- ggplotGrob(gg.plot)
+  gg <- g$grobs      
+  strips <- grep("strip_t", names(gg))
+  
+  for(ii in seq_along(labels))  {
+    modgrob <- getGrob(gg[[strips[ii]]], "strip.text", 
+                       grep=TRUE, global=TRUE)
+    gg[[strips[ii]]]$children[[modgrob$name]] <- editGrob(modgrob,label=labels[ii])
+  }
+  
+  g$grobs <- gg
+  class(g) = c("arrange", "ggplot",class(g)) 
+  g
+}
+
+###################################
+# df to create a circle on ggplot #
+###################################
+circleFun <- function(center = c(0,0),diameter = 1, npoints = 100){
+  r = diameter / 2
+  tt <- seq(0,2*pi,length.out = npoints)
+  xx <- center[1] + r * cos(tt)
+  yy <- center[2] + r * sin(tt)
+  return(data.frame(x = xx, y = yy))
+}
+
+
+#####################################################
+# make df to set ranges of x and y axies for biplot #
+#####################################################
+rangeDF <- function(df, xv = "CAP1", yv = "CAP2", year = "2012"){
+  ddply(df, .(co2), function(x) {
+    xyrange <- c(range(x[, xv]), range(x[, yv]))
+    MaxAbs <- max(abs(xyrange)) # highest absolute value
+    xydf <- data.frame(CAP1 = c(MaxAbs, -MaxAbs), 
+                       CAP2 = c(MaxAbs, -MaxAbs), 
+                       year = year) 
+    return(xydf)}
+  )
+}
+
+#############################################
+# Compute Species correlation with CAP axes #
+#############################################
+SpScorCorFun <- function(CapSpScorDF, CorVal = .7, co2) {
+  # CorVal is threshhold for correlation
+  # CapSpScorDF is species score from CAP analysis
+  spdf <- data.frame(CAP1 = CapSpScorDF[, 1],
+                     CAP2 = CapSpScorDF[, 2], 
+                     Spp = row.names(CapSpScorDF), 
+                     co2 = co2)
+  spdf <- spdf[complete.cases(spdf), ]
+  # set threshhold for correlation
+  spdf <- subset(spdf, abs(CAP1) > CorVal|abs(CAP2) > CorVal)
+  return(spdf)
+}
+
+
+###################################
+# Create species correlation plot #
+###################################
+SpCorpPlot <- function(df, xv = "CAP1", yv = "CAP2", textpos = 1.07) {
+  # textpos adjusts species names position in the grap
+  df$xval <- df[, xv]
+  df$yval <- df[, yv]
+  
+  df <- within(df, {
+    # position for species names
+    xval2 <- xval * textpos
+    yval2 <- yval * textpos
+  })
+  
+  p <- ggplot(data = df, aes(xval, yval))
+  CorPl <- p + 
+    geom_segment(aes(x = 0, y = 0, xend = xval, yend = yval), 
+                 arrow = arrow(length = unit(.1, "cm")),
+                 alpha = .7) +
+    geom_path(data = circleFun(diameter = 2), aes(x, y), alpha = .7) +
+    geom_text(data = df, 
+              aes(x = xval2, y = yval2, label = Spp),
+              size = 2, fontface = "bold.italic", 
+              colour = "red", alpha = .7, lineheight = .7) +
+    coord_fixed() +
+    facet_wrap(~co2, scales = "free") +
+    labs(x = "Correlation with CAP1", y = "Correlation with CAP2") +
+    theme(plot.margin=unit(c(0, 0.5, 0, 0), "lines"),
+          strip.background = element_blank(),
+          strip.text.x = element_blank(), 
+          axis.title.y = element_text(lineheight = 1.2))
+  return(CorPl)
+}
+
+##########################
+# Create CAP result plot #
+##########################
+CapPlot <- function(df){
+  p <- ggplot(df, aes(x = CAP1, y = CAP2, fill = year, col = year))
+  p2 <- p + geom_point(size = 3) + 
+    geom_blank(aes(x = CAP1, y = CAP2), data = rangeDF(df)) +
+    facet_wrap(~co2, scales = "free") +
+    theme(legend.position = "top", 
+          legend.direction = "horizontal",
+          plot.margin=unit(c(0, 0.5, 0, 0.5), "lines"), 
+          axis.title.y = element_text(lineheight = 1.2)) +
+    coord_fixed()
+  return(p2)
+}
+

@@ -51,7 +51,7 @@ p2 <- p + geom_point(size = 4) +
 # label_bquote can only take one variable. Hence I concatenated those two above
 # (e.g. 2012_0.597). Now I split this using strsplit and call each element
 # separately within label_bquote (e.g.strsplit(x, "_")[[1]][1] = "2012")
-ggsavePP(filename = "output//figs/FACE_CAPvsCO2_byYear", plot = p2,  width = 6, height = 4)
+ggsavePP(filename = "output//figs/FACE_CAPvsCO2_byYear", plot = p2,  width = 6, height = 3)
 
 # each co2 treatment separately----
 
@@ -90,34 +90,31 @@ CapCo2df <- ldply(c("amb", "elev"), function(x) {
 
 # species score (correlation between ld1 and species abundance (after
 # transformation))
-CapCo2SppScore <- ldply(c("amb", "elev"), function(x) {
-  df <- capSppScore_co2[[x]]
-  spdf <- data.frame(CAP1 = df[, 1], CAP2 = df[, 2], 
-                     Spp = row.names(df), 
-                     co2 = x, 
-                     year = "Scaled species Score")
-  spdf <- spdf[complete.cases(spdf), ]
-  # set threshhold for correlation
-  subset(spdf, abs(CAP1) > .6|abs(CAP2) > .6)
-})  
-CapCo2SppScore$co2 <- factor(CapCo2SppScore$co2, labels = levels(CapCo2df$co2))
+CapCo2SppScore <- ldply(c("amb", "elev"), 
+                        function(x) SpScorCorFun(CapSpScorDF = capSppScore_co2[[x]], 
+                                                 CorVal = .7, co2 = x))
 
-p <- ggplot(CapCo2df, aes(x = CAP1, y = CAP2, fill = year, col = year))
-p2 <- p + geom_point(size = 2) + 
-  geom_text(data = CapCo2SppScore, aes(x = CAP1 * 6, y = CAP2 * 2, label = Spp),
-            size = 2) +
-  facet_grid(.~co2,
-             labeller = label_bquote(.(strsplit(x, "_")[[1]][1])~
-                                       (list(sigma[1]^2==.(strsplit(x, "_")[[1]][2]),
-                                             sigma[2]^2==.(strsplit(x, "_")[[1]][3])
-                                             ) # list is used to insert ","
-                                        )
-                                     )
-             ) +
-  theme(legend.position = "top", 
-        legend.direction = "horizontal")
+# correlation plot----
+CapCo2SppScore$Spp <- gsub("[.]", "\n",as.character(CapCo2SppScore$Spp))
+  # species names are long so write in two lines
 
-ggsavePP(filename = "output//figs/FACE_CAPvsYear_byCO2", plot = p2,  width = 6, height = 6)
+## Species correlation plot
+CorPl <- SpCorpPlot(df = CapCo2SppScore, textpos = 1.3) + 
+  xlim(-1.4, 1.4) + ylim(-1.4, 1.4)
+  
+## CAP plot
+p2 <- CapPlot(df = CapCo2df)
+p2 <- facet_wrap_labeller(p2, 
+                          labels = c(
+                            expression(paste("Ambient (" , 
+                                             sigma[1]^2=="0.970", ",", 
+                                             ~sigma[2]^2=="0.007", ")")),
+                            expression(paste(eCO[2], " (", 
+                                             sigma[1]^2=="0.986", ",", 
+                                             ~sigma[2]^2=="0.670", ")"))))
+  
+p3 <- arrangeGrob(p2, CorPl)
+ggsavePP(filename = "output//figs/FACE_CAPvsYear_byCO2", plot = p3,  width = 7, height = 7)
 
 #######
 # PFG #
@@ -159,7 +156,7 @@ p2 <- p + geom_point(size = 4) +
                                        (sigma^2==.(strsplit(x, "_")[[1]][2])))) 
 
 ggsavePP(filename = "output//figs/FACE_CAPvsCO2_byYear_PFG", 
-         plot = p2,  width = 6, height = 4)
+         plot = p2,  width = 6, height = 3)
 
 # each co2 treatments separately----
 
@@ -184,7 +181,7 @@ for (i in 1:2){
   rm(envDF, disMatrix)
 }
 
-# create a plot
+# create a plot----
 names(PFGcapList_co2) <- c("amb", "elev")
 names(PFGcapSppScore_co2) <- c("amb", "elev")
 
@@ -195,36 +192,24 @@ PFGCapCo2df <- ldply(names(PFGcapList_co2), function(x) {
              co2 = paste(x, sqCor[1], sqCor[2], sep = "_"))
 })
 
+# species correlation plot
 # species score
-PFGCapCo2SppScore <- ldply(c("amb", "elev"), function(x) {
-  df <- PFGcapSppScore_co2[[x]]
-  spdf <- data.frame(CAP1 = df[, 1],
-                     CAP2 = df[, 2],
-                     PFG = row.names(df), 
-                     co2 = x,  
-                     year = "Scaled species score")
-  spdf <- spdf[complete.cases(spdf), ]
-  spdf
-})  
-PFGCapCo2SppScore$co2 <- factor(PFGCapCo2SppScore$co2, labels = levels(PFGCapCo2df$co2))
+PFGCapCo2SppScore <- ldply(c("amb", "elev"), function(x)
+  SpScorCorFun(CapSpScorDF = PFGcapSppScore_co2[[x]], co2 = x, CorVal = 0) 
+)
+SpPlot <- SpCorpPlot(df = PFGCapCo2SppScore)
 
-p <- ggplot(PFGCapCo2df, aes(x = CAP1, y = CAP2, col = year))
-p2 <- p + geom_point(size = 4) + 
-  geom_text(data = PFGCapCo2SppScore, 
-            aes(x = CAP1 * 2.5, y = CAP2, label = PFG), 
-            size = 3) +
-  facet_grid(.~co2,
-             labeller = label_bquote(.(strsplit(x, "_")[[1]][1])~
-                                       (list(sigma[1]^2==.(strsplit(x, "_")[[1]][2]),
-                                             sigma[2]^2==.(strsplit(x, "_")[[1]][3])
-                                       ) # list is used to insert ","
-                                       )
-             )
-  ) +
-  theme(legend.position = "top", 
-        legend.direction = "horizontal")
-
-ggsavePP(filename = "output//figs/FACE_CAPvsYear_byCO2_PFG", plot = p2,  width = 6, height = 6)
+# CAP plot
+p <- CapPlot(df = PFGCapCo2df)
+p2 <- facet_wrap_labeller(p, labels = c(
+                            expression(paste("Ambient (" , 
+                                       sigma[1]^2=="0.704", ",", 
+                                       ~sigma[2]^2=="0.018", ")")),
+                            expression(paste(eCO[2], " (", 
+                                             sigma[1]^2=="0.430", ",", 
+                                             ~sigma[2]^2=="0.010", ")"))))
+p3 <- arrangeGrob(p2, SpPlot)
+ggsavePP(filename = "output//figs/FACE_CAPvsYear_byCO2_PFG", plot = p3,  width = 7, height = 7)
 
 # PERMANOVA----
 ambDF <- subsetD(RingSumPFGMatrix, co2 == "amb")

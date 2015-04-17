@@ -10,3 +10,7 @@
 
 9/4/2015
 -Dissimilarity was not significantly correlated with moisture when analysed each year separately, so just a whole data set was analysed together without year factor.
+
+17/4/2015
+- CAP
+rescaling species score loooks more complex than I thought, and it seems to take some time to sort out. Probably possible using "capscale", but which scales to be used appears to depends on researchers. Beside taking eigen value into account for rescaling may not be that important for CAP as species correlation looks small anyway (but may not be always) when eighen value and also canonical correlaiton is small. 
