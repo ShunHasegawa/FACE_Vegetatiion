@@ -55,6 +55,7 @@ PlotSumPFGMatrix <- within(PlotSumPFGMatrix, {
   Lichen = NULL
   wood = NULL
   c3_4 = NULL
+  id = ring:plot
   yco = year:co2
 })
 
