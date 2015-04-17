@@ -99,9 +99,13 @@ CapCo2SppScore$Spp <- gsub("[.]", "\n",as.character(CapCo2SppScore$Spp))
   # species names are long so write in two lines
 
 ## Species correlation plot
-CorPl <- SpCorpPlot(df = CapCo2SppScore, textpos = 1.3) + 
-  xlim(-1.4, 1.4) + ylim(-1.4, 1.4)
+xyrange <- seq(-1.5, 1.5, .5)
+xylabels <- c("", xyrange[c(-1, -7)], "")
   
+CorPl <- SpCorpPlot(df = CapCo2SppScore, textpos = 1.3) + 
+  scale_x_continuous(breaks = xyrange, labels = xylabels, limits = c(-1.4, 1.4)) + 
+  scale_y_continuous(breaks = xyrange, labels = xylabels, limits = c(-1.4, 1.4))
+
 ## CAP plot
 p2 <- CapPlot(df = CapCo2df)
 p2 <- facet_wrap_labeller(p2, 
