@@ -33,7 +33,7 @@ for (i in 1:3){
 }
 
 # create a plot
-names(capList) <- c("2012", "2014", "2015")
+names(capList) <- c("2013", "2014", "2015")
 
 CapYeardf <- ldply(names(capList), function(x) {
   lst <- capList[[x]]
@@ -49,11 +49,13 @@ p2 <- p + geom_point(size = 4) +
              labeller = label_bquote(.(strsplit(x, "_")[[1]][1])~(sigma^2==.(strsplit(x, "_")[[1]][2])))) 
 # I need to two values to create labels: year and canonical correlation, but
 # label_bquote can only take one variable. Hence I concatenated those two above
-# (e.g. 2012_0.597). Now I split this using strsplit and call each element
-# separately within label_bquote (e.g.strsplit(x, "_")[[1]][1] = "2012")
+# (e.g. 2013_0.597). Now I split this using strsplit and call each element
+# separately within label_bquote (e.g.strsplit(x, "_")[[1]][1] = "2013")
 ggsavePP(filename = "output//figs/FACE_CAPvsCO2_byYear", plot = p2,  width = 6, height = 3)
 
-# each co2 treatment separately----
+#################################
+# each co2 treatment separately #
+#################################
 
 # create distance matrix
 DisMatrix_co2 <- dlply(RingSumVeg, .(co2), 
@@ -111,11 +113,11 @@ p2 <- CapPlot(df = CapCo2df)
 p2 <- facet_wrap_labeller(p2, 
                           labels = c(
                             expression(paste("Ambient (" , 
-                                             sigma[1]^2=="0.970", ",", 
-                                             ~sigma[2]^2=="0.007", ")")),
+                                             sigma[1]^2=="0.984", ",", 
+                                             ~sigma[2]^2=="0.214", ")")),
                             expression(paste(eCO[2], " (", 
-                                             sigma[1]^2=="0.986", ",", 
-                                             ~sigma[2]^2=="0.670", ")"))))
+                                             sigma[1]^2=="0.992", ",", 
+                                             ~sigma[2]^2=="0.012", ")"))))
   
 p3 <- arrangeGrob(p2, CorPl)
 ggsavePP(filename = "output//figs/FACE_CAPvsYear_byCO2", plot = p3,  width = 7, height = 7)
@@ -137,6 +139,7 @@ for (i in 1:3){
   envDF <- subset(RingSumPFGMatrix, year == names(PFG_DisMatrix_Year)[i])
   PFGcapList[[i]] <- CAPdiscrim(disMatrix ~ co2, 
                              data = envDF,
+                             axes = 3,
                              permutations = 1000)
   # add canonical correlation
   PFGcapList[[i]]$CanonicalCorSq <- CanonicalCor(CAPRes = PFGcapList[[i]],
@@ -145,7 +148,7 @@ for (i in 1:3){
 }
 
 # create a plot
-names(PFGcapList) <- c("2012", "2014", "2015")
+names(PFGcapList) <- c("2013", "2014", "2015")
 
 PFGCapYeardf <- ldply(names(PFGcapList), function(x) {
   lst <- PFGcapList[[x]]
