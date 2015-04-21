@@ -218,41 +218,41 @@ p2 <- facet_wrap_labeller(p, labels = c(
 p3 <- arrangeGrob(p2, SpPlot)
 ggsavePP(filename = "output//figs/FACE_CAPvsYear_byCO2_PFG", plot = p3,  width = 7, height = 7)
 
-# PERMANOVA----
-ambDF <- subsetD(RingSumPFGMatrix, co2 == "amb")
-ambPFG <- ambDF[, PFGName]
-ambSite <- ambDF[, !names(ambDF) %in% PFGName]
-disMatrix <- vegdist(log(ambPFG + 1), method = "bray")
-
-a2 <- adonis(disMatrix ~ year, data = ambSite, permutations = 9999)
-a2
-
-tdf <- log(ambPFG+1)
-
-n1 <- nested.npmanova(tdf ~ year + ring, data = ambSite, perm=10, method = "bray")
-
-
-?nested.npmanova
-
-disMatrix <- vegdist(log(RingSumPFGMatrix[, PFGName] + 1), method = "bray")
-Sitetdf <- RingSumPFGMatrix[, !names(RingSumPFGMatrix) %in% PFGName]
-a2 <- adonis(disMatrix ~ year + co2, data = Sitetdf, strata = Sitetdf$ring, 
-             permutations = 9999)
-a2
-
-
-
-# save all objects to create summary document later
-save.image(file = "output//Data/CAP_Object.RData")
-
-
-
-
-
-
-# vegan
-transDF <- log(RingSumPFGMatrix[, PFGName] + 1)
-sites <- RingSumPFGMatrix[, !names(RingSumPFGMatrix) %in% PFGName]
-vegDF <- capscale(transDF ~ yco, sites, dist = "bray")
-plot(vegDF)
-summary(vegDF)
+# # PERMANOVA----
+# ambDF <- subsetD(RingSumPFGMatrix, co2 == "amb")
+# ambPFG <- ambDF[, PFGName]
+# ambSite <- ambDF[, !names(ambDF) %in% PFGName]
+# disMatrix <- vegdist(log(ambPFG + 1), method = "bray")
+# 
+# a2 <- adonis(disMatrix ~ year, data = ambSite, permutations = 9999)
+# a2
+# 
+# tdf <- log(ambPFG+1)
+# 
+# n1 <- nested.npmanova(tdf ~ year + ring, data = ambSite, perm=10, method = "bray")
+# 
+# 
+# ?nested.npmanova
+# 
+# disMatrix <- vegdist(log(RingSumPFGMatrix[, PFGName] + 1), method = "bray")
+# Sitetdf <- RingSumPFGMatrix[, !names(RingSumPFGMatrix) %in% PFGName]
+# a2 <- adonis(disMatrix ~ year + co2, data = Sitetdf, strata = Sitetdf$ring, 
+#              permutations = 9999)
+# a2
+# 
+# 
+# 
+# # save all objects to create summary document later
+# save.image(file = "output//Data/CAP_Object.RData")
+# 
+# 
+# 
+# 
+# 
+# 
+# # vegan
+# transDF <- log(RingSumPFGMatrix[, PFGName] + 1)
+# sites <- RingSumPFGMatrix[, !names(RingSumPFGMatrix) %in% PFGName]
+# vegDF <- capscale(transDF ~ yco, sites, dist = "bray")
+# plot(vegDF)
+# summary(vegDF)
