@@ -214,6 +214,10 @@ OrgSpp <- function(df, KeepCol, CombineCol){
   df[KeepCol] <- rowSums(df[CombineCol])
   RemoveCol <- CombineCol[CombineCol != KeepCol]
   df <- df[!names(df) %in% RemoveCol]
+  # sort
+  siteVec <- c("ring", "plot", "position", "cell")
+  SpVec <- names(df)[!names(df) %in% siteVec]
+  df <- df[, c(siteVec, sort(SpVec))]
   return(df)
 }
 
