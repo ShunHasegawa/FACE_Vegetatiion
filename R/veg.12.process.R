@@ -130,7 +130,7 @@ df2013 <- OrgSpp(df2013, KeepCol = "Bursaria.spinosa",
                  CombineCol = SpName[grepl("Bursaria", SpName, ignore.case = TRUE)])
 
 # Carex.breviformis -> Carex.beviculmis
-df2013 <- OrgSpp(df2013, KeepCol = "Carex.beviculmis", 
+df2013 <- OrgSpp(df2013, KeepCol = "Carex.breviculmis", 
                  CombineCol = SpName[grepl("carex", SpName, ignore.case = TRUE)])
 
 # Commelina -> Commelina.cyanea
