@@ -98,7 +98,6 @@ names(forbs)
 names(dec2012)
 
 df2013 <- rbind.fill(forbs, dec2012)
-
 # re-organise data----
 
 # turn NA into 0
@@ -108,6 +107,10 @@ df2013[is.na(df2013)] <- 0
 SiteVec <- c("ring", "plot", "position", "cell")
 Spps <- names(df2013)[!names(df2013) %in% SiteVec]
 df2013[, Spps] <- apply(df2013[, Spps], 2, as.numeric)
+
+# two data frames are row-binded, so each cell is duplicated. Take sum of each cell
+nrow(df2013)
+df2013 <- ddply(df2013, .(ring, plot, position, cell), function(x) colSums(x[, Spps]))
 
 # remove spp with no count
 df2013 <- df2013[, c(SiteVec, Spps[!colSums(df2013[, Spps]) == 0])]
