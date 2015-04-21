@@ -210,12 +210,11 @@ read.veg.xlx <- function(sheetName, file) {
 ####################################################
 # organise species in a data frame read from excel #
 ####################################################
-OrgSpp <- function(df, KeepCol, CombineCol){
+OrgSpp <- function(df, KeepCol, CombineCol, siteVec = c("ring", "plot", "position", "cell")){
   df[KeepCol] <- rowSums(df[CombineCol])
   RemoveCol <- CombineCol[CombineCol != KeepCol]
   df <- df[!names(df) %in% RemoveCol]
   # sort
-  siteVec <- c("ring", "plot", "position", "cell")
   SpVec <- names(df)[!names(df) %in% siteVec]
   df <- df[, c(siteVec, sort(SpVec))]
   return(df)
@@ -282,9 +281,9 @@ source("R/rsquaredglmm.R")
 ########################
 # Yearly dissimilarity #
 ########################
-# Compute dissimilarity for each plot between 2012 & 2014 and 2014 & 2015
+# Compute dissimilarity for each plot between 2013 & 2014 and 2014 & 2015
 YearDssmlrty <- function(x, spp) {
-  df1 <- subset(x, year %in% c(2012, 2014))
+  df1 <- subset(x, year %in% c(2013, 2014))
   dis1 <- vegdist(log(df1[, spp] + 1), method = "bray")
   df2 <- subset(x, year %in% c(2014, 2015))
   dis2 <- vegdist(log(df2[, spp] + 1), method = "bray")
@@ -329,7 +328,7 @@ circleFun <- function(center = c(0,0),diameter = 1, npoints = 100){
 #####################################################
 # make df to set ranges of x and y axies for biplot #
 #####################################################
-rangeDF <- function(df, xv = "CAP1", yv = "CAP2", year = "2012"){
+rangeDF <- function(df, xv = "CAP1", yv = "CAP2", year = "2013"){
   ddply(df, .(co2), function(x) {
     xyrange <- c(range(x[, xv]), range(x[, yv]))
     MaxAbs <- max(abs(xyrange)) # highest absolute value
