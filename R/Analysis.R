@@ -50,16 +50,15 @@ PlotSumPFGMatrix <- dcast(year + block + co2 + ring + plot ~ PFG,
                           data = subset(veg, !is.na(PFG)), sum)
 colSums(PlotSumPFGMatrix[,6:13])
 
-# remove lichen and wood, also add interaction term
+# remove lichen, also add interaction term
 PlotSumPFGMatrix <- within(PlotSumPFGMatrix, {
   Lichen = NULL
-  wood = NULL
   c3_4 = NULL
   id = ring:plot
   yco = year:co2
 })
 
-PFGName <- c("c3", "c4", "legume", "moss", "Non_legume")
+PFGName <- c("c3", "c4", "legume", "moss", "Non_legume", "wood")
 
 # ring
 RingSumPFGMatrix <- ddply(PlotSumPFGMatrix, .(year, block, ring, co2, yco), 
