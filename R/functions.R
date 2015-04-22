@@ -406,3 +406,13 @@ CapPlot <- function(df){
   return(p2)
 }
 
+###############################
+# Barplot for data inspection #
+###############################
+InspctPlot <- function(df = vdf, ringval, plotval, sp){
+  cmdf <- subset(df, ring == ringval & plot == plotval, 
+                 select =c ("year", "ring", "plot", "position", "cell", sp))
+  p <- ggplot(cmdf, aes_string(x = "position", y = sp))
+  p2 <- p + geom_bar(stat = "identity") + facet_grid(. ~ year)
+  print(p2)
+}
