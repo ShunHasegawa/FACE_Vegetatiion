@@ -134,6 +134,75 @@ vdf$Lichen <- NULL
 # year is factor
 vdf$year <- factor(vdf$year)
 
+###################
+# Data correction # 
+################### 
+
+# For 2013 data, two surveys were conducted in September and December 2012. 
+# September data is used for forbs and December for grass and sedge. In 
+# December, forbs that had been recorded in September were checked again in
+# December if there're missing or addition.
+
+# The issues is that some forbs below seems to have been observed in December 
+# but no cell position was recorded. As a solution, compare with adjacent 
+# subplots and see if they're important. If not, then just ignore If they are, 
+# allocate estimated number from the adjacent subplots. not the best solution
+# but shouldn't change the final result too much cause those spp were not that
+# abundant.
+
+# 1.1.C, D Commelina.cyanea
+  # "Observed in numerous cells.."
+InspctPlot(ringval = 1, plotval = 1, sp = "Commelina.cyanea")
+# not that abundant in the adjacent plots but it still says "numerous". So add 5
+# for each of C and D
+vdf[vdf$year == "2013" & 
+      vdf$ring == 1 & 
+      vdf$plot == 1 & 
+      vdf$position == "C" & 
+      vdf$Commelina.cyanea == 0, 
+    "Commelina.cyanea"][1:5] <- 1
+
+vdf[vdf$year == "2013" & 
+      vdf$ring == 1 & 
+      vdf$plot == 1 & 
+      vdf$position == "D" & 
+      vdf$Commelina.cyanea == 0, 
+    "Commelina.cyanea"][1:5] <- 1
+
+# 6.2.D. Parsonsia.straminea
+InspctPlot(ringval = 6, plotval = 2, sp = "Parsonsia.straminea")
+  # add 2
+vdf[vdf$year == "2013" & 
+      vdf$ring == 6 & 
+      vdf$plot == 2 & 
+      vdf$position == "D" & 
+      vdf$Parsonsia.straminea == 0, 
+    "Parsonsia.straminea"][1:2] <- 1
+
+# 6.3.A. Parsonsia.straminea
+InspctPlot(ringval = 6, plotval = 3, sp = "Parsonsia.straminea")
+# add 2
+vdf[vdf$year == "2013" & 
+      vdf$ring == 6 & 
+      vdf$plot == 3 & 
+      vdf$position == "A" & 
+      vdf$Parsonsia.straminea == 0, 
+    "Parsonsia.straminea"][1:2] <- 1
+
+# 6.3.D. Solanum.nigrum 
+InspctPlot(ringval = 6, plotval = 3, sp = "Solanum.nigrum")
+  # not observed in the adjacent subplots so just ignore
+
+# 6.4.A. Parsonsia.straminea
+InspctPlot(ringval = 6, plotval = 4, sp = "Parsonsia.straminea")
+# add 1
+vdf[vdf$year == "2013" & 
+      vdf$ring == 6 & 
+      vdf$plot == 4 & 
+      vdf$position == "A" & 
+      vdf$Parsonsia.straminea == 0, 
+    "Parsonsia.straminea"][1] <- 1
+
 # save----
 save(vdf, file = "output//Data/FACE_Vegetation_Raw_2013_2015.RData")
 
