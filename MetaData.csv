@@ -1,0 +1,11 @@
+Souce of soil variables,,,
+,,,
+Variable,year,unit,souce
+TotalP,2014,,ALS_Chem_anl_June2013_clean.xlsx
+OrganicMatter,2014,,ALS_Chem_anl_June2013_clean.xlsx
+OrganicC,2014,,ALS_Chem_anl_June2013_clean.xlsx
+sand,2013-2015,,soil GWC texture colour bulk density March 2013.xlsx
+silt,2013-2015,,soil GWC texture colour bulk density March 2013.xlsx
+clay,2013-2015,,soil GWC texture colour bulk density March 2013.xlsx
+ph,2013-2015,,FACE_FreshSoil_pH.xlsx
+Depth_HL,2013-2015,m,Hard layer.xlsx
