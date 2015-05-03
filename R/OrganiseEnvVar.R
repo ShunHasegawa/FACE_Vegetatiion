@@ -2,9 +2,10 @@
 # Organise soil variable #
 ##########################
 SoilDf <- read.csv("Data//FACE_Environmtal_Variable.csv", header = TRUE)
-summary(SoilDf)
 
-# TC and TN----
+#############
+# TC and TN #
+#############
 TcnDF <- read.xlsx2("Data/SoilVariables/Soil.TC.TN.xlsx", 
                     sheetName = "FACE.soil.tc.tn", 
                     header = TRUE, startRow = 1, endRow = 97, 
@@ -19,7 +20,9 @@ TcnDF <- subsetD(TcnDF, depth == "0-10", select = -depth)
 TcnDF_Ring <- ddply(TcnDF, .(year, ring), summarise,
                     TotalC = mean(TotalC), TotalN = mean(TotalN))
 
-# Total P measured by Cat----
+###########################
+# Total P measured by Cat #
+###########################
 TpDF <- read.xlsx2("Data/SoilVariables/EucAFCE P sum 30_05_14.xlsx", 
                    sheetIndex = 1, 
                    header = TRUE, startRow = 1, endRow = 25, 
@@ -35,7 +38,9 @@ TpDF <- within(TpDF, {
 # Ring mean
 TpDF_Ring <- ddply(TpDF, .(year, ring), summarise, TotalP_CM = mean(TotalP_CM))
 
-# Soil moist and temp----
+#######################
+# Soil moist and temp #
+#######################
 load("Data//SoilVariables/soil.var_ring.means.RData")
 
 # 1st year is only from August so just use August-December
@@ -51,16 +56,102 @@ Probes <-names(SoilMTdf)[!names(SoilMTdf) %in% SiteVec]
 
 SoilMTdf_Ring <- ddply(SoilMTdf, .(year, ring), function(x) colMeans(x[, Probes], na.rm = TRUE))
 
-# light----
+#########
+# light #
+#########
+load("output//Data/FACE_Light_DayMean.RData")
+head(FACE_Light_DayMean)
+# understorey and canopy PAR is highly correlated so just use understorey
+# October 2012 values are little bit weird. It goes up on a sudden.
+# Just use Nov-Dec for the time being cause measurements in these months are
+# complete in all the three years.
+LightNovDec <- subsetD(FACE_Light_DayMean, month(Date) %in% c(11, 12))
+LightNovDec$year <- factor(year(LightNovDec$Date), labels = c(2013:2015))
 
+FlorLight_Ring <- ddply(LightNovDec, .(year, ring), summarise, FloorPAR = mean(FloorPAR, na.rm = TRUE))
 
+#######
+# IEM #
+#######
+load("Data/SoilVariables/FACE_IEM.RData")
 
+# use only Nov-Jan
+iemNovJan <- subsetD(iem, month(date) == c(1, 11, 12))
+# add year; January is counted as an year before
+iemNovJan$year <- with(iemNovJan, factor(ifelse(month(date) == 1, year(date), year(date) + 1)))
 
+iem_ring <- ddply(iemNovJan, .(ring, year), summarise,
+                  IEM_no = mean(no, na.rm = TRUE), 
+                  IEM_nh = mean(nh, na.rm = TRUE), 
+                  IEM_p = mean(p, na.rm = TRUE))
 
-Reduce(function(...) merge(..., by = c("year", "ring"), all.x = TRUE), 
-       list(SoilDf, TcnDF_Ring, TpDF_Ring, SoilMTdf_Ring))
+#################
+# Soil Extracts #
+#################
+load("Data/SoilVariables/extractable.RData")
+tdf <- within(extr, {
+  M <- month(date)
+  Y <- year(date)
+})
+xtabs(~ Y + M, data = tdf)
 
+# use december
+ExtrDec <- subsetD(extr, month(date) == 12)
+ExtrDec$year <- factor(year(ExtrDec$date), labels = c(2013, 2014))
+Extract_ring <- ddply(ExtrDec, .(year, ring), summarise, 
+                      Ext_no = mean(no, na.rm = TRUE),
+                      Ext_nh = mean(nh, na.rm = TRUE),
+                      Ext_p = mean(po, na.rm = TRUE))
 
-?Reduce
+##################
+# Mineralisation #
+##################
+load("Data/SoilVariables/FACE_mineralisation.RData")
+tdf <- within(mine, {
+  M <- month(date)
+  Y <- year(date)
+})
+xtabs(~ Y + M, data = tdf)
+# use January
+MineJan <- subsetD(mine, month(date) == 1)
+MineJan$year <- factor(year(MineJan$date))
 
+Mineralisation_ring <- ddply(MineJan, .(year, ring), summarise,
+                             n.min = mean(n.min, na.rm = TRUE), 
+                             nitrification = mean(nitrification, na.rm = TRUE), 
+                             p.min = mean(p.min, na.rm = TRUE))
+#############
+# Lysimeter #
+#############
+load("Data/SoilVariables/FACE_lysimeter.Rdata")
+tdf <- within(lys, {
+  M <- month(date)
+  Y <- year(date)
+})
+
+tdfS <- subsetD(tdf, depth == "shallow")
+xtabs(~ Y + M, data = tdfS)
+# no complete months for even two years.. don't use for the time being
+
+###############
+# Combine all #
+###############
+EnvVarDF <- Reduce(function(...) merge(..., by = c("year", "ring"), all.x = TRUE), 
+                   list(SoilDf, TcnDF_Ring, TpDF_Ring, SoilMTdf_Ring, FlorLight_Ring, 
+                        iem_ring, Extract_ring, Mineralisation_ring))
+
+plot(TotalP ~ TotalP_CM, data = EnvVarDF)
+# some of the variables are not complete for three years
+
+# Variable measured only in the 1st year
+naCol_1stYear <-cbind(EnvVarDF[, c("year", "ring")], 
+                      EnvVarDF[, apply(subset(EnvVarDF, year == 2014),
+                                       2, function(x) any(is.na(x)))])
+# these are all soil variable and shouldn't change dramatically year by year so just repeat the 1st year values
+NewnaCol <- ldply(1:3, function(...) subset(naCol_1stYear, year == 2013))
+
+# replace na columns with new columns
+EnvVarDF[, names(NewnaCol)[c(-1, -2)]] <- NewnaCol[, c(-1, -2)]
+
+save(EnvVarDF, file = "output/Data/FACE_EnvironmenVars.RData")
 
