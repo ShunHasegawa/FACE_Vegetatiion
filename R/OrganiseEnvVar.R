@@ -140,18 +140,4 @@ EnvVarDF <- Reduce(function(...) merge(..., by = c("year", "ring"), all.x = TRUE
                    list(SoilDf, TcnDF_Ring, TpDF_Ring, SoilMTdf_Ring, FlorLight_Ring, 
                         iem_ring, Extract_ring, Mineralisation_ring))
 
-plot(TotalP ~ TotalP_CM, data = EnvVarDF)
-# some of the variables are not complete for three years
-
-# Variable measured only in the 1st year
-naCol_1stYear <-cbind(EnvVarDF[, c("year", "ring")], 
-                      EnvVarDF[, apply(subset(EnvVarDF, year == 2014),
-                                       2, function(x) any(is.na(x)))])
-# these are all soil variable and shouldn't change dramatically year by year so just repeat the 1st year values
-NewnaCol <- ldply(1:3, function(...) subset(naCol_1stYear, year == 2013))
-
-# replace na columns with new columns
-EnvVarDF[, names(NewnaCol)[c(-1, -2)]] <- NewnaCol[, c(-1, -2)]
-
 save(EnvVarDF, file = "output/Data/FACE_EnvironmenVars.RData")
-
