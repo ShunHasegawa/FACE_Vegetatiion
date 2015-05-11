@@ -12,20 +12,20 @@ ph,pHunit,Fresh soil pH at 0-30 cm,TRUE,TRUE,FALSE,Jun,FACE_FreshSoil_pH.xlsx
 TotalC,%,Soil total Carbon at 0-10 cm,TRUE,FALSE,FALSE,Jun,Soil.TC.TN.xlsx
 TotalN,%,Soil total Nitrogen at 0-10 cm,TRUE,FALSE,FALSE,Jun,Soil.TC.TN.xlsx
 TotalP_CM,mg kg-1,Soil total Phosphorus determined by Cat,TRUE,FALSE,FALSE,Jun,EucAFCE P sum 30_05_14.xlsx
-Theta5,%,Soil moisture at 5 cm,TRUE,TRUE,TRUE,Aug-Dec,
-Theta30,%,Soil moisture at 30 cm,TRUE,TRUE,TRUE,Aug-Dec,
-ThetaHL,%,Soil moisture at hard layer,TRUE,TRUE,TRUE,Aug-Dec,
-Theta75,%,Soil moisture at 75 cm,TRUE,TRUE,TRUE,Aug-Dec,
-moist,content,Soil moisture content from TDR at 5-25 cm,TRUE,TRUE,TRUE,Aug-Dec,
-EC,,Electrical conductivity,TRUE,TRUE,TRUE,Aug-Dec,
-temp,oC,Soil temperature from TDR at 5-25 cm,TRUE,TRUE,TRUE,Aug-Dec,
-T5,oC,Soil temperature at 5 cm,TRUE,TRUE,TRUE,Aug-Dec,
-T10,oC,Soil temperature at 10 cm,TRUE,TRUE,TRUE,Aug-Dec,
-T20,oC,Soil temperature at 20 cm,TRUE,TRUE,TRUE,Aug-Dec,
-T30,oC,Soil temperature at 30 cm,TRUE,TRUE,TRUE,Aug-Dec,
-T50,oC,Soil temperature at 50 cm,TRUE,TRUE,TRUE,Aug-Dec,
-T100,oC,Soil temperature at 100 cm,TRUE,TRUE,TRUE,Aug-Dec,
-FloorPAR,umol s-1 m-2,Understorey PAR,TRUE,TRUE,TRUE,Nov-Dec,
+Theta5,%,Soil moisture at 5 cm,TRUE,TRUE,TRUE,Aug-Dec,HIEv
+Theta30,%,Soil moisture at 30 cm,TRUE,TRUE,TRUE,Aug-Dec,HIEv
+ThetaHL,%,Soil moisture at hard layer,TRUE,TRUE,TRUE,Aug-Dec,HIEv
+Theta75,%,Soil moisture at 75 cm,TRUE,TRUE,TRUE,Aug-Dec,HIEv
+moist,content,Soil moisture content from TDR at 5-25 cm,TRUE,TRUE,TRUE,Aug-Dec,HIEv
+EC,,Electrical conductivity,TRUE,TRUE,TRUE,Aug-Dec,HIEv
+temp,oC,Soil temperature from TDR at 5-25 cm,TRUE,TRUE,TRUE,Aug-Dec,HIEv
+T5,oC,Soil temperature at 5 cm,TRUE,TRUE,TRUE,Aug-Dec,HIEv
+T10,oC,Soil temperature at 10 cm,TRUE,TRUE,TRUE,Aug-Dec,HIEv
+T20,oC,Soil temperature at 20 cm,TRUE,TRUE,TRUE,Aug-Dec,HIEv
+T30,oC,Soil temperature at 30 cm,TRUE,TRUE,TRUE,Aug-Dec,HIEv
+T50,oC,Soil temperature at 50 cm,TRUE,TRUE,TRUE,Aug-Dec,HIEv
+T100,oC,Soil temperature at 100 cm,TRUE,TRUE,TRUE,Aug-Dec,HIEv
+FloorPAR,umol s-1 m-2,Understorey PAR,TRUE,TRUE,TRUE,Nov-Dec,HIEv
 IEM_no,mg cm-2 d-1,IEM-adsorbed nitrate,TRUE,TRUE,FALSE,Nov-Jan,
 IEM_nh,mg cm-2 d-1,IEM-adsorbed ammonium,TRUE,TRUE,FALSE,Nov-Jan,
 IEM_p,mg cm-2 d-1,IEM-adsorbed phosphate,TRUE,TRUE,FALSE,Nov-Jan,
