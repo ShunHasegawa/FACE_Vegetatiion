@@ -59,6 +59,15 @@ names(forbs)[grep("Wahlenbergia.sp", names(forbs))] <- "Forb.Wahlenbergia.gracil
 # remove PFG
 names(forbs) <- gsub("Forb.|Shrub.|Moss.|Tree.|Fern.|Lichen.", "", names(forbs))
 
+# add year and month
+forbs <- within(forbs, {
+  year = factor("2013")
+  month = "September" # the survey was conducted in September 2012!!
+  })
+
+# save
+save(forbs, file = "output//Data/FACE_Vegetation_Sep2012.RData")
+
 #################
 # December 2012 #
 #################
@@ -88,8 +97,15 @@ dec2012 <- dec2012[, c("ring", "plot", "position", "Cell", sort(decName))]
 # Cell -> cell
 names(dec2012)[names(dec2012) == "Cell"] <- "cell"
 
-# turn "..." or ".." to .
+# turn "..." or ".." to "."
 names(dec2012) <- gsub("[.][.][.]|[.][.]", ".", names(dec2012))
+
+# add year and months
+dec2012$year <- factor("2013")
+dec2012$month <- "December" # the survey was conducted in December 2012!!
+
+# save
+save(dec2012, file = "output/Data/FACE_Vegetation_Dec2012.RData")
 
 #######################
 # Combine Sep and Dec #
@@ -104,13 +120,9 @@ df2013 <- rbind.fill(forbs, dec2012)
 df2013[is.na(df2013)] <- 0 
 
 # turn values into numeric
-SiteVec <- c("ring", "plot", "position", "cell")
+SiteVec <- c("year", "month", "ring", "plot", "position", "cell")
 Spps <- names(df2013)[!names(df2013) %in% SiteVec]
 df2013[, Spps] <- apply(df2013[, Spps], 2, as.numeric)
-
-# two data frames are row-binded, so each cell is duplicated. Take sum of each cell
-nrow(df2013)
-df2013 <- ddply(df2013, .(ring, plot, position, cell), function(x) colSums(x[, Spps]))
 
 # remove spp with no count
 df2013 <- df2013[, c(SiteVec, Spps[!colSums(df2013[, Spps]) == 0])]
@@ -125,70 +137,70 @@ SpName <- names(df2013)[!names(df2013) %in% SiteVec]
 df2013 <- df2013[, c(SiteVec, sort(SpName))]
 
 # Axonopsis and Axonopus.sp -> Axonopus.fissifolius
-df2013 <- OrgSpp(df2013, KeepCol = "Axonopus.fissifolius", 
+df2013 <- OrgSpp(df2013, siteVec = SiteVec, KeepCol = "Axonopus.fissifolius", 
                  CombineCol = SpName[grepl("Axonop", SpName, ignore.case = TRUE)])
 
 # Bursaria -> Bursaria.spinosa
-df2013 <- OrgSpp(df2013, KeepCol = "Bursaria.spinosa", 
+df2013 <- OrgSpp(df2013, siteVec = SiteVec, KeepCol = "Bursaria.spinosa", 
                  CombineCol = SpName[grepl("Bursaria", SpName, ignore.case = TRUE)])
 
 # Carex.breviformis -> Carex.beviculmis
-df2013 <- OrgSpp(df2013, KeepCol = "Carex.breviculmis", 
+df2013 <- OrgSpp(df2013, siteVec = SiteVec, KeepCol = "Carex.breviculmis", 
                  CombineCol = SpName[grepl("carex", SpName, ignore.case = TRUE)])
 
 # Commelina -> Commelina.cyanea
-df2013 <- OrgSpp(df2013, KeepCol = "Commelina.cyanea", 
+df2013 <- OrgSpp(df2013, siteVec = SiteVec, KeepCol = "Commelina.cyanea", 
                  CombineCol = SpName[grepl("Commelina", SpName, ignore.case = TRUE)])
 
 # Conyza. -> Conyza.sumatrensis
-df2013 <- OrgSpp(df2013, KeepCol = "Conyza.sumatrensis", 
+df2013 <- OrgSpp(df2013, siteVec = SiteVec, KeepCol = "Conyza.sumatrensis", 
                  CombineCol = SpName[grepl("Conyza", SpName, ignore.case = TRUE)])
 
 # Cyperus.flacidus, Cyperus.sp -> Cyperus.flaccidus
 # Cyperus.sp is not too sure, but its really small abundance, so just combine
 sum(df2013[, "Cyperus.sp"])
-df2013 <- OrgSpp(df2013, KeepCol = "Cyperus.flaccidus", 
+df2013 <- OrgSpp(df2013, siteVec = SiteVec, KeepCol = "Cyperus.flaccidus", 
                  CombineCol = SpName[grepl("Cyperus", SpName, ignore.case = TRUE)])
 
 # Glycine.clandestina, Glycine.sp, Glycine.sp.1 -> Glycine.sp These ones are
 # really hard to identfy. Also other than Glycine.clandestina abundance is so
 # small so just combine
-df2013 <- OrgSpp(df2013, KeepCol = "Glycine.sp", 
+df2013 <- OrgSpp(df2013, siteVec = SiteVec, KeepCol = "Glycine.sp", 
                  CombineCol = SpName[grepl("Glycine", SpName, ignore.case = TRUE)])
 
 # Hypercium -> Hypericum.gramineum
-df2013 <- OrgSpp(df2013, KeepCol = "Hypericum.gramineum", 
+df2013 <- OrgSpp(df2013, siteVec = SiteVec, KeepCol = "Hypericum.gramineum", 
                  CombineCol = SpName[grepl("Hyper", SpName, ignore.case = TRUE)])
 
 # Juncus.sp, Juncus.continuus. -> Juncus.continuus
-df2013 <- OrgSpp(df2013, KeepCol = "Juncus.continuus", 
+df2013 <- OrgSpp(df2013, siteVec = SiteVec, KeepCol = "Juncus.continuus", 
                  CombineCol = SpName[grepl("Juncus", SpName, ignore.case = TRUE)])
 
 # Lachnagrostis -> Lachnagrostis.filiformis
 names(df2013)[names(df2013) == "Lachnagrostis"] <- "Lachnagrostis.filiformis"
 
 # Laxmannia, Laxmannia.gracilis. -> Laxmannia.gracilis
-df2013 <- OrgSpp(df2013, KeepCol = "Laxmannia.gracilis", 
+df2013 <- OrgSpp(df2013, siteVec = SiteVec, KeepCol = "Laxmannia.gracilis", 
                  CombineCol = SpName[grepl("Laxmannia", SpName, ignore.case = TRUE)])
 
 # Opercularia. -> Opercularia.diphylla
-df2013 <- OrgSpp(df2013, KeepCol = "Opercularia.diphylla", 
+df2013 <- OrgSpp(df2013, siteVec = SiteVec, KeepCol = "Opercularia.diphylla", 
                  CombineCol = SpName[grepl("Opercularia", SpName, ignore.case = TRUE)])
 # assume that paspalidium was paspalidium distans at this time --> needs to be
 # corrected later. Also Paspalidium.distans = Paspalidium.radiatum
-df2013 <- OrgSpp(df2013, KeepCol = "Paspalidium.distans", 
+df2013 <- OrgSpp(df2013, siteVec = SiteVec, KeepCol = "Paspalidium.distans", 
                  CombineCol = SpName[grepl("paspalidium", SpName, ignore.case = TRUE)])
 
 # Poranthera -> Poranthera.microphylla 
-df2013 <- OrgSpp(df2013, KeepCol = "Poranthera.microphylla ", 
+df2013 <- OrgSpp(df2013, siteVec = SiteVec, KeepCol = "Poranthera.microphylla ", 
                  CombineCol = SpName[grepl("Poranthera", SpName, ignore.case = TRUE)])
 
 # Schoenus -> Schoenus.opogon
-df2013 <- OrgSpp(df2013, KeepCol = "Schoenus.opogon", 
+df2013 <- OrgSpp(df2013, siteVec = SiteVec, KeepCol = "Schoenus.opogon", 
                  CombineCol = SpName[grepl("Schoenus", SpName, ignore.case = TRUE)])
 
 # Sisyrinchium. -> Sisyrinchium.Iridaceae
-df2013 <- OrgSpp(df2013, KeepCol = "Sisyrinchium.Iridaceae", 
+df2013 <- OrgSpp(df2013, siteVec = SiteVec, KeepCol = "Sisyrinchium.Iridaceae", 
                  CombineCol = SpName[grepl("Sisyrinchium", SpName, ignore.case = TRUE)])
 
 # sp. -> sp
@@ -199,7 +211,8 @@ names(df2013) <- gsub("sp[.]", "sp", names(df2013))
 names(df2013)[grepl("[.]$", names(df2013))] <- paste0(names(df2013)[grepl("[.]$", names(df2013))], "sp")
 
 ## no species
-names(df2013)[!grepl("[.]", names(df2013))][5:7] <- paste0(names(df2013)[!grepl("[.]", names(df2013))][5:7], "sp") 
+names(df2013)[!grepl(paste(c("[.]", SiteVec), collapse = "|"), names(df2013))] <- 
+  paste0(names(df2013)[!grepl(paste(c("[.]", SiteVec), collapse = "|"), names(df2013))], ".sp") 
 
 # check if there're valuse > 2----
 SpName <- names(df2013)[!names(df2013) %in% SiteVec]
@@ -216,7 +229,6 @@ df2013 <- within(df2013, {
   plot <- factor(plot)
   position <- factor(position)
   cell <- factor(cell)
-  year <- "2013"
   })
 
 # save
