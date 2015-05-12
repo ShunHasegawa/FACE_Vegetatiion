@@ -9,10 +9,12 @@ load("output/Data/FACE_Vegetation_2013.RData")
 # 2014
 # source("R/prcss.veg.2014.R")
 load("output/Data/FACE_Veg2014.RData")
+veg.14$month <- "December"
 
 # 2015
 # source("R/prcss.veg.2015.R")
 load("output//Data/FAVE_vegetation2015.RData")
+veg.2015$month <- "December"
 
 vdf <- rbind.fill(df2013, veg.14, veg.2015)
 
@@ -23,7 +25,7 @@ vdf <- rbind.fill(df2013, veg.14, veg.2015)
 vdf[is.na(vdf)] <- 0
 
 # remove spp which were not observed
-SiteVec <- c("year", "ring", "plot", "position", "cell")
+SiteVec <- c("year", "month", "ring", "plot", "position", "cell")
 SppVec <- names(vdf)[!names(vdf) %in% SiteVec]
 all(colSums(vdf[, SppVec]) > 0)
 
@@ -107,18 +109,20 @@ vdf <- OrgSpp(vdf, siteVec = SiteVec,
 names(vdf)
 
 # check all values <2
-all(vdf[, c(-1:-5)] < 2)
+tsp <- names(vdf)[!names(vdf) %in% SiteVec]
+all(vdf[, tsp] < 2)
 # FALSE
-which(vdf[, c(-1:-5)] > 1, arr.ind = TRUE)
-names(vdf[, c(-1:-5)])[43]
-names(vdf[, c(-1:-5)])[34]
-# Glycine sp. Turn those into 1
-vdf[, c(-1:-5)][which(vdf[, c(-1:-5)] > 1, arr.ind = TRUE)] <- 1
-all(vdf[, c(-1:-5)] < 2)
+which(vdf[, tsp] > 1, arr.ind = TRUE)
+names(vdf[, tsp])[42]
+names(vdf[, tsp])[34]
+
+# Glycine sp. and Eragrostis.brownii; turn those into 1
+vdf[, tsp][which(vdf[, tsp] > 1, arr.ind = TRUE)] <- 1
+all(vdf[, tsp] < 2)
 # TRUE
 
 # Spp list----
-vdf.mlt <- melt(vdf, id = c("year", "ring", "plot", "position", "cell"))
+vdf.mlt <- melt(vdf, id = c("year", "month", "ring", "plot", "position", "cell"))
 spp <- data.frame(sp = sort(levels(vdf.mlt$variable)))
 write.csv(spp, file = "output/Data/spp_2015.csv", row.names = FALSE)
 
@@ -131,8 +135,8 @@ YearSum[newSp] # very small..
 # remove Lichen and Carex.breviformis for the time being----
 vdf$Lichen <- NULL
 
-# year is factor
-vdf$year <- factor(vdf$year)
+# month is factor
+vdf$month <- factor(vdf$month)
 
 ###################
 # Data correction # 
@@ -156,6 +160,7 @@ InspctPlot(ringval = 1, plotval = 1, sp = "Commelina.cyanea")
 # not that abundant in the adjacent plots but it still says "numerous". So add 5
 # for each of C and D
 vdf[vdf$year == "2013" & 
+      vdf$month == "December" &
       vdf$ring == 1 & 
       vdf$plot == 1 & 
       vdf$position == "C" & 
@@ -163,6 +168,7 @@ vdf[vdf$year == "2013" &
     "Commelina.cyanea"][1:5] <- 1
 
 vdf[vdf$year == "2013" & 
+      vdf$month == "December" &
       vdf$ring == 1 & 
       vdf$plot == 1 & 
       vdf$position == "D" & 
@@ -171,8 +177,26 @@ vdf[vdf$year == "2013" &
 
 # 6.2.D. Parsonsia.straminea
 InspctPlot(ringval = 6, plotval = 2, sp = "Parsonsia.straminea")
-  # add 2
+  # This one is tricky.. Ovserved in September in A, B and C, but not in D. Then
+  # it was found in December in D but no notes for A, B and C. Probably, it was
+  # found in A, B and C in Decebmer as well, but just was not noted.
+  # So copy September to December and also add 2 in D in December
+
+# 1) Copy September to December
 vdf[vdf$year == "2013" & 
+      vdf$month == "December" &
+      vdf$ring == 6 & 
+      vdf$plot == 2,
+    "Parsonsia.straminea"] <- vdf[vdf$year == "2013" & 
+                                    vdf$month == "September" &
+                                    vdf$ring == 6 & 
+                                    vdf$plot == 2,
+                                  "Parsonsia.straminea"]
+InspctPlot(ringval = 6, plotval = 2, sp = "Parsonsia.straminea")
+
+# 2) Add 2 in D in December
+vdf[vdf$year == "2013" &
+      vdf$month == "December" &
       vdf$ring == 6 & 
       vdf$plot == 2 & 
       vdf$position == "D" & 
@@ -181,8 +205,24 @@ vdf[vdf$year == "2013" &
 
 # 6.3.A. Parsonsia.straminea
 InspctPlot(ringval = 6, plotval = 3, sp = "Parsonsia.straminea")
-# add 2
+  # Same problem as above. Copy September to December and add 2 in A in
+  # December.
+
+# 1) Copy September to December
 vdf[vdf$year == "2013" & 
+      vdf$month == "December" &
+      vdf$ring == 6 & 
+      vdf$plot == 3,
+    "Parsonsia.straminea"] <- vdf[vdf$year == "2013" & 
+                                    vdf$month == "September" &
+                                    vdf$ring == 6 & 
+                                    vdf$plot == 3,
+                                  "Parsonsia.straminea"]
+InspctPlot(ringval = 6, plotval = 3, sp = "Parsonsia.straminea")
+
+# 2) add 2 in A in December
+vdf[vdf$year == "2013" & 
+      vdf$month == "December" &
       vdf$ring == 6 & 
       vdf$plot == 3 & 
       vdf$position == "A" & 
@@ -195,8 +235,23 @@ InspctPlot(ringval = 6, plotval = 3, sp = "Solanum.nigrum")
 
 # 6.4.A. Parsonsia.straminea
 InspctPlot(ringval = 6, plotval = 4, sp = "Parsonsia.straminea")
-# add 1
+  # Same problem as above. Copy September to December and add 1 in A in December.
+
+# 1) Copy September to December
 vdf[vdf$year == "2013" & 
+      vdf$month == "December" &
+      vdf$ring == 6 & 
+      vdf$plot == 4,
+    "Parsonsia.straminea"] <- vdf[vdf$year == "2013" & 
+                                    vdf$month == "September" &
+                                    vdf$ring == 6 & 
+                                    vdf$plot == 4,
+                                  "Parsonsia.straminea"]
+InspctPlot(ringval = 6, plotval = 4, sp = "Parsonsia.straminea")
+
+# add 1 in A in December
+vdf[vdf$year == "2013" & 
+      vdf$month == "December" &
       vdf$ring == 6 & 
       vdf$plot == 4 & 
       vdf$position == "A" & 
@@ -210,7 +265,7 @@ save(vdf, file = "output//Data/FACE_Vegetation_Raw_2013_2015.RData")
 # Create df including plant  #
 # characteristis (e.g. PFGs) #
 ##############################
-vdf.mlt <- melt(vdf, id = c("year", "ring", "plot", "position", "cell"))
+vdf.mlt <- melt(vdf, id = c("year", "month", "ring", "plot", "position", "cell"))
 
 # plant properties
 spList <- read.csv("Data//FACE_Vegetation_sp.list.csv", na.strings = c("NA", ""))

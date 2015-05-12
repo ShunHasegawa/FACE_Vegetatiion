@@ -411,8 +411,9 @@ CapPlot <- function(df){
 ###############################
 InspctPlot <- function(df = vdf, ringval, plotval, sp){
   cmdf <- subset(df, ring == ringval & plot == plotval, 
-                 select =c ("year", "ring", "plot", "position", "cell", sp))
+                 select =c ("year", "month", "ring", "plot", "position", "cell", sp))
+  cmdf$ym <- cmdf$year:cmdf$month
   p <- ggplot(cmdf, aes_string(x = "position", y = sp))
-  p2 <- p + geom_bar(stat = "identity") + facet_grid(. ~ year)
+  p2 <- p + geom_bar(stat = "identity") + facet_grid(. ~ ym)
   print(p2)
 }
