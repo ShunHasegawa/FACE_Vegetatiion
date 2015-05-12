@@ -259,19 +259,7 @@ vdf[vdf$year == "2013" &
     "Parsonsia.straminea"][1] <- 1
 
 # save----
-save(vdf, file = "output//Data/FACE_Vegetation_Raw_2013_2015.RData")
-
-##############################
-# Create df including plant  #
-# characteristis (e.g. PFGs) #
-##############################
-vdf.mlt <- melt(vdf, id = c("year", "month", "ring", "plot", "position", "cell"))
-
-# plant properties
-spList <- read.csv("Data//FACE_Vegetation_sp.list.csv", na.strings = c("NA", ""))
-VegRes15 <- merge(vdf.mlt, spList, by.x = "variable", by.y = "sp", all.x = TRUE)
-
-save(VegRes15, file = "output/Data/FACE_Vegetation_PFG_2015.RData")
+save(vdf, file = "output//Data/FACE_Vegetation_Raw_2013_2015_PreInspection.RData")
 
 #######################################
 # How to process 1st year Sep and Dec #
@@ -281,8 +269,9 @@ save(VegRes15, file = "output/Data/FACE_Vegetation_PFG_2015.RData")
 # 2) Combine Sep ad Dec and use only dominant spp
 # 3) Combine Sep ad Dec and use only spp seen in 2014 and 2015
 
+vdf.mlt <- melt(vdf, id = c("year", "month", "ring", "plot", "position", "cell"))
 # Combine Sep and Dec
-DF2013 <- subset(VegRes15, year == 2013)
+DF2013 <- subset(vdf.mlt, year == 2013)
 # combine sep and dec and remove duplicates
 DF2013_merged <- DF2013 %>%
   group_by(variable, year, ring, plot, position, cell) %>%
@@ -293,7 +282,7 @@ DF2013_merged$value[which(DF2013_merged$valu == 2)] <- 1
 DF2013_merged$month <- factor("Sep_Dec")
 
 # Create a new data frame containing Dec2013, S+D2013, 2014 and 2015
-VegRes15_SD <- rbind.fill(subset(VegRes15, month == "December"), DF2013_merged)
+VegRes15_SD <- rbind.fill(subset(vdf.mlt, month == "December"), DF2013_merged)
 
 # Create a barplot for each year
 VegRes15_SD$ym <- with(VegRes15_SD, year:month)
@@ -307,7 +296,7 @@ Total_sum <- ddply(subset(VegRes15_YearSum, ym != "2013:December"),
                    summarise, value = sum(value))
 OderedSpp <- Total_sum$variable[order(Total_sum$value, decreasing = TRUE)]
 
-VegRes15_YearSum$variable <- factor(VegRes15_YearSum$variable, levels = OrderSpp)
+VegRes15_YearSum$variable <- factor(VegRes15_YearSum$variable, levels = OderedSpp)
 
 # Barplot
 theme_set(theme_bw())
@@ -330,7 +319,10 @@ PlotDominantSpp <- function(coverage, dfs = VegRes15_YearSum){
   tdf <- ddply(dfs, .(ym), mutate, 
                Dominant = ifelse(value > coverage * 2400, TRUE, FALSE))
   
-  p <- ggplot(subsetD(tdf, Dominant), aes(x = variable, y = value))
+  # Spp which coveres >1% at least one of three years
+  DominantSpp <- unique(tdf$variable[tdf$Dominant])
+  
+  p <- ggplot(subset(tdf, variable %in% DominantSpp), aes(x = variable, y = value))
   p2 <- p + geom_bar(stat = "identity") + 
     facet_grid(ym ~ ., scale = "free_x") + 
     theme(axis.text.x = element_text(angle = 90)) +
@@ -344,3 +336,34 @@ PlotDominantSpp(coverage = 0.01)
 # 5 %
 PlotDominantSpp(coverage = 0.05)
 
+# 5 % seems to cut too many species. Removeing <1% coverage species may be
+# suitable.
+
+###########################
+# Remove <1% coverage spp #
+###########################
+# Spp which coveres >1% at least one of three years
+tdf <- ddply(VegRes15_YearSum, .(ym), mutate, 
+             Dominant = ifelse(value > 0.01 * 2400, TRUE, FALSE))
+DominantSpp <- unique(tdf$variable[tdf$Dominant])
+
+DomSpDf <- subset(VegRes15_SD, variable %in% DominantSpp & ym != "2013:December")
+
+DomVdf <- dcast(year + month + ring + plot + position + cell ~ variable,  
+                   value.var = "value", data = DomSpDf)
+DomVdf <- within(DomVdf, {
+  month <- NULL
+  cell <- factor(cell)
+})
+
+save(DomVdf, file = "output//Data/FACE_DominantVegetation_Raw_2013_2015.RData")
+
+##############################
+# Create df including plant  #
+# characteristis (e.g. PFGs) #
+##############################
+DomVdf_mlt <- melt(DomVdf, id = c("year", "ring", "plot", "position", "cell"))
+# plant properties
+spList <- read.csv("Data//FACE_Vegetation_sp.list.csv", na.strings = c("NA", ""))
+VegRes15 <- merge(DomVdf_mlt, spList, by.x = "variable", by.y = "sp", all.x = TRUE)
+save(VegRes15, file = "output/Data/FACE_DominantVegetation_PFG_2015.RData")
