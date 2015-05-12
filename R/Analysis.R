@@ -9,10 +9,10 @@ source("R/functions.R")
 # source("R/FACE_VegetationDataSheet2015.R")
 
 # Raw data for multi variate analysis
-load("output/Data//FACE_Vegetation_Raw_2013_2015.RData")
+load("output//Data/FACE_DominantVegetation_Raw_2013_2015.RData")
 
 # Data frame with plant functional groups
-load("output//Data//FACE_Vegetation_PFG_2015.RData")
+load("output/Data/FACE_DominantVegetation_PFG_2015.RData")
 
 # check unknown spp
 all(!grepl("unknown", VegRes15$variable, ignore.case = TRUE))
@@ -29,7 +29,7 @@ veg <- within(VegRes15, {
 #######################
 
 # all spp----
-veg.face <- within(vdf, {
+veg.face <- within(DomVdf, {
   co2 <- factor(ifelse(ring %in% c(1, 4, 5), "elev", "amb"))
   block <- recode(ring, "1:2 = 'A'; 3:4 = 'B'; 5:6 = 'C'")
   id <- ring:plot
@@ -48,12 +48,10 @@ RingSumVeg <- ddply(PlotSumVeg, .(year, block, co2, ring), function(x) colSums(x
 # plot
 PlotSumPFGMatrix <- dcast(year + block + co2 + ring + plot ~ PFG, 
                           data = subset(veg, !is.na(PFG)), sum)
-colSums(PlotSumPFGMatrix[,6:13])
+colSums(PlotSumPFGMatrix[,6:11])
 
 # remove lichen, also add interaction term
 PlotSumPFGMatrix <- within(PlotSumPFGMatrix, {
-  Lichen = NULL
-  c3_4 = NULL
   id = ring:plot
   yco = year:co2
 })
