@@ -395,7 +395,7 @@ SpCorpPlot <- function(df, xv = "CAP1", yv = "CAP2", textpos = 1.07) {
 ##########################
 CapPlot <- function(df){
   p <- ggplot(df, aes(x = CAP1, y = CAP2, fill = year, col = year))
-  p2 <- p + geom_point(size = 3) + 
+  p2 <- p + geom_point(size = 3.5) + 
     geom_blank(aes(x = CAP1, y = CAP2), data = rangeDF(df)) +
     facet_wrap(~co2, scales = "free") +
     theme(legend.position = "top", 
