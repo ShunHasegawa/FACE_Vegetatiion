@@ -12,9 +12,12 @@ In the 1st year vegetation survey was conducted twice: September and December 20
 
 ```{r, include=FALSE}
 source("../R/Packages.R")
-load("../output/Data/FACE_Vegetation_PFG_2015.RData")
+load("../output//Data/FACE_Vegetation_Raw_2013_2015_PreInspection.RData")
+
+vdf.mlt <- melt(vdf, id = c("year", "month", "ring", "plot", "position", "cell"))
+
 # Combine Sep and Dec
-DF2013 <- subset(VegRes15, year == 2013)
+DF2013 <- subset(vdf.mlt, year == 2013)
 # combine sep and dec and remove duplicates
 DF2013_merged <- DF2013 %>%
   group_by(variable, year, ring, plot, position, cell) %>%
@@ -25,7 +28,7 @@ DF2013_merged$value[which(DF2013_merged$valu == 2)] <- 1
 DF2013_merged$month <- factor("Sep_Dec")
 
 # Create a new data frame containing Dec2013, S+D2013, 2014 and 2015
-VegRes15_SD <- rbind.fill(subset(VegRes15, month == "December"), DF2013_merged)
+VegRes15_SD <- rbind.fill(subset(vdf.mlt, month == "December"), DF2013_merged)
 ```
 
 Firstly, plot all data for each year. For the 1st year, December data and also Sep-Dec-merged data are plotted. 
@@ -74,7 +77,10 @@ PlotDominantSpp <- function(coverage, dfs = VegRes15_YearSum){
   tdf <- ddply(dfs, .(ym), mutate, 
                Dominant = ifelse(value > coverage * 2400, TRUE, FALSE))
   
-  p <- ggplot(subset(tdf, Dominant), aes(x = variable, y = value))
+  # Spp which coveres >1% at least one of three years
+  DominantSpp <- unique(tdf$variable[tdf$Dominant])
+  
+  p <- ggplot(subset(tdf, variable %in% DominantSpp), aes(x = variable, y = value))
   p2 <- p + geom_bar(stat = "identity") + 
     facet_grid(ym ~ ., scale = "free_x") + 
     theme(axis.text.x = element_text(angle = 90)) +
