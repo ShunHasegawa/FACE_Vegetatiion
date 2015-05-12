@@ -5,52 +5,69 @@ date: "Sunday, February 15, 2015"
 output: pdf_document
 ---
 
-Here're the summary of canonical analysis of principle coordinate (CAP). The analysis has been done in the same way as RDA. Species composition was anlysed for each year separately and also each CO2 treatments separately. Also plant functional group composition was analysed in the same way. Data is transformed by log(x + 1) before the analysis, and then Bray-Cutis dissimilarity was used (c.f., RDA uses Euclidean dissimilarity).
+Here're the summary of canonical analysis of principle coordinate (CAP). The analysis has been done in the same way as RDA. Species composition was anlysed for each year separately and also each CO2 treatments separately. Also plant functional group composition was analysed in the same way. Data is transformed by log(x + 1) before the analysis, and then Bray-Cutis dissimilarity was used (c.f., RDA uses Euclidean dissimilarity). Please note that only dominant species, covering more than 1% of the total area (2400 cells), were used in the analysis.
 
 ```{r, echo=FALSE, results='hide', include=FALSE}
 source("../R/Packages.R")
 load("../output//Data/CAP_Object.RData")
+theme_set(theme_bw())
 ````
 
 # All species
 
 ## Each year separtely
 
-```{r, echo=FALSE, results='markup', message=FALSE}
+```{r, echo=FALSE, results='markup', message=FALSE, fig.height=3}
 p <- ggplot(CapYeardf, aes(x = co2, y = CAP1))
-p + geom_point(size = 4) + facet_grid(.~year)
+p2 <- p + geom_point(size = 4) + 
+  facet_grid(.~year, 
+             labeller = label_bquote(.(strsplit(x, "_")[[1]][1])~(sigma^2==.(strsplit(x, "_")[[1]][2]))))
+p2
 ```
 
 ## Each CO2 treatment separately
 
-```{r, echo=FALSE, results='markup', message=FALSE}
-p <- ggplot(CapCo2df, aes(x = year, y = CAP1))
-p + geom_point(size = 4) + 
-  geom_text(data = CapCo2SppScore[abs(CapCo2SppScore$CAP1) > .7, ], 
-            aes(x = year, y = CAP1 * 10, 
-            label = CapCo2SppScore$Spp[abs(CapCo2SppScore$CAP1) > .7],
-            group = year),
-            size = 4) +
-  facet_grid(.~co2)
+```{r, echo=FALSE, results='markup', message=FALSE, fig.height=7}
+p2 <- CapPlot(df = CapCo2df)
+p2 <- facet_wrap_labeller(p2, 
+                          labels = c(
+                            expression(paste("Ambient (" , 
+                                             sigma[1]^2=="0.978", ",", 
+                                             ~sigma[2]^2=="0.008", ")")),
+                            expression(paste(eCO[2], " (", 
+                                             sigma[1]^2=="0.981", ",", 
+                                             ~sigma[2]^2=="0.956", ")"))))
+p3 <- arrangeGrob(p2, CorPl)
+p3
 ```
-Only species with absolute species score (coorelation with CAP axis) > 0.7 are shown in the plot. Quite similar yet slightly different species contributed to the comunity changes between CO2 treatments.
+Only species with absolute species score (coorelation with CAP axis) > 0.6 are shown in the plot. At both $CO_2$ treatments, communitiy compositions changed between the 1st and 2nd years. While composition hardly changed in ambient rings, it changed a lot in eCO2 rings between the 2nd to 3rd years.
 
 # Plant functional groups
 
 ## Each year separately
 
-```{r, echo=FALSE, results='markup', message=FALSE}
+```{r, echo=FALSE, results='markup', message=FALSE, fig.height=3}
 p <- ggplot(PFGCapYeardf, aes(x = co2, y = CAP1))
-p + geom_point(size = 4) + facet_grid(.~year)
+p2 <- p + geom_point(size = 4) + 
+  facet_grid(.~year, 
+             labeller = label_bquote(.(strsplit(x, "_")[[1]][1])~
+                                       (sigma^2==.(strsplit(x, "_")[[1]][2])))) 
+p2
 ```
 
 ## Each CO2 treatments separately
 
-```{r, echo=FALSE, message=FALSE, results='markup'}
-p <- ggplot(PFGCapCo2df, aes(x = year, y = CAP1))
-p + geom_point(size = 4) + 
-  geom_text(data = PFGCapCo2SppScore, aes(x = year, y = CAP1 * 10, label = PFG)) +
-  facet_grid(.~co2)
+```{r, echo=FALSE, message=FALSE, results='markup', fig.height=7}
+p <- CapPlot(df = PFGCapCo2df)
+p2 <- facet_wrap_labeller(p, labels = c(
+                            expression(paste("Ambient (" , 
+                                       sigma[1]^2=="0.046", ",", 
+                                       ~sigma[2]^2=="0.001", ")")),
+                            expression(paste(eCO[2], " (", 
+                                             sigma[1]^2=="0.117", ",", 
+                                             ~sigma[2]^2=="0.013", ")"))))
+p3 <- arrangeGrob(p2, SpPlot)
+p3
 ```
 
-PFG composition changed at ambient in a year but not at eCO2 treatment. Increases in C4 and decreases in C3 and moss seems to have contributed to this change in ambient rings.
+Canonical correlations were quite small (0.05 in ambient and 0.11 in eCO2), indicating that there's not much separation between years.
