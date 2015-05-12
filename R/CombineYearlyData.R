@@ -272,3 +272,75 @@ spList <- read.csv("Data//FACE_Vegetation_sp.list.csv", na.strings = c("NA", "")
 VegRes15 <- merge(vdf.mlt, spList, by.x = "variable", by.y = "sp", all.x = TRUE)
 
 save(VegRes15, file = "output/Data/FACE_Vegetation_PFG_2015.RData")
+
+#######################################
+# How to process 1st year Sep and Dec #
+#######################################
+# Three options
+# 1) Use only December 2012
+# 2) Combine Sep ad Dec and use only dominant spp
+# 3) Combine Sep ad Dec and use only spp seen in 2014 and 2015
+
+# Combine Sep and Dec
+DF2013 <- subset(VegRes15, year == 2013)
+# combine sep and dec and remove duplicates
+DF2013_merged <- DF2013 %>%
+  group_by(variable, year, ring, plot, position, cell) %>%
+  summarise(value = sum(value, na.rm = TRUE))
+
+# Remove double count
+DF2013_merged$value[which(DF2013_merged$valu == 2)] <- 1
+DF2013_merged$month <- factor("Sep_Dec")
+
+# Create a new data frame containing Dec2013, S+D2013, 2014 and 2015
+VegRes15_SD <- rbind.fill(subset(VegRes15, month == "December"), DF2013_merged)
+
+# Create a barplot for each year
+VegRes15_SD$ym <- with(VegRes15_SD, year:month)
+
+# Yearly sum
+VegRes15_YearSum <- ddply(VegRes15_SD, .(ym, variable), summarise, value = sum(value))
+
+# Reorder accoridng to abundance
+Total_sum <- ddply(subset(VegRes15_YearSum, ym != "2013:December"), 
+                   .(variable), 
+                   summarise, value = sum(value))
+OderedSpp <- Total_sum$variable[order(Total_sum$value, decreasing = TRUE)]
+
+VegRes15_YearSum$variable <- factor(VegRes15_YearSum$variable, levels = OrderSpp)
+
+# Barplot
+theme_set(theme_bw())
+p <- ggplot(VegRes15_YearSum, aes(x = variable, y = value))
+p2 <- p + geom_bar(stat = "identity") + 
+  facet_grid(ym ~ .) + 
+  theme(axis.text.x = element_text(angle = 90))
+p2
+  # Using only Dec don't seeme to be a good idea as I loose quite many dominant
+  # herb spp compared to 2014 and 2015.
+
+# Zoom in to see minor spp
+p2 + coord_cartesian(ylim = c(0, 50))
+  # surely there are more spp in 2013:Sep_Dec than 2014 and 2015, but many of
+  # them are observed only <5 cells
+
+# Plot only dominant spp
+PlotDominantSpp <- function(coverage, dfs = VegRes15_YearSum){
+  # coverage: percentage coverage for threshhold. Spp below this is removed
+  tdf <- ddply(dfs, .(ym), mutate, 
+               Dominant = ifelse(value > coverage * 2400, TRUE, FALSE))
+  
+  p <- ggplot(subsetD(tdf, Dominant), aes(x = variable, y = value))
+  p2 <- p + geom_bar(stat = "identity") + 
+    facet_grid(ym ~ ., scale = "free_x") + 
+    theme(axis.text.x = element_text(angle = 90)) +
+    ggtitle(paste0(">", coverage * 100, "% coverage species"))
+  return(p2)
+}
+
+# 1 %
+PlotDominantSpp(coverage = 0.01)
+
+# 5 %
+PlotDominantSpp(coverage = 0.05)
+
