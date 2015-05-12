@@ -94,7 +94,7 @@ CapCo2df <- ldply(c("amb", "elev"), function(x) {
 # transformation))
 CapCo2SppScore <- ldply(c("amb", "elev"), 
                         function(x) SpScorCorFun(CapSpScorDF = capSppScore_co2[[x]], 
-                                                 CorVal = .7, co2 = x))
+                                                 CorVal = .6, co2 = x))
 
 # correlation plot----
 CapCo2SppScore$Spp <- gsub("[.]", "\n",as.character(CapCo2SppScore$Spp))
@@ -113,12 +113,11 @@ p2 <- CapPlot(df = CapCo2df)
 p2 <- facet_wrap_labeller(p2, 
                           labels = c(
                             expression(paste("Ambient (" , 
-                                             sigma[1]^2=="0.984", ",", 
-                                             ~sigma[2]^2=="0.214", ")")),
+                                             sigma[1]^2=="0.978", ",", 
+                                             ~sigma[2]^2=="0.008", ")")),
                             expression(paste(eCO[2], " (", 
-                                             sigma[1]^2=="0.992", ",", 
-                                             ~sigma[2]^2=="0.012", ")"))))
-  
+                                             sigma[1]^2=="0.981", ",", 
+                                             ~sigma[2]^2=="0.956", ")"))))
 p3 <- arrangeGrob(p2, CorPl)
 ggsavePP(filename = "output//figs/FACE_CAPvsYear_byCO2", plot = p3,  width = 7, height = 7)
 
@@ -178,7 +177,8 @@ PFGcapSppScore_co2 <- list()
 for (i in 1:2){
   disMatrix <- PFG_DisMatrix_co2[[i]]
   envDF <- subset(RingSumPFGMatrix, co2 == names(PFG_DisMatrix_co2)[i])
-  PFGcapList_co2[[i]] <- CAPdiscrim(disMatrix ~ year, data = envDF, permutations = 1000)
+  PFGcapList_co2[[i]] <- CAPdiscrim(disMatrix ~ year, data = envDF, permutations = 1000, 
+                                    m = 2)
   # add canonical correlation
   PFGcapList_co2[[i]]$CanonicalCorSq <- CanonicalCor(CAPRes = PFGcapList_co2[[i]],
                                                      EnvDF = envDF, 
@@ -210,13 +210,16 @@ SpPlot <- SpCorpPlot(df = PFGCapCo2SppScore)
 p <- CapPlot(df = PFGCapCo2df)
 p2 <- facet_wrap_labeller(p, labels = c(
                             expression(paste("Ambient (" , 
-                                       sigma[1]^2=="0.704", ",", 
-                                       ~sigma[2]^2=="0.018", ")")),
+                                       sigma[1]^2=="0.046", ",", 
+                                       ~sigma[2]^2=="0.001", ")")),
                             expression(paste(eCO[2], " (", 
-                                             sigma[1]^2=="0.430", ",", 
-                                             ~sigma[2]^2=="0.010", ")"))))
+                                             sigma[1]^2=="0.117", ",", 
+                                             ~sigma[2]^2=="0.013", ")"))))
 p3 <- arrangeGrob(p2, SpPlot)
 ggsavePP(filename = "output//figs/FACE_CAPvsYear_byCO2_PFG", plot = p3,  width = 7, height = 7)
+
+# save all objects to create summary document later
+save.image(file = "output//Data/CAP_Object.RData")
 
 # # PERMANOVA----
 # ambDF <- subsetD(RingSumPFGMatrix, co2 == "amb")
@@ -242,8 +245,6 @@ ggsavePP(filename = "output//figs/FACE_CAPvsYear_byCO2_PFG", plot = p3,  width =
 # 
 # 
 # 
-# # save all objects to create summary document later
-# save.image(file = "output//Data/CAP_Object.RData")
 # 
 # 
 # 
