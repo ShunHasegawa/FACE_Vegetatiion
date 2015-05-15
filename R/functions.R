@@ -417,3 +417,8 @@ InspctPlot <- function(df = vdf, ringval, plotval, sp){
   p2 <- p + geom_bar(stat = "identity") + facet_grid(. ~ ym)
   print(p2)
 }
+
+#############################################
+# Remove year, ring and co2 columns from DF #
+#############################################
+Rm_ymc <- function(x) x[, !names(x) %in% c("year", "ring", "co2")]
