@@ -139,5 +139,10 @@ xtabs(~ Y + M, data = tdfS)
 EnvVarDF <- Reduce(function(...) merge(..., by = c("year", "ring"), all.x = TRUE), 
                    list(SoilDf, TcnDF_Ring, TpDF_Ring, SoilMTdf_Ring, FlorLight_Ring, 
                         iem_ring, Extract_ring, Mineralisation_ring))
+EnvVarDF <- within(EnvVarDF, {
+  year <- factor(year)
+  ring <- factor(ring)
+  co2 <- factor(ifelse(ring %in% c(1, 4, 5), "elev", "amb"))
+})
 
 save(EnvVarDF, file = "output/Data/FACE_EnvironmenVars.RData")
