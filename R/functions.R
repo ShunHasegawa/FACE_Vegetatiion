@@ -426,19 +426,20 @@ Rm_ymc <- function(x) x[, !names(x) %in% c("year", "ring", "co2")]
 ###########
 # Triplot #
 ###########
-TriPlot <- function(MultValRes, env, yaxis, axispos, EnvNumeric = TRUE, lowx = .5, lowy = .5){
+TriPlot <- function(MultValRes, env, yaxis, axispos, EnvNumeric = TRUE, lowx = .5, lowy = .5,
+                    spcons = 2.5, biplcons = 3){
   #   lowx, lowy are minimum sp correlation with axes to plot
   ResultScore <- summary(MultValRes)
   
   # Fitted or sp-weighted site score
   # sites <- if(FittedSite) data.frame(ResultScore$sites, env) else data.frame(ResultScore$constraints, env)
-    
+  
   # extract scores
   Rlist <- list(sites = data.frame(ResultScore$sites, env),
                 species = data.frame(spp = gsub("[.]", "\n", row.names(ResultScore$species)), 
-                                     ResultScore$species * 2.5, 
+                                     ResultScore$species * spcons, 
                                      row.names = NULL), 
-                biplot = data.frame(ResultScore$biplot * 3, 
+                biplot = data.frame(ResultScore$biplot * biplcons, 
                                     predictor = row.names(ResultScore$biplot),
                                     row.names = NULL), 
                 centroids = data.frame(treatment = row.names(ResultScore$centroids),
@@ -479,11 +480,11 @@ TriPlot <- function(MultValRes, env, yaxis, axispos, EnvNumeric = TRUE, lowx = .
                  aes(x = 0, y = 0, xend = xval, yend = value), 
                  arrow = arrow(length = unit(.1, "cm")), 
                  alpha = .6,
-                 color = "blue") + 
+                 color = "black") + 
     geom_text(data = Rlist_mlt$centroids, 
               aes(x = xval * 1.1 , y = value * 1.1, label = treatment), 
               alpha = .6, lineheight = .7, 
-              color = "blue", size = 2, 
+              color = "black", size = 2, 
               fontface = "bold") 
   
   # species
@@ -513,5 +514,8 @@ TriPlot <- function(MultValRes, env, yaxis, axispos, EnvNumeric = TRUE, lowx = .
                 color = "blue", size = 2, 
                 fontface = "bold")
   }
-  p4
+  p5 <- p4 + 
+    scale_color_hue(labels = paste0(1:6, c("a", "e", "a", "e", "e", "a"))) +
+    geom_hline(aes(yintercept = 0), linetype = "dotted") +
+    geom_vline(aes(xintercept = 0), linetype = "dotted")
 }
