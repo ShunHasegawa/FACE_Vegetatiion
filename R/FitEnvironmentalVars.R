@@ -94,47 +94,47 @@ ggsavePP(filename = "output//figs/PartialRDA_EnvVar", plot = p2, width = 6, heig
 # Plant community is different between treatments, but simply becuase of initial
 # difference
 
-
-
-# Peform permanova
-TypeIIpermanova <- function(terms, EnvironmentalDF) {
-  # reorder terms. the tem of interest is placed at the end
-  TermList <- llply(1:length(terms), function(x) c(terms[-x], terms[x]))
-  names(TermList) <- terms
-  # create formulas
-  formulaList <- llply(TermList, function(x) {
-    form1 <- paste(x, collapse = "+")
-    form <- paste("log(RngSppDF + 1) ~", form1)
-    return(as.formula(form))
-  })
-  # perform permanova for each formula
-  PermDF <- ldply(names(formulaList), function(x) {
-    perm <- adonis(formulaList[[x]],  
-                   method = "bray", 
-                   data = EnvironmentalDF,
-                   strata = EnvironmentalDF$year, 
-                   permutations = 999)
-    res <- data.frame(tem = x, perm$aov.tab[row.names(perm$aov.tab) == x, ])
-    return(res)
-    })
-  return(PermDF)
-}
-# SS is TypeI SS so variance is allocated sequentially; thereby significant 
-# levels depend on the order of terms. Hence obtain F and associated P values by
-# fitting the term of interest at the end. Repeat this for all the variables. 
-
-PermRes <- TypeIIpermanova(names(EnvDF_3df)[c(-1, -2)], EnvironmentalDF = EnvDF_3df)
-PermRes
-
-
-# Perform CAP----
-DisMatrix <- vegdist(log(RingSumVeg[, SppName] + 1), method = "bray")
-EnvDF_3df
-sum(c(0.3836, 0.2356, 0.1793, 0.1296, 0.0827, 0.0248, 0.0141, 0.0052 ))
-EnvDF_3df$cy <- with(EnvDF_3df, co2:year)
-CapRes1 <- capscale(log(RingSumVeg[, SppName] + 1) ~ year + co2 + OrganicMatter + Depth_HL + ThetaHL +
+#########
+## CAP ##
+#########
+# bray-curtis is used to compute dissimilarity
+Cap1 <- capscale(log(RingSumVeg[, SppName] + 1) ~ year + co2 + OrganicMatter + Depth_HL + 
                    moist + temp + FloorPAR, EnvDF_3df, dist = "bray")
-plot(CapRes1)
+anova(Cap1) # significant association between plant community and environmental variables
+anova(Cap1, by = "axis") # CAP1-4 are significant
+Cap1
+# 76 % is explained by constrained axes
+TriPlot(Cap1, env = EnvDF_3df, yaxis = "CAP", axispos = c(1:3), biplcons = 1,
+        lowx = .2, lowy = .2)
+
+# model simplification
+anova(Cap1, by = "margin")
+capRes <- llply(list("backward", "forward", "both"), 
+                function(x) ordistep(Cap1, direction = x, trace = 0))
+SimplModAnv <- llply(capRes, function(x) anova(x, by = "margin"))
+SimplModAnv
+# slightly different results depending on the order of deletion. year and temp
+# probably have similar contribution. keep year for time being
+cap2 <- capRes[[3]]
+p <- TriPlot(cap2, env = EnvDF_3df, yaxis = "CAP", axispos = c(1:3), biplcons = 1,
+        lowx = .2, lowy = .2)
+p2 <- p 
+ggsavePP(filename = "output//figs/FACE_CAP_EnvVar", plot = p2, width = 6, height = 6)
+
+# Partial CAP
+pcap1 <- capscale(log(RingSumVeg[, SppName] + 1) ~ year + co2 + Condition(block), EnvDF_3df, dist = "bray")
+pcap1
+# block explains 55 % of variation
+anova(pcap1)
+anova(pcap1, by = "margin")
+p <- TriPlot(MultValRes = pcap1, env = EnvDF_3df, yaxis = "CAP", axispos = c(1:3), biplcons = 1, 
+             lowx = .1, lowy = .1, EnvNumeric = FALSE)
+ggsavePP(filename = "output//figs/FACE_PartialCAP_EnvVar", plot = p, width = 6, height = 6)
+
+
+
+
+
 EnvDF_3df$block <- recode(EnvDF_3df$ring, "1:2 = 'A'; 3:4 = 'B'; 5:6 = 'C'")
 
 a1 <- anova(CapRes1, by = "term", permu = 999)
@@ -542,3 +542,35 @@ plot(efLst[[2]], p.max = .05)
 
 adonis(log(RngSppDF + 1) ~ moist + temp, 
        data = EnvDF_2df, method = "bray", permutation = 720)
+
+
+
+# Peform permanova
+TypeIIpermanova <- function(terms, EnvironmentalDF) {
+  # reorder terms. the tem of interest is placed at the end
+  TermList <- llply(1:length(terms), function(x) c(terms[-x], terms[x]))
+  names(TermList) <- terms
+  # create formulas
+  formulaList <- llply(TermList, function(x) {
+    form1 <- paste(x, collapse = "+")
+    form <- paste("log(RngSppDF + 1) ~", form1)
+    return(as.formula(form))
+  })
+  # perform permanova for each formula
+  PermDF <- ldply(names(formulaList), function(x) {
+    perm <- adonis(formulaList[[x]],  
+                   method = "bray", 
+                   data = EnvironmentalDF,
+                   strata = EnvironmentalDF$year, 
+                   permutations = 999)
+    res <- data.frame(tem = x, perm$aov.tab[row.names(perm$aov.tab) == x, ])
+    return(res)
+  })
+  return(PermDF)
+}
+# SS is TypeI SS so variance is allocated sequentially; thereby significant 
+# levels depend on the order of terms. Hence obtain F and associated P values by
+# fitting the term of interest at the end. Repeat this for all the variables. 
+
+PermRes <- TypeIIpermanova(names(EnvDF_3df)[c(-1, -2)], EnvironmentalDF = EnvDF_3df)
+PermRes
