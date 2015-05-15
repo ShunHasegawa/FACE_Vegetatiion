@@ -422,3 +422,96 @@ InspctPlot <- function(df = vdf, ringval, plotval, sp){
 # Remove year, ring and co2 columns from DF #
 #############################################
 Rm_ymc <- function(x) x[, !names(x) %in% c("year", "ring", "co2")]
+
+###########
+# Triplot #
+###########
+TriPlot <- function(MultValRes, env, yaxis, axispos, EnvNumeric = TRUE, lowx = .5, lowy = .5){
+  #   lowx, lowy are minimum sp correlation with axes to plot
+  ResultScore <- summary(MultValRes)
+  
+  # Fitted or sp-weighted site score
+  # sites <- if(FittedSite) data.frame(ResultScore$sites, env) else data.frame(ResultScore$constraints, env)
+    
+  # extract scores
+  Rlist <- list(sites = data.frame(ResultScore$sites, env),
+                species = data.frame(spp = gsub("[.]", "\n", row.names(ResultScore$species)), 
+                                     ResultScore$species * 2.5, 
+                                     row.names = NULL), 
+                biplot = data.frame(ResultScore$biplot * 3, 
+                                    predictor = row.names(ResultScore$biplot),
+                                    row.names = NULL), 
+                centroids = data.frame(treatment = row.names(ResultScore$centroids),
+                                       ResultScore$centroids,
+                                       row.names = NULL))  
+  
+  # remove categorical variables from biplot when there's numerc
+  if(EnvNumeric){
+    tdf <- Rlist$biplot
+    Rlist$biplot <- tdf[!grepl("co2|year", as.character(tdf$predictor)), ]
+  }
+  
+  # add ring and year columns for later
+  for (i in 2:4) Rlist[[i]] <- data.frame(Rlist[[i]], ring = "1", year = "2013")
+  axisnames <- colnames(ResultScore$cont$importance)[axispos] # axes to be used
+  Rlist_mlt <- llply(Rlist, function(x) {
+    mltid <- names(x)[!names(x) %in% axisnames[-1]]
+    melt(x, id = mltid)
+  })
+  
+  # % variance explained by axes
+  VarProp <- ResultScore$cont$importance["Eigenvalue",]/ResultScore$tot.chi
+  axislabs <- paste0(axisnames, "(", round(VarProp[axispos] * 100, 2), "%)")
+  Rlist_mlt <- llply(Rlist_mlt, function(x) {
+    names(x)[names(x) == axisnames[1]] <- "xval"
+    x$variable <- factor(x$variable, levels = axisnames[-1], labels = axislabs[-1])
+    return(x)
+  })
+  
+  # make a plot
+  theme_set(theme_bw())
+  p <- ggplot(data = Rlist_mlt$sites, aes(x = xval, y = value, col = ring, shape = year))
+  p2 <- p + geom_point(size = 3) + facet_grid(variable ~ .)
+  
+  # treatment
+  p3 <- p2 + 
+    geom_segment(data = Rlist_mlt$centroids, 
+                 aes(x = 0, y = 0, xend = xval, yend = value), 
+                 arrow = arrow(length = unit(.1, "cm")), 
+                 alpha = .6,
+                 color = "blue") + 
+    geom_text(data = Rlist_mlt$centroids, 
+              aes(x = xval * 1.1 , y = value * 1.1, label = treatment), 
+              alpha = .6, lineheight = .7, 
+              color = "blue", size = 2, 
+              fontface = "bold") 
+  
+  # species
+  spdf <- subset(Rlist_mlt$species, abs(xval) > lowx * 2.5| abs(value) > lowy * 2.5)
+  p4 <- p3 + 
+    geom_segment(data = spdf, 
+                 aes(x = 0, y = 0, xend = xval, yend = value), 
+                 arrow = arrow(length = unit(.1, "cm")),
+                 alpha = .6) +
+    geom_text(data = spdf, 
+              aes(x = xval * 1.2, y = value * 1.2, label = spp),
+              size = 2, fontface = "bold.italic", 
+              colour = "red", alpha = .6, lineheight = .7) +
+    labs(x = axislabs[1], y = yaxis)
+  
+  # environmental variables
+  if(EnvNumeric){
+    p4 <- p4 + 
+      geom_segment(data = Rlist_mlt$biplot, 
+                   aes(x = 0, y = 0, xend = xval, yend = value), 
+                   arrow = arrow(length = unit(.1, "cm")), 
+                   alpha = .6,
+                   color = "blue") + 
+      geom_text(data = Rlist_mlt$biplot, 
+                aes(x = xval * 1.1, y = value * 1.1, label = predictor), 
+                alpha = .6, lineheight = .7, 
+                color = "blue", size = 2, 
+                fontface = "bold")
+  }
+  p4
+}
