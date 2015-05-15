@@ -41,35 +41,60 @@ naCol_2ndYear
 # these variables may vary year by year. so remove them for the time being
 EnvDF_3df <- EnvVarDF[, apply(EnvVarDF, 2, function(x) !any(is.na(x)))]
 
-# Performe PCoA----
-RngVegdf <- ddply(veg.face, .(year, ring, co2), function(x) colSums(x[, SppName]))
-RngSppDF <- RngVegdf[, SppName]
-RngSiteDF <- RngVegdf[, !names(RngVegdf) %in% SppName]
 
-PCoA <- cmdscale(d = vegdist(log(RngSppDF + 1), method = "bray"), eig = TRUE, k = 3)
-PCoA_SiteScoreDF <- cbind(RngSiteDF, PCoA$points)
-names(PCoA_SiteScoreDF)[4:6] <- paste0("PCoA", 1:3)
+#########
+## RDA ##
+#########
 
-# Fit environmental variables----
-# 1st two axes
-par(mfrow = c(1, 2))
-efLst <- llply(2:3, function(x) envfit(PCoA$points[, c(1, x)], EnvDF_3df[, c(-1, -2)], permu = 999))
+rda1 <- rda(log(RingSumVeg[, SppName] + 1) ~ year + co2 + OrganicMatter + Depth_HL + 
+              ThetaHL + moist + FloorPAR + temp, EnvDF_3df)
+rda1   # Constrained (canonical) axes explains 81%
+summary(rda1)
+anova(rda1)  # Significant association between species and environmental variables
+anova(rda1, by = "axis")  # RDA1-5 are significant
+anova(rda1, by = "margin") # not all explanatory variables is significant
 
-plot(PCoA2 ~ PCoA1, data = PCoA_SiteScoreDF, type = "n")
-d_ply(PCoA_SiteScoreDF, .(year, ring), function(x) {
-  points(PCoA2 ~ PCoA1, col = ring, pch = as.numeric(year), data = x, cex = 2)
-})
-plot(efLst[[1]], p.max = .05)
-legend("bottomleft", 
-       col = c(1:6, 1, 1, 1), pch = c(rep(19, 6), 1:3), 
-       legend = c(paste("Ring", 1:6), paste("Year", 1:3)), 
-       bty = "n", cex = .7)
+# model simplification
+rdaRes <- llply(list("backward", "forward", "both"), 
+                function(x) ordistep(rda1, direction = x, trace = 0))
+SimplModAnv <- llply(rdaRes, function(x) anova(x, by = "margin"))
+SimplModAnv
+# co2, OrganicMatter, Depth_HL, ThetaHL, moist and temp are significant
+rda2 <- rdaRes[[3]]
 
-plot(PCoA3 ~ PCoA1, data = PCoA_SiteScoreDF, type = "n")
-d_ply(PCoA_SiteScoreDF, .(year, ring), function(x) {
-  points(PCoA3 ~ PCoA1, col = ring, pch = as.numeric(year), data = x, cex = 2)
-})
-plot(efLst[[2]], p.max = .05)
+anova(rda2, by = "axis")
+
+# plot
+p <- TriPlot(MultValRes = rda2, env = EnvDF_3df, yaxis = "RDA axis", axispos = c(1, 2, 3))
+p2 <- p + scale_color_hue(labels = paste0(1:6, c("a", "e", "a", "e", "e", "a")))
+ggsavePP(filename = "output//figs/RDA_EnvVar", plot = p2, width = 6, height = 6)
+
+# Envrironmental variables have significant association with plant community, 
+# but masks CO2 effect. Environmental variables and associated plant community 
+# seems really similar between adjacent FACE rings within the same block (1&2, 
+# 3&4 and 5&6). So conduct Partial RDA (fit block first to remove initial
+# difference and fit co2 and year)
+
+# Partial RDA
+EnvDF_3df$block <- recode(EnvDF_3df$ring, "1:2 = 'A'; 3:4 = 'B'; 5:6 = 'C'")
+prda1 <- rda(log(RingSumVeg[, SppName] + 1) ~ year + co2 + Condition(block), EnvDF_3df)
+prda1 
+# as expected condition accounts for a large propotion of variation (48 %)
+# Semipartial R2 = 25 %
+anova(prda1) # significant association
+plot(prda1)
+anova(prda1, by = "axis") # only RDA1 is significant
+anova(prda1, by = "margin")
+summary(prda1)
+
+p <- TriPlot(MultValRes = prda1, env = EnvDF_3df, yaxis = "RDA axis", axispos = c(1, 2, 4), EnvNumeric = FALSE)
+p2 <- p + scale_color_hue(labels = paste0(1:6, c("a", "e", "a", "e", "e", "a")))
+ggsavePP(filename = "output//figs/PartialRDA_EnvVar", plot = p2, width = 6, height = 6)
+
+# Plant community is different between treatments, but simply becuase of initial
+# difference
+
+
 
 # Peform permanova
 TypeIIpermanova <- function(terms, EnvironmentalDF) {
@@ -163,28 +188,6 @@ CapRes2 <- capscale(log(RingSumVeg[, SppName] + 1) ~ co2 + year + OrganicMatter 
                    moist + temp + FloorPAR, EnvDF_3df, dist = "bray",add = TRUE)
 ordistep(CapRes2)
 ?prc
-rda1 <- rda(log(RingSumVeg[, SppName] + 1) ~ year + OrganicMatter + Depth_HL + ThetaHL +
-              moist + temp + FloorPAR, EnvDF_3df)
-
-
-
-rda1 <- rda(log(RingSumVeg[, SppName] + 1) ~ year + OrganicMatter + Depth_HL + ThetaHL +
-              moist + temp + FloorPAR, EnvDF_3df)
-a <- ordistep(rda1, direction = "backward", trace = 0)
-a2 <- ordistep(rda1, direction = "forward", trace = 0)
-a3 <- ordistep(rda1, direction = "both", trace = 0)
-llply(list(a, a2, a3), function(x) anova(x, by = "terms"))
-anova(a, by = "terms")
-
-EnvDF_3df$year2 <- as.numeric(EnvDF_3df$year)
-rda2 <- rda(log(RingSumVeg[, SppName] + 1) ~ year*co2 + Condition(block + year), EnvDF_3df)
-rda3 <- rda(log(RingSumVeg[, SppName] + 1) ~ year2*co2 + Condition(block + year2), EnvDF_3df)
-
-
-anova(rda2, permutation = ctrl, first = TRUE)
-anova(rda3, permutation = ctrl, first = TRUE)
-anova(rda3, permutation = ctrl, first = TRUE, by = "terms")
-anova(rda3, by = "terms")
 
 
 
