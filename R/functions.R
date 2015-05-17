@@ -441,10 +441,12 @@ TriPlot <- function(MultValRes, env, yaxis, axispos, EnvNumeric = TRUE, lowx = .
                                      row.names = NULL), 
                 biplot = data.frame(ResultScore$biplot * biplcons, 
                                     predictor = row.names(ResultScore$biplot),
-                                    row.names = NULL), 
-                centroids = data.frame(treatment = row.names(ResultScore$centroids),
-                                       ResultScore$centroids,
-                                       row.names = NULL))  
+                                    row.names = NULL))
+  if(!is.na(ResultScore$centroids)) {
+    Rlist$centroids <- data.frame(treatment = row.names(ResultScore$centroids),
+                                 ResultScore$centroids,
+                                 row.names = NULL)
+  } 
   
   # remove categorical variables from biplot when there's numerc
   if(EnvNumeric){
@@ -453,7 +455,7 @@ TriPlot <- function(MultValRes, env, yaxis, axispos, EnvNumeric = TRUE, lowx = .
   }
   
   # add ring and year columns for later
-  for (i in 2:4) Rlist[[i]] <- data.frame(Rlist[[i]], ring = "1", year = "2013")
+  for (i in 2:length(Rlist)) Rlist[[i]] <- data.frame(Rlist[[i]], ring = "1", year = "2013")
   axisnames <- colnames(ResultScore$cont$importance)[axispos] # axes to be used
   Rlist_mlt <- llply(Rlist, function(x) {
     mltid <- names(x)[!names(x) %in% axisnames[-1]]
@@ -475,7 +477,8 @@ TriPlot <- function(MultValRes, env, yaxis, axispos, EnvNumeric = TRUE, lowx = .
   p2 <- p + geom_point(size = 3) + facet_grid(variable ~ .)
   
   # treatment
-  p3 <- p2 + 
+  if(!is.na(ResultScore$centroids)){
+  p2 <- p2 + 
     geom_segment(data = Rlist_mlt$centroids, 
                  aes(x = 0, y = 0, xend = xval, yend = value), 
                  arrow = arrow(length = unit(.1, "cm")), 
@@ -485,11 +488,11 @@ TriPlot <- function(MultValRes, env, yaxis, axispos, EnvNumeric = TRUE, lowx = .
               aes(x = xval * 1.1 , y = value * 1.1, label = treatment), 
               alpha = .6, lineheight = .7, 
               color = "black", size = 2, 
-              fontface = "bold") 
+              fontface = "bold") }
   
   # species
   spdf <- subset(Rlist_mlt$species, abs(xval) > lowx * 2.5| abs(value) > lowy * 2.5)
-  p4 <- p3 + 
+  p4 <- p2 + 
     geom_segment(data = spdf, 
                  aes(x = 0, y = 0, xend = xval, yend = value), 
                  arrow = arrow(length = unit(.1, "cm")),
@@ -518,4 +521,5 @@ TriPlot <- function(MultValRes, env, yaxis, axispos, EnvNumeric = TRUE, lowx = .
     scale_color_hue(labels = paste0(1:6, c("e", "a", "a", "e", "e", "a"))) +
     geom_hline(aes(yintercept = 0), linetype = "dotted") +
     geom_vline(aes(xintercept = 0), linetype = "dotted")
+  p5
 }
