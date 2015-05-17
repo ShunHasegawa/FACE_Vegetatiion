@@ -1,3 +1,4 @@
+## ---- OrganiseEnvVars
 # Environmental variables
 load("output//Data/FACE_EnvironmenVars.RData")
 
@@ -41,6 +42,8 @@ naCol_2ndYear
 # these variables may vary year by year. so remove them for the time being
 EnvDF_3df <- EnvVarDF[, apply(EnvVarDF, 2, function(x) !any(is.na(x)))]
 
+EnvDF_3df$block <- recode(EnvDF_3df$ring, "1:2 = 'A'; 3:4 = 'B'; 5:6 = 'C'")
+## ---- RunRDA
 
 #########
 ## RDA ##
@@ -76,7 +79,6 @@ spenvcor(rda2)
 # difference and fit co2 and year)
 
 # Partial RDA
-EnvDF_3df$block <- recode(EnvDF_3df$ring, "1:2 = 'A'; 3:4 = 'B'; 5:6 = 'C'")
 prda1 <- rda(log(RingSumVeg[, SppName] + 1) ~ year + co2 + Condition(block), EnvDF_3df)
 prda1 
 # as expected condition accounts for a large propotion of variation (48 %)
@@ -93,35 +95,44 @@ ggsavePP(filename = "output//figs/PartialRDA_EnvVar", plot = p, width = 6, heigh
 # Plant community is different between treatments, but simply becuase of initial
 # difference
 
+## ---- RunCap
+
 #########
 ## CAP ##
 #########
 # bray-curtis is used to compute dissimilarity
-Cap1 <- capscale(log(RingSumVeg[, SppName] + 1) ~ year + co2 + OrganicMatter + Depth_HL + 
+Cap1 <- capscale(log(RingSumVeg[, SppName] + 1) ~ OrganicMatter + Depth_HL + 
                    moist + temp + FloorPAR, EnvDF_3df, dist = "bray")
+Cap1
+# 66 % is explained by constrained axes
+
 anova(Cap1) # significant association between plant community and environmental variables
 anova(Cap1, by = "axis") # CAP1-4 are significant
-Cap1
-# 76 % is explained by constrained axes
-TriPlot(Cap1, env = EnvDF_3df, yaxis = "CAP", axispos = c(1:3), biplcons = 1,
-        lowx = .2, lowy = .2)
 
-# model simplification
+theme_set(theme_bw())
+TriPlot(Cap1, env = EnvDF_3df, yaxis = "CAP", axispos = c(1:3), biplcons = 1, lowx = .2, lowy = .2)
+
+# model simplification; remove each term one by one backwards, forwards and both
 anova(Cap1, by = "margin")
 capRes <- llply(list("backward", "forward", "both"), 
                 function(x) ordistep(Cap1, direction = x, trace = 0))
 SimplModAnv <- llply(capRes, function(x) anova(x, by = "margin"))
 SimplModAnv
-# slightly different results depending on the order of deletion. year and temp
-# probably have similar contribution. keep year for time being
+# consistent results
+
 cap2 <- capRes[[3]]
-spenvcor(cap2)
 
 p <- TriPlot(cap2, env = EnvDF_3df, yaxis = "CAP", axispos = c(1:3), biplcons = 1,
         lowx = .2, lowy = .2)
+p
 ggsavePP(filename = "output//figs/FACE_CAP_EnvVar", plot = p, width = 6, height = 6)
 
-# Partial CAP
+## ---- RunPartialCap
+
+# Partial CAP Environmental variables have significant association with plant 
+# community. Adjacent FACE rings (Block) seems to have similar plant community.
+# So in order to take between-block variation and run partial CAP
+
 pcap1 <- capscale(log(RingSumVeg[, SppName] + 1) ~ year + co2 + Condition(block), EnvDF_3df, dist = "bray")
 pcap1
 # block explains 55 % of variation
@@ -130,7 +141,108 @@ anova(pcap1, by = "axis") # only 1st axis is significant
 anova(pcap1, by = "margin")
 p <- TriPlot(MultValRes = pcap1, env = EnvDF_3df, yaxis = "CAP", axispos = c(1, 2, 4), biplcons = 1, 
              lowx = .1, lowy = .1, EnvNumeric = FALSE)
+p
 ggsavePP(filename = "output//figs/FACE_PartialCAP_EnvVar", plot = p, width = 6, height = 6)
+
+## ---- RunCAPbyCO2_AllSpp
+CapByCo2 <- llply(list(amb = "amb", elev = "elev"), function(x) {
+  capscale(log(RingSumVeg[, SppName] + 1) ~ year + Condition(ring), 
+           EnvDF_3df, dist = "bray", subset = EnvDF_3df$co2 == x)
+})
+CapByCo2
+llply(CapByCo2, anova)
+# There was significant association between year and plant community at both CO2
+# treatments
+
+## ---- RunCAPbyCO2_AllSpp_plot
+SmmryCapByCO2 <- llply(CapByCo2, summary)
+
+# score for spp, site and centroids
+CapScoreList <- llply(CapByCo2, vegan::scores)
+
+# combine the above scores for each of co2 treatments
+CapScores <- llply(names(CapScoreList$amb), function(x) {
+  tdf <- ldply(list(CapScoreList$amb[[x]], CapScoreList$elev[[x]]), 
+               function(y) data.frame(y, treatment = row.names(y)))
+  tdf$co2 <- rep(c("amb", "elev"), each = nrow(tdf)/2)
+  return(tdf)
+  })
+names(CapScores) <- names(CapScoreList$amb)
+
+CapScores$species$year <- factor("2013")
+CapScores$centroids$year <- factor("2013")
+CapScores$sites <- cbind(CapScores$sites, 
+                         ldply(c("amb", "elev"), function(x) subset(EnvDF_3df, co2 == x)))
+
+p <- ggplot(data = CapScores$sites, aes(x = CAP1, y = CAP2, shape = year))
+p2 <- p + geom_point(size = 3) + facet_grid(co2 ~.)
+p3 <- p2 + 
+  geom_segment(data = CapScores$centroids, 
+                   aes(x = 0, y = 0, xend = CAP1, yend = CAP2), 
+                   arrow = arrow(length = unit(.1, "cm")), 
+                   alpha = .6,
+                   color = "blue") + 
+      geom_text(data = CapScores$centroids, 
+                aes(x = CAP1 * 1.1 , y = CAP2 * 1.1, label = treatment), 
+                alpha = .6, lineheight = .7, 
+                color = "blue", size = 2, 
+                fontface = "bold")
+spdf <- subset(CapScores$species, abs(CAP1) > .08| abs(CAP2) > .08)
+spdf <- within(spdf, {
+  treatment <- gsub("[.]", "\n", as.character(treatment))
+  CAP1 <- CAP1 * 2.5
+  CAP2 <- CAP2 * 2.5
+  })
+
+p4 <- p3 + 
+  geom_segment(data = spdf, 
+               aes(x = 0, y = 0, xend = CAP1, yend = CAP2), 
+               arrow = arrow(length = unit(.1, "cm")),
+               alpha = .6,
+               colour = "red") +
+    geom_text(data = spdf, 
+              aes(x = CAP1 * 1.2, y = CAP2 * 1.2, label = treatment),
+              size = 2, fontface = "bold.italic", 
+              colour = "red", alpha = .6, lineheight = .7) +
+    labs(x = "CAP1", y = "CAP2") +
+  geom_hline(aes(yintercept = 0), linetype = "dotted") +
+  geom_vline(aes(xintercept = 0), linetype = "dotted")
+p4
+ggsavePP(filename = "output/figs/FACE_CAPvsYear_byCO2", plot = p4, width = 6, height = 6)
+
+#######
+# PFG #
+#######
+## ---- RunCAPbyCO2_PFG
+cap_pfg1 <- capscale(log(RingSumPFGMatrix[, PFGName] + 1) ~ OrganicMatter + moist + temp + 
+                       FloorPAR + Depth_HL, EnvDF_3df, dist = "bray")
+
+anova(cap_pfg1)
+anova(cap_pfg1, by = "axis")
+anova(cap_pfg1, by = "margin")
+
+capRes_pfg <- llply(list("backward", "forward", "both"), 
+                    function(x) ordistep(cap_pfg1, direction = x, trace = 0))
+
+SimplModAnv_pfg <- llply(capRes_pfg, function(x) anova(x, by = "margin"))
+cap_pfg2 <- capRes_pfg[[3]]
+
+p <- TriPlot(cap_pfg2, yaxis = "CAP", env = EnvDF_3df, axispos = c(1:3),
+             lowx = 0, lowy = 0, spcons = .7, biplcons = .7)
+p
+ggsavePP(filename = "output/figs/FACE_CAP_EnvVar_PFG", plot = p, width = 6, height = 6)
+
+
+## ---- others
+CapByCo2_pfg <- llply(list(amb = "amb", elev = "elev"), function(x) {
+  capscale(log(RingSumPFGMatrix[, PFGName] + 1) ~ year + Condition(ring), 
+           EnvDF_3df, dist = "bray", subset = EnvDF_3df$co2 == x)
+  })
+
+llply(CapByCo2_pfg, anova)
+par(mfrow = c(1, 2))
+llply(CapByCo2_pfg, function(x) plot(x, scaling = 1))
+# no evidence of association
 
 
 ###########################
