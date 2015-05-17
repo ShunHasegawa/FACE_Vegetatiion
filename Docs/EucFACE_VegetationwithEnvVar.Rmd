@@ -5,155 +5,58 @@ date: "Thursday, May 07, 2015"
 output: pdf_document
 ---
 
+# Organise environmental variables
+Soil chemistry and properties such as organic matter, moisture, temperature etc. are used environmental variables. Some variables are not complete for three years. Some variables are highly correlated one another and really redundant, so they're organised before fitting to plant community data. 
 
-```{r, include=FALSE}
-source("../R/Packages.R")
-# source("../R/functions.R")
+```{r setup, include=FALSE}
+library(knitr)
+opts_knit$set(root.dir=normalizePath('../'))
 
-# Environmental variables
-load("../output//Data/FACE_EnvironmenVars.RData")
+```{r readchunks, include=FALSE}
+read_chunk("R/Analysis.R")
+read_chunk("R/FitEnvironmentalVars.R")
 
-# Raw data for multi variate analysis
-load("../output/Data//FACE_Vegetation_Raw_2013_2015.RData")
+```{r LoadData, include=FALSE}
 
-# Data frame with plant functional groups
-load("../output//Data//FACE_Vegetation_PFG_2015.RData")
-
-# check unknown spp
-all(!grepl("unknown", VegRes15$variable, ignore.case = TRUE))
-
-# co2, block and id
-veg <- within(VegRes15, {
-  block <- recode(ring, "1:2 = 'A'; 3:4 = 'B'; 5:6 = 'C'")
-  co2 <- factor(ifelse(ring %in% c(1, 4, 5), "elev", "amb"))
-  id <- ring:plot
-})
-
-#######################
-# organise data frame #
-#######################
-
-# all spp----
-veg.face <- within(vdf, {
-  co2 <- factor(ifelse(ring %in% c(1, 4, 5), "elev", "amb"))
-  block <- recode(ring, "1:2 = 'A'; 3:4 = 'B'; 5:6 = 'C'")
-  id <- ring:plot
-})
-SiteName <- c("year", "block", "ring", "co2", "plot", "id", "position", "cell")
-SppName <- names(veg.face)[!names(veg.face) %in% SiteName]
-
-# plot sum
-PlotSumVeg <- ddply(veg.face, .(year, block, co2, ring, plot, id), function(x) colSums(x[, SppName]))
-
-# ring sum
-RingSumVeg <- ddply(PlotSumVeg, .(year, block, co2, ring), function(x) colSums(x[, SppName]))
-
-# PFG matrix----
-
-# plot
-PlotSumPFGMatrix <- dcast(year + block + co2 + ring + plot ~ PFG, 
-                          data = subset(veg, !is.na(PFG)), sum)
-colSums(PlotSumPFGMatrix[,6:13])
-
-# remove lichen, also add interaction term
-PlotSumPFGMatrix <- within(PlotSumPFGMatrix, {
-  Lichen = NULL
-  c3_4 = NULL
-  id = ring:plot
-  yco = year:co2
-})
-
-PFGName <- c("c3", "c4", "legume", "moss", "Non_legume", "wood")
-
-# ring
-RingSumPFGMatrix <- ddply(PlotSumPFGMatrix, .(year, block, ring, co2, yco), 
-                          function(x) colSums(x[, PFGName]))
-  
-
-# Diversity & eveness----
-vegDF <- PlotSumVeg[, SppName]
-siteDF <- PlotSumVeg[, !names(PlotSumVeg) %in% SppName]
-
-DivDF <- within(siteDF,{
-  H <- diversity(vegDF) # Shannon's index
-  S <- specnumber(vegDF) # number of spp
-  J <- H/log(S)  # Pielou's evenness
-})
-
+```{r OrganiseEnvVars, results='markup'}
 ```
 
-```{r, results='markup'}
-names(EnvVarDF)
+# CAP analysis
 
-# correlations
-CorMatrix <- cor(EnvVarDF[c(-1, -2)], use = "pairwise.complete.obs")
-corrplot(CorMatrix, tl.cex = .8)
-# some values are really redundant so remove. Also some of them are hard to
-# interpret so remove. e.g. EC, Theta75
-RmVar <- c("silt", "clay", "OrganicC", "TotalP_CM",
-           "Theta5", "Theta30", "Theta75", "EC", 
-           "T5", "T10", "T20", "T30", "T50", "T100")
-EnvVarDF <- EnvVarDF[, !names(EnvVarDF) %in% RmVar]
-CorMatrix <- cor(EnvVarDF[c(-1, -2)], use = "pairwise.complete.obs")
-corrplot(CorMatrix)
+## All species
+After organising, the following variables are fitted to plant community data using Canonical analysis of principal coordinate (CAP).
 
-# some of the variables are not complete for three years
+* Soil moisture (moist)
+* Soil temperature (temp)
+* Soil organic matter (OrganicMatter)
+* Depth of the hard layers (Depth_HL)
+* Photosynthetically active radiation (PAR) at the forest floor (FloorPAR)
 
-# Variables measured only in the 1st year---
-naCol_1stYear <-cbind(EnvVarDF[, c("year", "ring")], 
-                      EnvVarDF[, apply(subset(EnvVarDF, year == 2014),
-                                       2, function(x) any(is.na(x)))])
-# these are all soil variable and shouldn't change dramatically year by year so
-# just repeat the 1st year values
-NewnaCol <- ldply(1:3, function(...) subset(naCol_1stYear, year == 2013))
-
-# replace na columns with new columns
-EnvVarDF[, names(NewnaCol)[c(-1, -2)]] <- NewnaCol[, c(-1, -2)]
-
-# Variables measured only in the 1 and 2nd years----
-naCol_2ndYear <-cbind(EnvVarDF[, c("year", "ring")], 
-                      EnvVarDF[, apply(EnvVarDF, 2, function(x) any(is.na(x)))])
-# these variables may vary year by year
+```{r RunCap, results='markup', fig.width=6, fig.height=6}
 ```
 
-```{r, results='markup', fig.height=3.5, fig.width=6}
-###########################
-# Analyse 3-year data set #
-###########################
-naCol_2ndYear
-# these variables may vary year by year. so remove them for the time being
-EnvDF_3df <- EnvVarDF[, apply(EnvVarDF, 2, function(x) !any(is.na(x)))]
+There was a significant association between soil variables and plant community. Ring 1 and 2 are high temperature and dry soil. Ring 3 and 4 are wet and low organic matter. Ring 5 and 6 are wet and higher soil organic matter. Also yearly changes ($\bigcirc\rightarrow\triangle\rightarrow\Box$) of plant community may be associated with temperature changes.
 
-# Performe PCoA----
-RngVegdf <- ddply(veg.face, .(year, ring, co2), function(x) colSums(x[, SppName]))
-RngSppDF <- RngVegdf[, SppName]
-RngSiteDF <- RngVegdf[, !names(RngVegdf) %in% SppName]
+Adjacent FACE rings (1\&2, 3\&4, 5\&6), or rings within a block, seems to have same similar soil characteristics and associated plant community. This masks CO$_2$ effects, hence, using Partial CAP, between-block variation is removed and re-performed CAP with CO$_2$ and year as treatments.
 
-PCoA <- cmdscale(d = vegdist(log(RngSppDF + 1), method = "bray"), eig = TRUE, k = 3)
-PCoA_SiteScoreDF <- cbind(RngSiteDF, PCoA$points)
-names(PCoA_SiteScoreDF)[4:6] <- paste0("PCoA", 1:3)
-
-# Fit environmental variables----
-# 1st two axes
-efLst <- llply(2:3, function(x) envfit(PCoA$points[, c(1, x)], EnvDF_3df[, c(-1, -2)], permu = 999))
-efLst
-par(mfrow = c(1, 2), mar = c(5, 5, 1, 0))
-plot(PCoA2 ~ PCoA1, data = PCoA_SiteScoreDF, type = "n")
-d_ply(PCoA_SiteScoreDF, .(year, ring), function(x) {
-  points(PCoA2 ~ PCoA1, col = ring, pch = as.numeric(year), data = x, cex = 1.5)
-})
-plot(efLst[[1]], p.max = .05, cex = .7)
-legend("bottomleft", col = c(1:6), pch = c(rep(19, 6)), legend = paste("Ring", 1:6), 
-       bty = "n", cex = .7)
-legend("topleft", pch = c(1:3), legend = paste("Year", 1:3), bty = "n", cex = .7)
-
-plot(PCoA3 ~ PCoA1, data = PCoA_SiteScoreDF, type = "n")
-d_ply(PCoA_SiteScoreDF, .(year, ring), function(x) {
-  points(PCoA3 ~ PCoA1, col = ring, pch = as.numeric(year), data = x, cex = 1.5)
-})
-plot(efLst[[2]], p.max = .05, cex = .7)
-
-
+## Partial CAP
+```{r RunPartialCap, results='markup', fig.width=6, fig.height=6, message=FALSE}
 ```
 
+As expected block accounts for major proportion of variation (55\%). Ambient and eCO$_2$ were clearly split and Year2013 is separated from Year2014 and Year2015. This indicates that plant community changed from the 1st year to the 2nd year, but not much between the 2nd and 3rd years. Also difference between CO$_2$ treatments are likely to be due to initial difference which is highly associated with environmental variables.
 
+## Run CAP for each CO$_2$ treatments
+Due to the initial difference in plant community between CO$_2$ treatments, it's hard to see CO$_2$ effects. So I performed CAP each CO$_2$ treatments separately and see the yearly changes. In order to take the initial difference into account, between-ring variation is removed and residual is analysed using partial CAP.
+
+```{r RunCAPbyCO2_AllSpp, results='markup'}
+```
+
+There was a significant association between yearly changes and plant communities, but as expected large proportion of variation is due to between-ring difference (80 and 77\% in ambient and eCO$_2$ rings, respectively.)
+
+![CAP with all species for each CO2](../output/figs/FACE_CAPvsYear_byCO2.pdf)
+
+## Plant functional groups
+Plant functional group composition is also analysed.
+
+```{r RunCAPbyCO2_PFG, results='markup', fig.width=6, fig.height=6}
+```
