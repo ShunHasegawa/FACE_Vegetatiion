@@ -1,5 +1,6 @@
 rm(list=ls(all=TRUE))
 
+## ---- LoadData
 source("R/Packages.R")
 source("R/functions.R")
 
@@ -73,6 +74,7 @@ DivDF <- within(siteDF,{
   J <- H/log(S)  # Pielou's evenness
 })
 
+## ---- CreateFigs
 ########
 # Figs #
 ########
