@@ -43,7 +43,7 @@ library(car)
 
 \section{Introduction}
 Here I summarise the results of EucFACE understorey vegetation survey in 2013,
-2014 and 2015. I performed multivariate analysis (MDS and CAP). I also analysed proportion of plant functional groups (PFG) and diversity indices. 
+2014 and 2015. I performed multivariate analyses (CAP) with envrironmental variables. I also analysed proportion of plant functional groups (PFG) and diversity indices. 
 At the end I'll explain how I organised data. I'll show the code manipulating the data set from 2015 survey and combining with the previous data sets from 2013 and 2014. I needed to combine some of the columns and remove unnecessary ones. It is because slightly different names are occasionally used for even the same species in different excel sheets.
 
 %%%%%%%%%%%
@@ -80,28 +80,6 @@ At the end I'll explain how I organised data. I'll show the code manipulating th
 \end{center}
 \end{landscape}
 \clearpage
-
-%%%%%%%%
-% PCoA %
-%%%%%%%%
-\section{Principal Coordinates Analysis (PCoA)}
-Principal Coordinates Analysis (PCoA) is also known as Metric-multidimensional scaling (MDS). Here I present PCoA results. First three axes of PCoA explain 67\% of variability in original data set. Firstly, different colors are used to depict CO$_2$ treatments.
-
-% PCoA for CO2 treatment
-\begin{figure}[H]\label{figure:PCoA_CO2}
-\includegraphics{../output/figs/FACE_Vegetation_PCoA_CO2.pdf}
-\caption{Results of PCoA, showing PCoA2 and 3 against PCoA1}
-\end{figure}
-
-There is no evidence of CO$_2$ treatments affecting variability in species composition. Below I show the same figure as the above, but rings are shown by different colors.
-
-% PCoA for CO2 treatment
-\begin{figure}[H]\label{figure:PCoA_Ring}
-\includegraphics{../output/figs/FACE_Vegetation_PCoA_EachRing.pdf}
-\caption{Results of PCoA for each rings}
-\end{figure}
-
-PCoA1 is driven by ring differences, suggesting that variability in species composition is mainly due to spatial variability. PCoA2 is driven by Year, and PCoA3 is by Block (i.e., Ring 1\&2, 3\&4 and 5\&6).
 
 %%%%%%%
 % CAP %
