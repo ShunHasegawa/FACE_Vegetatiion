@@ -515,7 +515,7 @@ TriPlot <- function(MultValRes, env, yaxis, axispos, EnvNumeric = TRUE, lowx = .
                 fontface = "bold")
   }
   p5 <- p4 + 
-    scale_color_hue(labels = paste0(1:6, c("a", "e", "a", "e", "e", "a"))) +
+    scale_color_hue(labels = paste0(1:6, c("e", "a", "a", "e", "e", "a"))) +
     geom_hline(aes(yintercept = 0), linetype = "dotted") +
     geom_vline(aes(xintercept = 0), linetype = "dotted")
 }
