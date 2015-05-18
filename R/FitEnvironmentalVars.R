@@ -210,10 +210,11 @@ p4 <- p3 +
 p4
 ggsavePP(filename = "output/figs/FACE_CAPvsYear_byCO2", plot = p4, width = 6, height = 6)
 
+## ---- RunCAPbyCO2_PFG
+
 #######
 # PFG #
 #######
-## ---- RunCAPbyCO2_PFG
 cap_pfg1 <- capscale(log(RingSumPFGMatrix[, PFGName] + 1) ~ OrganicMatter + moist + temp + 
                        FloorPAR + Depth_HL, EnvDF_3df, dist = "bray")
 
@@ -234,6 +235,16 @@ ggsavePP(filename = "output/figs/FACE_CAP_EnvVar_PFG", plot = p, width = 6, heig
 
 
 ## ---- others
+# Partial CAP with PFG
+cap_pfg2 <- capscale(log(RingSumPFGMatrix[, PFGName] + 1) ~ co2 + year + Condition(block),
+                     EnvDF_3df, dist = "bray")
+cap_pfg3 <- capscale(log(RingSumPFGMatrix[, PFGName] + 1) ~ co2 + year,
+                     EnvDF_3df, dist = "bray")
+anova(cap_pfg2)
+anova(cap_pfg3)
+
+
+
 CapByCo2_pfg <- llply(list(amb = "amb", elev = "elev"), function(x) {
   capscale(log(RingSumPFGMatrix[, PFGName] + 1) ~ year + Condition(ring), 
            EnvDF_3df, dist = "bray", subset = EnvDF_3df$co2 == x)
