@@ -240,9 +240,13 @@ cap_pfg2 <- capscale(log(RingSumPFGMatrix[, PFGName] + 1) ~ co2 + year + Conditi
                      EnvDF_3df, dist = "bray")
 cap_pfg3 <- capscale(log(RingSumPFGMatrix[, PFGName] + 1) ~ co2 + year,
                      EnvDF_3df, dist = "bray")
+cap_pfg4 <- capscale(log(RingSumPFGMatrix[, PFGName] + 1) ~ year + Condition(ring),
+                     EnvDF_3df, dist = "bray")
 anova(cap_pfg2)
 anova(cap_pfg3)
-
+anova(cap_pfg4)
+anova(cap_pfg4, by = "axis")
+plot(cap_pfg4)
 
 
 CapByCo2_pfg <- llply(list(amb = "amb", elev = "elev"), function(x) {
