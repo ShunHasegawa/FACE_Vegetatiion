@@ -14,11 +14,45 @@ TcnDF <- read.xlsx2("Data/SoilVariables/Soil.TC.TN.xlsx",
 names(TcnDF)[grepl("tc|tn", names(TcnDF))] <- c("TotalC", "TotalN")
 TcnDF[, c("TotalC", "TotalN")] <- apply(TcnDF[, c("TotalC", "TotalN")], 2, as.numeric)
 TcnDF$year <- factor(TcnDF$year, labels = c(2013, 2014))
-TcnDF <- subsetD(TcnDF, depth == "0-10", select = -depth)
+TcnDF$depth <- factor(paste0(TcnDF$depth, "cm"))
 
-# Ring mean
-TcnDF_Ring <- ddply(TcnDF, .(year, ring), summarise,
-                    TotalC = mean(TotalC), TotalN = mean(TotalN))
+#######################
+# TC and TN from Hiev #
+#######################
+HtcnDF <- read.csv("Data/SoilVariables/FACE_P0014_ALL_ SoilCN_June2012-Spet2014_V1.csv")
+HtcnDF <- within(HtcnDF, {
+  Date <- as.Date(dmy(as.character(Date)))
+  ring <- factor(ring)
+  year <- year(Date) + 1 # in order to combine with vegetation results from January next year
+  Month <- month(Date)
+})
+HtcnDF <- subsetD(HtcnDF, plot != "Backfill")
+names(HtcnDF)[grepl("tc|tn", names(HtcnDF))] <- c("TotalC", "TotalN")
+ftable(xtabs( ~ year + Month + depth, data = HtcnDF))
+# 2014 is completely missing
+# no 20-30 cm for 2013
+
+# compre the above two data frames
+llply(list(HtcnDF, TcnDF), function(x) subset(x, ring == 1 & year == 2013))
+  # 2013 is the same. so just need 2014 from the above.
+
+# ring mean for each data frames at 0-10 cm from June or May
+TcnDF_Ring <- ldply(list(subset(TcnDF, year == 2014), subset(HtcnDF, Month %in% c(5, 6))), 
+                    function(x) {
+                      ddply(x, .(year, ring, depth), summarise, 
+                            TotalC = mean(TotalC), 
+                            TotalN = mean(TotalN))
+                      })
+
+# check interaction beween ring and depth
+par(mfrow = c(2, 3))
+d_ply(TcnDF_Ring, .(year), function(x) 
+  with(x, interaction.plot(depth, ring, TotalC, main = unique(x$year))))
+d_ply(TcnDF_Ring, .(year), function(x) 
+  with(x, interaction.plot(depth, ring, TotalN, main = unique(x$year))))
+# There doesn't seem to be interaction so just use top 0-10 cm
+
+TcnDF_Ring <- subsetD(TcnDF_Ring, depth == "0-10cm", select = -depth)
 
 ###########################
 # Total P measured by Cat #
