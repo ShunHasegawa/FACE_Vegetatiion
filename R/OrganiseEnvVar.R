@@ -54,23 +54,89 @@ d_ply(TcnDF_Ring, .(year), function(x)
 
 TcnDF_Ring <- subsetD(TcnDF_Ring, depth == "0-10cm", select = -depth)
 
-###########################
-# Total P measured by Cat #
-###########################
-TpDF <- read.xlsx2("Data/SoilVariables/EucAFCE P sum 30_05_14.xlsx", 
-                   sheetIndex = 1, 
-                   header = TRUE, startRow = 1, endRow = 25, 
-                   stringsAsFactors = FALSE)
-# organise
-TpDF <- TpDF[, c("Ring", "Quarter", "Total.CM.mg.kg.1")]
-names(TpDF) <- c("ring", "plot", "TotalP_CM")
-TpDF <- within(TpDF, {
-  TotalP_CM <- as.numeric(TotalP_CM)
-  year <- "2013" # not too sure which soil was used... need to check with Cat
-})
+###############
+# Dry soil pH #
+###############
+phDF <- read.csv("Data/SoilVariables/FACE_P0014_ALL_ SoilpH_2012to2014_V1.csv")
 
-# Ring mean
-TpDF_Ring <- ddply(TpDF, .(year, ring), summarise, TotalP_CM = mean(TotalP_CM))
+levels(phDF$Depth)
+# unneccessary space. so remove
+
+unique(phDF$Plot)
+# some of pots contains ring number so remove
+
+phDF <- within(phDF, {
+  Date <- as.Date(dmy(Date))
+  Ring <- factor(Ring)
+  Plot <- as.character(factor(Plot)) # 1.0->1, 1.1->1.1
+  Plot <- factor(gsub(".[.]", "", Plot)) # 1->1, 1.1->1
+  Depth <- factor(gsub(" ", "", as.character(Depth)))
+  year <- year(Date) + 1  # in order to combine with vegetation results from January next year
+  Month <- month(Date)
+  })
+names(phDF)[c(3, 4, 6)] <- c("ring", "plot", "Drysoil_ph")
+# remove NA
+phDF <- phDF[!is.na(phDF$Drysoil_ph), ]
+
+# which month and depth to be used
+ftable(xtabs( ~ year + Month + Depth, data = phDF))
+  # use May/June at 0-10cm
+
+phDF_June <- subsetD(phDF, Depth == "0-10cm" & Month %in% 5:6)
+
+# ring mean
+phDF_ring <- ddply(phDF_June, .(year, ring), summarise, Drysoil_ph = mean(Drysoil_ph))
+
+par(mfrow = c(1, 2))
+
+# compare fresh soil pH and dry soil pH
+with(phDF_ring, interaction.plot(year, ring, Drysoil_ph, ylim = c(5, 6)))
+with(SoilDf, interaction.plot(year, ring, ph, ylim = c(5, 6)))
+  # quite different
+
+###############################
+# Comprehensive soil analysis #
+###############################
+SoilChemDF <- read.csv("Data/SoilVariables/FACE_P0014_ALL_ ElementalAnalysis_2012to2014_V2.csv")
+
+# remove unit
+names(SoilChemDF) <- gsub("[..].*", "", names(SoilChemDF))
+
+# re-structure
+SoilChemDF <- within(SoilChemDF, {
+  Date <- as.Date(ymd(Date))
+  Ring <- factor(Ring)
+  Plot <- factor(Plot)
+  Depth <- factor(gsub(" ", "", as.character(Depth)))
+  year <- year(Date) + 1
+  Month <- month(Date)
+  Sulfur <- NULL
+})
+names(SoilChemDF)[c(3, 4)] <- c("ring", "plot")
+summary(SoilChemDF)
+
+# remove rows whose chemical measurements are all NA
+chems <- names(SoilChemDF)[!names(SoilChemDF) %in% c("Date", "Sample", "ring", "plot", "Depth", "Month", "year")]
+SoilChemDF <- SoilChemDF[apply(SoilChemDF[, chems], 1, function(x) !all(is.na(x))), ]
+summary(SoilChemDF)
+
+# which month and depth to be used
+ftable(xtabs( ~ year + Month + Depth, data = SoilChemDF))
+  # aw what am I gonna do....?
+
+# e.g. phosphorus
+par(mfrow = c(2, 3))
+l_ply(1:6, function(x)
+boxplot(Phosphorus ~ Date, data = subset(SoilChemDF, Depth == "0-10cm" & ring == x), cex.axis = .7, 
+        main = paste("Ring", x)))
+# there is a monthly variation, so ideally want to use measurment from the same month
+
+# use March at 0-10 cm for time being
+SoilChemDF_Mar <- subsetD(SoilChemDF, Depth == "0-10cm" & Month == 3)
+summary(SoilChemDF_Mar)
+
+SoilChemDF_ring <- ddply(SoilChemDF_Mar, .(year, ring), function(x) colMeans(x[, chems]))
+
 
 #######################
 # Soil moist and temp #
@@ -171,12 +237,14 @@ xtabs(~ Y + M, data = tdfS)
 # Combine all #
 ###############
 EnvVarDF <- Reduce(function(...) merge(..., by = c("year", "ring"), all.x = TRUE), 
-                   list(SoilDf, TcnDF_Ring, TpDF_Ring, SoilMTdf_Ring, FlorLight_Ring, 
-                        iem_ring, Extract_ring, Mineralisation_ring))
+                   list(SoilDf, TcnDF_Ring, phDF_ring, SoilChemDF_ring, 
+                        SoilMTdf_Ring, FlorLight_Ring, iem_ring, Extract_ring, 
+                        Mineralisation_ring))
 EnvVarDF <- within(EnvVarDF, {
   year <- factor(year)
   ring <- factor(ring)
   co2 <- factor(ifelse(ring %in% c(1, 4, 5), "elev", "amb"))
+  TotalP <- NULL
 })
 
 save(EnvVarDF, file = "output/Data/FACE_EnvironmenVars.RData")
