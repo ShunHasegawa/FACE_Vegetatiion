@@ -2,38 +2,39 @@
 # Environmental variables
 load("output//Data/FACE_EnvironmenVars.RData")
 
+names(EnvVarDF)
+# remove all minor metals
+rmMetal <- c("Silver", "Arsenic", "Lead", "Cadmium", "Chromium", "Copper", "Manganese", 
+             "Nickel", "Selenium", "Zinc", "Mercury", "Iron", "Aluminium", "Boron", 
+             "Silicon", "Vanadium", "Cobalt", "Molybdenum", "Barium", "Calcium", "Magnesium",
+             "Potassium", "Sodium")
+
+EnvVarDF <- EnvVarDF[, !names(EnvVarDF) %in% rmMetal]
+
 # correlations
 CorMatrix <- cor(Rm_ymc(EnvVarDF), use = "pairwise.complete.obs")
-corrplot(CorMatrix)
+p = CorMatrix
+p[is.na(CorMatrix)]=0.2 
+p[is.na(CorMatrix)==F]=0
+CorMatrix[is.na(CorMatrix)]=0
+corrplot.mixed(CorMatrix, p.mat=p, tl.cex = .5)
 
 # some values are really redundant so remove. Also some of them are hard to
 # interpret so remove. e.g. EC, Theta75
-RmVar <- c("sand", "silt", "clay", "TotalP", "OrganicC", "TotalP_CM", "TotalC",
-           "TotalN", "Theta5", "Theta30", "Theta75", "EC", 
-           "T5", "T10", "T20", "T30", "T50", "T100")
+RmVar <- c("sand", "silt", "clay", "OrganicMatter",
+           "OrganicC", "OrganicC", "TotalP_CM", 
+           "Theta5", "Theta30", "Theta75", "EC", 
+           "T5", "T10", "T20", "T30", "T50", "T100", 
+           "TotalN", "Phosphorus", "nitrification")
 EnvVarDF <- EnvVarDF[, !names(EnvVarDF) %in% RmVar]
 CorMatrix <- cor(Rm_ymc(EnvVarDF), use = "pairwise.complete.obs")
-corrplot(CorMatrix)
+corrplot.mixed(CorMatrix, tl.cex = .5, mar = par()$mar)
 
 # some of the variables are not complete for three years
-
-# Variables measured only in the 1st year---
-naCol_1stYear <-cbind(EnvVarDF[, c("year", "ring", "co2")], 
-                      EnvVarDF[, apply(subset(EnvVarDF, year == 2014),
-                                       2, function(x) any(is.na(x)))])
-names(naCol_1stYear)[4] <- "OrganicMatter"
-
-# these are all soil variable and shouldn't change dramatically year by year so
-# just repeat the 1st year values
-NewnaCol <- ldply(1:3, function(...) subset(naCol_1stYear, year == 2013))
-
-# replace na columns with new columns
-EnvVarDF[, names(NewnaCol)[c(-1:-3)]] <- Rm_ymc(NewnaCol)
 
 # Variables measured only in the 1 and 2nd years----
 naCol_2ndYear <-cbind(EnvVarDF[, c("year", "ring")], 
                       EnvVarDF[, apply(EnvVarDF, 2, function(x) any(is.na(x)))])
-# these variables may vary year by year
 
 ###########################
 # Analyse 3-year data set #
@@ -48,52 +49,274 @@ EnvDF_3df$block <- recode(EnvDF_3df$ring, "1:2 = 'A'; 3:4 = 'B'; 5:6 = 'C'")
 #########
 ## RDA ##
 #########
+# combine environment and spp df
+seDF <- merge(RingSumVeg, EnvDF_3df, by = c("year", "ring", "block", "co2"))
 
-rda1 <- rda(log(RingSumVeg[, SppName] + 1) ~ year + co2 + OrganicMatter + Depth_HL + 
-              moist + FloorPAR + temp, EnvDF_3df)
-rda1   # Constrained (canonical) axes explains 76%
-anova(rda1)  # Significant association between species and environmental variables
-anova(rda1, by = "axis")  # RDA1-4 are significant
-anova(rda1, by = "margin") # not all explanatory variables is significant
+##############
+## 1st year ##
+##############
+
+# determine environmental variables driving initial difference in species
+# composition using the 1st year data
+
+names(EnvDF_3df)
+df2013 <- subsetD(seDF, year == 2013)
+
+rda1 <- rda(log(df2013[ , SppName] + 1) ~ TotalC + moist + Drysoil_ph + Depth_HL, df2013)
+rda1   # Constrained (canonical) axes explains 93%
+# possible permutation is 6! = 720 (small), so carry out exact permutation test
+
+anova(rda1, permutations = allPerms(6))  # 6! = 720
+# it sayw number of permutations 198 but actually 720 (I think.. and don't know
+# why it says 198)
+anova(rda1, permutations = allPerms(6), by = "margin") 
+  # not all explanatory variables is significant
+
+# model simplification
+rdaRes <- llply(list("backward", "forward", "both"), 
+                function(x) ordistep(rda1, direction = x, trace = 0, 
+                                     permutations = allPerms(6)))
+SimplModAnv <- llply(rdaRes, function(x) anova(x, by = "margin", 
+                                               permutations = allPerms(6)))
+SimplModAnv
+# TotalC and moist
+rda2 <- rdaRes[[1]] # constrained axis explains 71% of variation
+anova(rda2, permutations = allPerms(6))
+anova(rda2, permutations = allPerms(6), by = "axis")
+anova(rda2, permutations = allPerms(6), by = "terms")
+
+# include co2
+rda3 <- rda(log(df2013[ , SppName] + 1) ~ co2 + Condition(TotalC + moist), df2013)
+anova(rda3, permutations = allPerms(6))
+# no co2 effect
+
+# plot
+p <- TriPlot(MultValRes = rda2, env = subset(seDF, year == 2013), 
+             yaxis = "RDA axis", axispos = c(1, 2, 3))
+ggsavePP(filename = "output//figs/FACE_RDA_EnvVar_Year1", plot = p, width = 6, height = 6)
+spenvcor(rda2)
+
+##############
+## 2nd year ##
+##############
+df2014 <- subsetD(seDF, year == 2014)
+rda1 <- rda(log(df2014[ , SppName] + 1) ~ TotalC + moist + Drysoil_ph + Depth_HL, df2014)
+rda1   # Constrained (canonical) axes explains 84%
+anova(rda1, permutations = allPerms(6))  # 6! = 720
+anova(rda1, permutations = allPerms(6), by = "terms")  # 6! = 720
+# no significant association
+
+# model simplification
+rdaRes <- llply(list("backward", "forward", "both"), 
+                function(x) ordistep(rda1, direction = x, trace = 0, 
+                                     permutations = allPerms(6), 
+                                     Pin = .1, Pout = .11))
+SimplModAnv <- llply(rdaRes, function(x) anova(x, by = "margin", 
+                                               permutations = allPerms(6)))
+SimplModAnv
+# moist and Drysoil_ph is marginally significant
+
+rda2 <- rdaRes[[1]]
+anova(rda2, permutations = allPerms(6))
+anova(rda2, permutations = allPerms(6), by = "margin")
+
+# include co2
+rda3 <- rda(log(df2014[ , SppName] + 1) ~ co2 + Condition(moist + Drysoil_ph) , df2014)
+anova(rda3, permutations = allPerms(6))
+# no
+
+# plot
+p <- TriPlot(MultValRes = rda2, env = df2014, yaxis = "RDA axis", axispos = c(1, 2, 3))
+ggsavePP(filename = "output//figs/FACE_RDA_EnvVar_Year2", plot = p, 
+         width = 6, height = 6)
+
+##############
+## 3rd year ##
+##############
+df2015 <- subsetD(seDF, year == 2015)
+rda1 <- rda(log(df2015[ , SppName] + 1) ~ TotalC + moist + Drysoil_ph + Depth_HL, df2015)
+rda1   # Constrained (canonical) axes explains 89%
+anova(rda1, permutations = allPerms(6))  # marginaly significant
+anova(rda1, permutations = allPerms(6), by = "terms")  # 6! = 720
+# no significant association
 
 # model simplification
 rdaRes <- llply(list("backward", "forward", "both"), 
                 function(x) ordistep(rda1, direction = x, trace = 0))
-SimplModAnv <- llply(rdaRes, function(x) anova(x, by = "margin"))
+SimplModAnv <- llply(rdaRes, function(x) anova(x, by = "margin", 
+                                               permutations = allPerms(6)))
 SimplModAnv
-# co2, OrganicMatter, Depth_HL, moist and temp are significant
-rda2 <- rdaRes[[3]]
-anova(rda2, by = "axis")
+# TotalC, moist and Drysoil_ph
+rda2 <- rdaRes[[1]] 
+rda2 # 78%
+anova(rda2, permutations = allPerms(6), by = "terms")  # 6! = 720
+
+# include co2
+rda3 <- rda(log(df2015[ , SppName] + 1) ~ co2 + Condition(TotalC + moist + Drysoil_ph), df2015)
+rda3
+anova(rda3, permutations = allPerms(6))  
+# no co2 effect
 
 # plot
-p <- TriPlot(MultValRes = rda2, env = EnvDF_3df, yaxis = "RDA axis", axispos = c(1, 2, 3))
-ggsavePP(filename = "output//figs/FACE_RDA_EnvVar", plot = p, width = 6, height = 6)
-# moisture is very well representing high moisutre in ring5 followed by ring6
-spenvcor(rda2)
+p <- TriPlot(MultValRes = rda2, env = df2015, yaxis = "RDA axis", axispos = c(1, 2, 3))
+ggsavePP(filename = "output//figs/FACE_RDA_EnvVar_Year3", plot = p, width = 6, height = 6)
+
+#################
+# CO2 treatment #
+#################
+
+#############
+## Ambient ##
+#############
+ambDF <- subsetD(seDF, co2 == "amb")
+
+# permutaiton Possible number of permutation is (3!)^3 = 216. it's small so need
+# to use exact permutation test
+
+allPerms(9, 
+         how(within = Within(type = "free"), plot = Plots(strata = ambDF2$ring)))
+# Null hypothesis is no difference between years. Ring is no exchangeable but 
+# subplots are. NOTE # First three colmuns of the above indices are for the 1st 
+# factor of ring, and four to six are for the 2nd and seven to nine are for 3rd.
+# So that data frame needs to be reordered to match this. 
+
+# reorder by ring
+ambDF <- ambDF[order(ambDF$ring), ]
+
+# Run RDA
+rda_amb <- rda(log(ambDF[, SppName] + 1) ~ year + moist + TotalC + 
+                 Drysoil_ph + FloorPAR + Condition(ring) , ambDF)
+
+hh <- allPerms(9, how(within = Within(type = "free"), plot = Plots(strata = ambDF$ring)))
+
+# model simplificaiton
+rdaRes <- llply(list("backward", "forward", "both"), 
+                function(x) ordistep(rda_amb, direction = x, trace = 0, 
+                                     permutations = hh))
+SimplModAnv <- llply(rdaRes, function(x) anova(x, by = "margin", permutations = hh))
+SimplModAnv
+# only year is left
+rda_amb2 <- rdaRes[[1]]
+anova(rda_amb2, permutations = hh)
+
+# replace time with temp
+rda_amb <- rda(log(ambDF[, SppName] + 1) ~ temp + moist + TotalC + 
+                 Drysoil_ph + FloorPAR + Condition(ring) , ambDF)
+rdaRes <- llply(list("backward", "forward", "both"), 
+                function(x) ordistep(rda_amb, direction = x, trace = 0, 
+                                     permutations = hh))
+SimplModAnv <- llply(rdaRes, function(x) anova(x, by = "margin", permutations = hh))
+SimplModAnv
+
+rda_amb_temp <- rdaRes[[1]]
+anova(rda_amb_temp, permutations = hh)
+
+# plot
+p <- TriPlot(MultValRes = rda_amb_temp, env = ambDF, yaxis = "RDA axis", axispos = c(1, 2, 3))
+ggsavePP(filename = "output//figs/FACE_RDA_EnvVar_Ambient", plot = p, width = 6, height = 6)
+
+#########
+## co2 ##
+#########
+
+elvDF <- subsetD(seDF, co2 == "elev")
+# reorder by ring
+elvDF <- elvDF[order(elvDF$ring), ]
+
+# Run RDA
+rda_elev <- rda(log(elvDF[, SppName] + 1) ~ year + moist + TotalC + 
+                 Drysoil_ph + Condition(ring) , elvDF)
+
+hh <- allPerms(9, how(within = Within(type = "free"), plot = Plots(strata = elevDF$ring)))
+
+# model simplificaiton
+rdaRes <- llply(list("backward", "forward", "both"), 
+                function(x) ordistep(rda_elev, direction = x, trace = 0, 
+                                     permutations = hh))
+SimplModAnv <- llply(rdaRes, function(x) anova(x, by = "margin", permutations = hh))
+SimplModAnv
+
+# year and moist
+rda_elev2 <- rdaRes[[3]]
+anova(rda_elev2, permutations = hh)
+anova(rda_elev2, permutations = hh, by = "margin")
+
+# year maybe replaceable with temp
+summary(lm(temp ~ year, data = seDF))
+
+# use temp itead of time
+rda_elev <- rda(log(elvDF[, SppName] + 1) ~ temp + moist + TotalC + 
+                  Drysoil_ph + Condition(ring) , elvDF)
+rdaRes <- llply(list("backward", "forward", "both"), 
+                function(x) ordistep(rda_elev, direction = x, trace = 0, 
+                                     permutations = hh))
+SimplModAnv <- llply(rdaRes, function(x) anova(x, by = "margin", permutations = hh))
+SimplModAnv
+
+rda_elev_temp <- rdaRes[[1]]
+anova(rda_elev_temp, permutations = hh)
+anova(rda_elev_temp, permutations = hh, by = "margin")
+
+# plot
+p <- TriPlot(MultValRes = rda_elev_temp, env = ambDF, yaxis = "RDA axis", axispos = c(1, 2, 3))
+ggsavePP(filename = "output//figs/FACE_RDA_EnvVar_eCO2", plot = p, width = 6, height = 6)
+
+##################### # 3-year data set ## #################### From the above
+#analysis, moist, temp, TotalC and Dry_soilph are determied to be imporatnt
+#driver
+
+rda_all <- rda(log(seDF[, SppName] + 1) ~ TotalC + moist + Drysoil_ph + temp + co2, 
+               seDF)
+# can't run anova as it is. cause different perumutation units need to be
+# defined for year and co2. so anyway create a triplot and see the pattern.
+rda_all
+
+# plot
+p <- TriPlot(MultValRes = rda_all, env = seDF, yaxis = "RDA axis", axispos = c(1, 2, 3), centcons = 2)
+ggsavePP(filename = "output//figs/FACE_RDA_EnvVar_Year1_3", plot = p, width = 6, height = 6)
+
+#######################################
+# investigate environmental variables #
+#######################################
+
+# define permutation
+seDF <- seDF[order(seDF$ring, seDF$year), ] # reorder by ring
+ctrl <- allPerms(nrow(seDF), 
+                 how(within = Within(type = "series", constant = TRUE),
+                     # keep order (Year1-3) to take autocorrelation into account
+                     plot = Plots(strata = seDF$ring, type = "free")) )
+                          # ring is exchangeable.
+
+# check if permutation is proparly designed
+seDF[, c("year", "ring")]
+some(ctrl)
+# correct as each ring is exchanged and the order 1-3, 4-6, 7-9 etc. are kept
 
 
-# Envrironmental variables have significant association with plant community, 
-# but masks CO2 effect. Environmental variables and associated plant community 
-# seems really similar between adjacent FACE rings within the same block (1&2, 
-# 3&4 and 5&6). So conduct Partial RDA (fit block first to remove initial
-# difference and fit co2 and year)
+# use temp as condition as temp explains yearly variation
+rda3 <- rda(log(seDF[, SppName] + 1) ~ TotalC + moist + Drysoil_ph + Depth_HL + Condition(temp), seDF)
 
-# Partial RDA
-prda1 <- rda(log(RingSumVeg[, SppName] + 1) ~ year + co2 + Condition(block), EnvDF_3df)
-prda1 
-# as expected condition accounts for a large propotion of variation (48 %)
-# Semipartial R2 = 25 %
-anova(prda1) # significant association
-plot(prda1)
-anova(prda1, by = "axis") # only RDA1 is significant
-anova(prda1, by = "margin")
-summary(prda1)
+anova(rda3, permutations = ctrl)
+# marginally significant
+anova(rda3, by = "margin", permutations = ctrl)
 
-p <- TriPlot(MultValRes = prda1, env = EnvDF_3df, yaxis = "RDA axis", axispos = c(1, 2, 4), EnvNumeric = FALSE)
-ggsavePP(filename = "output//figs/PartialRDA_EnvVar", plot = p, width = 6, height = 6)
+# model simplification
+rdaRes <- llply(list("backward", "forward", "both"), 
+                function(x) ordistep(rda3, direction = x, trace = 0, 
+                                     permutations = ctrl))
+SimplModAnv <- llply(rdaRes, function(x) anova(x, by = "margin", permutations = ctrl))
+SimplModAnv
 
-# Plant community is different between treatments, but simply becuase of initial
-# difference
+# moist, totalC and Drysoil_ph
+rda4 <- rdaRes[[1]]
+anova(rda4, permutations = ctrl)
+anova(rda4, by = "margin", permutations = ctrl)
+
+# plot
+p <- TriPlot(MultValRes = rda4, env = seDF, yaxis = "RDA axis", axispos = c(1, 2, 3))
+ggsavePP(filename = "output//figs/FACE_RDA_EnvVar_AllYear", plot = p, width = 6, height = 6)
+
+
 
 ## ---- RunCap
 
@@ -101,12 +324,16 @@ ggsavePP(filename = "output//figs/PartialRDA_EnvVar", plot = p, width = 6, heigh
 ## CAP ##
 #########
 # bray-curtis is used to compute dissimilarity
-Cap1 <- capscale(log(RingSumVeg[, SppName] + 1) ~ OrganicMatter + Depth_HL + 
+Cap1 <- capscale(log(RingSumVeg[, SppName] + 1) ~ TotalC +  Depth_HL + 
                    moist + temp + FloorPAR, EnvDF_3df, dist = "bray")
+
+Cap1 <- capscale(log(RingSumVeg[, SppName] + 1) ~ TotalC +  moist, 
+                 EnvDF_3df, dist = "bray")
 Cap1
 # 66 % is explained by constrained axes
 
-anova(Cap1) # significant association between plant community and environmental variables
+anova(Cap1, permutations = ctrl) # significant association between plant community and environmental variables
+anova(rda1, permutations = ctrl) # significant association between plant community and environmental variables
 anova(Cap1, by = "axis") # CAP1-4 are significant
 
 theme_set(theme_bw())
