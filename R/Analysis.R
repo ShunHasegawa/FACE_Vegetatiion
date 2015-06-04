@@ -39,10 +39,10 @@ SiteName <- c("year", "block", "ring", "co2", "plot", "id", "position", "cell")
 SppName <- names(veg.face)[!names(veg.face) %in% SiteName]
 
 # plot sum
-PlotSumVeg <- ddply(veg.face, .(year, block, co2, ring, plot, id), function(x) colSums(x[, SppName]))
+PlotSumVeg <- ddply(veg.face, .(year, ring, plot, block, co2, id), function(x) colSums(x[, SppName]))
 
 # ring sum
-RingSumVeg <- ddply(PlotSumVeg, .(year, block, co2, ring), function(x) colSums(x[, SppName]))
+RingSumVeg <- ddply(PlotSumVeg, .(year, ring, block, co2), function(x) colSums(x[, SppName]))
 
 # PFG matrix----
 
