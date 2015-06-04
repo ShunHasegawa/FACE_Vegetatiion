@@ -427,7 +427,7 @@ Rm_ymc <- function(x) x[, !names(x) %in% c("year", "ring", "co2")]
 # Triplot #
 ###########
 TriPlot <- function(MultValRes, env, yaxis, axispos, EnvNumeric = TRUE, lowx = .5, lowy = .5,
-                    spcons = 2.5, biplcons = 3){
+                    spcons = 2.5, biplcons = 3, centcons = 1){
   #   lowx, lowy are minimum sp correlation with axes to plot
   ResultScore <- summary(MultValRes)
   
@@ -444,7 +444,7 @@ TriPlot <- function(MultValRes, env, yaxis, axispos, EnvNumeric = TRUE, lowx = .
                                     row.names = NULL))
   if(!is.na(ResultScore$centroids)) {
     Rlist$centroids <- data.frame(treatment = row.names(ResultScore$centroids),
-                                 ResultScore$centroids,
+                                 ResultScore$centroids * centcons,
                                  row.names = NULL)
   } 
   
