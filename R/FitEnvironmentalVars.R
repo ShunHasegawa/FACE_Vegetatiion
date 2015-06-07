@@ -62,28 +62,23 @@ seDF <- merge(RingSumVeg, EnvDF_3df, by = c("year", "ring", "block", "co2"))
 names(EnvDF_3df)
 df2013 <- subsetD(seDF, year == 2013)
 
-rda1 <- rda(log(df2013[ , SppName] + 1) ~ TotalC + moist + Drysoil_ph + Depth_HL, df2013)
-rda1   # Constrained (canonical) axes explains 93%
-# possible permutation is 6! = 720 (small), so carry out exact permutation test
-
-anova(rda1, permutations = allPerms(6))  # 6! = 720
-# it sayw number of permutations 198 but actually 720 (I think.. and don't know
-# why it says 198)
-anova(rda1, permutations = allPerms(6), by = "margin") 
-  # not all explanatory variables is significant
+rda1 <- rda(log(df2013[ , SppName] + 1) ~ TotalC + moist + Drysoil_ph + Depth_HL + FloorPAR, df2013)
 
 # model simplification
 rdaRes <- llply(list("backward", "forward", "both"), 
                 function(x) ordistep(rda1, direction = x, trace = 0, 
                                      permutations = allPerms(6)))
+  # possible permutation is 6! = 720 (small), so carry out exact permutation
+  # test it says number of permutations 198 but actually 720 (I think.. and
+  # don't know why it says 198)
+
 SimplModAnv <- llply(rdaRes, function(x) anova(x, by = "margin", 
                                                permutations = allPerms(6)))
 SimplModAnv
 # TotalC and moist
 rda2 <- rdaRes[[1]] # constrained axis explains 71% of variation
 anova(rda2, permutations = allPerms(6))
-anova(rda2, permutations = allPerms(6), by = "axis")
-anova(rda2, permutations = allPerms(6), by = "terms")
+Res_Year1 <- anova(rda2, permutations = allPerms(6), by = "terms")
 
 # include co2
 rda3 <- rda(log(df2013[ , SppName] + 1) ~ co2 + Condition(TotalC + moist), df2013)
@@ -117,8 +112,8 @@ SimplModAnv
 # moist and Drysoil_ph is marginally significant
 
 rda2 <- rdaRes[[1]]
-anova(rda2, permutations = allPerms(6))
-anova(rda2, permutations = allPerms(6), by = "margin")
+anova(rda2, permutations =0, allPerms(6))
+Res_Year2 <- anova(rda2, permutations = allPerms(6), by = "margin")
 
 # include co2
 rda3 <- rda(log(df2014[ , SppName] + 1) ~ co2 + Condition(moist + Drysoil_ph) , df2014)
@@ -149,7 +144,7 @@ SimplModAnv
 # TotalC, moist and Drysoil_ph
 rda2 <- rdaRes[[1]] 
 rda2 # 78%
-anova(rda2, permutations = allPerms(6), by = "terms")  # 6! = 720
+Res_Year3 <- anova(rda2, permutations = allPerms(6), by = "terms")  # 6! = 720
 
 # include co2
 rda3 <- rda(log(df2015[ , SppName] + 1) ~ co2 + Condition(TotalC + moist + Drysoil_ph), df2015)
@@ -199,6 +194,10 @@ SimplModAnv
 rda_amb2 <- rdaRes[[1]]
 anova(rda_amb2, permutations = hh)
 
+# Axis
+anova(rda_amb2, permutations = hh, by = "axis")
+# RDA1 is significant
+
 # replace time with temp
 rda_amb <- rda(log(ambDF[, SppName] + 1) ~ temp + moist + TotalC + 
                  Drysoil_ph + FloorPAR + Condition(ring) , ambDF)
@@ -225,9 +224,9 @@ elvDF <- elvDF[order(elvDF$ring), ]
 
 # Run RDA
 rda_elev <- rda(log(elvDF[, SppName] + 1) ~ year + moist + TotalC + 
-                 Drysoil_ph + Condition(ring) , elvDF)
+                  Drysoil_ph + Condition(ring) , elvDF)
 
-hh <- allPerms(9, how(within = Within(type = "free"), plot = Plots(strata = elevDF$ring)))
+hh <- allPerms(9, how(within = Within(type = "free"), plot = Plots(strata = elvDF$ring)))
 
 # model simplificaiton
 rdaRes <- llply(list("backward", "forward", "both"), 
@@ -261,7 +260,18 @@ anova(rda_elev_temp, permutations = hh, by = "margin")
 p <- TriPlot(MultValRes = rda_elev_temp, env = ambDF, yaxis = "RDA axis", axispos = c(1, 2, 3))
 ggsavePP(filename = "output//figs/FACE_RDA_EnvVar_eCO2", plot = p, width = 6, height = 6)
 
-##################### # 3-year data set ## #################### From the above
+########
+# Plot #
+########
+p2 <- PlotRDA_Year(rdaResLst = list(rda_amb2, rda_elev2))
+ggsavePP(filename = "output/figs/FACE_RDAvsYearbyCO2", plot = p2, 
+         width = 6.65, height = 4)
+
+
+#####################
+## 3-year data set ## 
+#####################
+# From the above
 #analysis, moist, temp, TotalC and Dry_soilph are determied to be imporatnt
 #driver
 
@@ -274,6 +284,133 @@ rda_all
 # plot
 p <- TriPlot(MultValRes = rda_all, env = seDF, yaxis = "RDA axis", axispos = c(1, 2, 3), centcons = 2)
 ggsavePP(filename = "output//figs/FACE_RDA_EnvVar_Year1_3", plot = p, width = 6, height = 6)
+
+#######
+# PFG #
+#######
+peDF <- merge(RingSumPFGMatrix, EnvDF_3df, by = c("year", "ring", "block", "co2")) 
+
+simpleRDAFun <- function(x) {
+  dd <- x
+  rda1 <- rda(log(dd[ , PFGName] + 1) ~ TotalC + moist + Drysoil_ph + Depth_HL, data = dd)
+  rda2 <- ordistep(rda1, direction = "backward", trace = 0, permutations = allPerms(6))
+  return(rda2)
+}
+
+dd1 <- subsetD(peDF, year == 2013)
+dd2 <- subset(peDF, year == 2014)
+dd3 <- subset(peDF, year == 2015)
+
+rda1 <- rda(log(dd1[ , PFGName] + 1) ~ TotalC + moist + Drysoil_ph + Depth_HL, data = dd1)
+rda2 <- rda(log(dd2[ , PFGName] + 1) ~ TotalC + moist + Drysoil_ph + Depth_HL, data = dd2)
+rda3 <- rda(log(dd3[ , PFGName] + 1) ~ TotalC + moist + Drysoil_ph + Depth_HL, data = dd3)
+
+rda1_2 <- ordistep(rda1, direction = "both", trace = 0, permutations = allPerms(6), Pin = .1, Pout = .11)
+rda2_2 <- ordistep(rda2, direction = "both", trace = 0, permutations = allPerms(6), Pin = .1, Pout = .11)
+rda3_2 <- ordistep(rda3, direction = "both", trace = 0, permutations = allPerms(6), Pin = .1, Pout = .11)
+
+peDF_res <- list(rda1_2, rda2_2, rda3_2)
+llply(peDF_res, function(x) anova(x, permutations = allPerms(6)))
+RdaPfgRes <- llply(peDF_res, function(x) anova(x, permutations = allPerms(6), by = "margin"))
+RdaPfgRes
+
+# TotalC, moist, Drysoil_ph and Depth_HL
+
+#########
+## CO2 ##
+#########
+summary(lm(FloorPAR ~ year, data = peDF)) 
+summary(lm(temp ~ year, data = peDF)) 
+cor(peDF$FloorPAR, peDF$temp)
+# significant temporal change in FloorPAR and temperature
+plot(FloorPAR ~ year, data = peDF)
+plot(temp ~ year, data = peDF)
+
+#############
+## Ambient ##
+#############
+ambDF_pfg <- subsetD(peDF, co2 == "amb")
+
+# reorder by ring
+ambDF_pfg <- ambDF_pfg[order(ambDF_pfg$ring), ]
+
+# Run RDA
+rda_amb <- rda(log(ambDF_pfg[, PFGName] + 1) ~ year + Condition(ring) , ambDF_pfg)
+
+# Define permutation
+hh <- allPerms(9, how(within = Within(type = "free"), plot = Plots(strata = ambDF_pfg$ring)))
+
+anova(rda_amb, permutations = hh)
+# no year effect
+
+# Use temp and FloorPAR intstead
+rda_amb2 <- rda(log(ambDF_pfg[, PFGName] + 1) ~ temp + FloorPAR + Condition(ring) , ambDF_pfg)
+# model simplificaiton
+rda_amb3 <- ordistep(rda_amb2, direction = "both", trace = 0, permutations = hh)
+anova(rda_amb3, permutations = hh, by = "terms")
+# significant tempearture effect
+
+##########
+## eCO2 ##
+##########
+
+elevDF_pfg <- subsetD(peDF, co2 == "elev")
+elevDF_pfg <- elevDF_pfg[order(elevDF_pfg$ring), ]
+
+rda_elev <- rda(log(elevDF_pfg[, PFGName] + 1) ~ year + Condition(ring) , elevDF_pfg)
+hh <- allPerms(9, how(within = Within(type = "free"), plot = Plots(strata = elevDF_pfg$ring)))
+anova(rda_elev, permutations = hh)
+# no year effect
+
+# fit FloorPAR and temp
+rda_elev2 <- rda(log(elevDF_pfg[, PFGName] + 1) ~ FloorPAR + temp + Condition(ring) , elevDF_pfg)
+anova(rda_elev2, permutations = hh, by = "terms")
+
+# remove FloorPAR or temp
+rda_elev3 <- rda(log(elevDF_pfg[, PFGName] + 1) ~ temp + Condition(ring) , elevDF_pfg)
+rda_elev4 <- rda(log(elevDF_pfg[, PFGName] + 1) ~ FloorPAR + Condition(ring) , elevDF_pfg)
+anova(rda_elev3, permutations = hh, by = "terms")
+anova(rda_elev4, permutations = hh, by = "terms")
+# no temp effect or FloorPAR effect
+
+# Plot against year by co2
+p2 <- PlotRDA_Year(rdaResLst = list(rda_amb, rda_elev), env = list(ambDF_pfg, elevDF_pfg), spscore = 0)
+ggsavePP(filename = "output/figs/FACE_RDAvsYearbyCO2_PFG", plot = p2, 
+         width = 6.65, height = 4)
+
+#####################
+## 3-year data set ## 
+#####################
+# From the above
+#analysis, moist, temp, TotalC and Dry_soilph are determied to be imporatnt
+#driver
+rda_pfg_all <- rda(log(peDF[, PFGName] + 1) ~ TotalC + moist + Drysoil_ph + Depth_HL + temp, peDF)
+
+# plot
+p <- TriPlot(MultValRes = rda_pfg_all, env = peDF, yaxis = "RDA axis", axispos = c(1, 2, 3), 
+             centcons = 2, spcons = .5, biplcons = 1, lowx = 0, lowy = 0)
+ggsavePP(filename = "output//figs/FACE_RDA_EnvVar_PFG_Year1_3", plot = p, width = 6, height = 6)
+
+##################
+# Summary result #
+##################
+Res_list <- list(Res_Year1, Res_Year2, Res_Year3)
+names(Res_list) <- c("Year1", "Year2", "Year3")
+str(Res_Year1)
+
+SummaryRDAanova <- function(x){
+  data.frame(source = row.names(x), 
+             DF = x$Df,
+             Var = round(x$Variance*100/sum(x$Variance), 2),  
+             F = round(x$F, 2), 
+             P =  round(x$Pr, 3))
+}
+
+ResDF <- ldply(Res_list, SummaryRDAanova, .id = "Year")
+write.csv(ResDF, file = "output/table/Result_RDA_Anova.csv", row.names = FALSE)
+PfgResDF <- ldply(RdaPfgRes, SummaryRDAanova, .id = "Year")
+write.csv(PfgResDF, file = "output/table/Result_RDA_Anova_PFG.csv", row.names = FALSE)
+
 
 #######################################
 # investigate environmental variables #

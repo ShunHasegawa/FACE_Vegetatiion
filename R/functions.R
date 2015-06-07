@@ -523,3 +523,44 @@ TriPlot <- function(MultValRes, env, yaxis, axispos, EnvNumeric = TRUE, lowx = .
     geom_vline(aes(xintercept = 0), linetype = "dotted")
   p5
 }
+
+#######################################
+# Plot RDA result against year by co2 #
+#######################################
+PlotRDA_Year <- function(rdaResLst, spscore = .3, env){
+  names(rdaResLst) <- c("amb", "elev")
+  
+  # % variance for RDA1
+  Rda1Prop <- laply(rdaResLst, function(x) {
+    ss <- round(summary(x)$cont$importance["Proportion Explained", "RDA1"] * 100, 2)
+    paste0(ss, "%")}
+  )
+  
+  # Spp score
+  RDAsppDF <- ldply(c("amb", "elev"), function(x) {
+    ll <- rdaResLst[[x]]
+    spdf <- vegan::scores(ll)$species
+    data.frame(spdf, 
+               co2 = x,
+               year = "Species score",
+               sp = row.names(spdf))
+  })
+  
+  RDAsppDF$co2 <- factor(RDAsppDF$co2, labels = paste0(c("Ambient (", "eCO2 ("), Rda1Prop, ")"))
+  RDAsppDF <- subset(RDAsppDF, abs(RDA1) > spscore)
+  
+  RDAsiteDF <- ldply(c("amb", "elev"), function(x) {
+    ll <- rdaResLst[[x]]
+    if(x == "amb") dd <- env[[1]] else dd <- env[[2]]
+    data.frame(vegan::scores(ll)$sites, co2 = x, dd)
+  }) 
+  RDAsiteDF$co2 <- factor(RDAsiteDF$co2, labels = paste0(c("Ambient (", "eCO2 ("), Rda1Prop, ")"))
+  
+  p <- ggplot(RDAsiteDF, aes(x = year, y = RDA1))
+  p2 <- p + 
+    geom_point(size = 4, alpha = .7) + 
+    geom_text(data = RDAsppDF, aes(x = year, y = RDA1 * 3, label = sp), size = 2) + 
+    geom_hline(xintercept = 0, linetype = "dashed") + 
+    facet_grid(. ~ co2)
+  p2
+}
