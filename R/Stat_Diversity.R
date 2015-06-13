@@ -85,6 +85,24 @@ cntrst <- contrast(Sml_lme,
 S_CntrstRes <- cntrstTbl(cntrst, data = tdf, variable = "S", digit = 2)
 S_CntrstRes
 
+###########
+# Summary #
+###########
+Anv_lst <- list('Species richness' = AnvF_Sml, 
+                'Diveristy' = AnvF_Dml,
+                'Evenness' = AnvF_Eml)
+
+Anv_df <- ldply(Anv_lst, function(x) {
+  predictors = factor(row.names(x), levels = c("co2", "year", "co2:year"))
+  pval = x$Pr
+  stat = as.character(cut(pval, breaks = c(0, 0.001, 0.01, 0.05, 0.1, 1), 
+                          labels = c("***", "**", "*", ".", "ns")))
+  stat[stat == "ns"] <- round(pval[which(stat == "ns")], 2)
+  data.frame(predictors, stat)
+  }, .id = "variable")
+Anv_cst <- dcast(variable ~ predictors, data = Anv_df, value.var = "stat")
+write.csv(Anv_cst, file = "output/table/FACE_Diversity_StatSummary.csv")
+
 ## ---- Stats_DiversityInx_Evenness
 # Evenness
 # The initial model
