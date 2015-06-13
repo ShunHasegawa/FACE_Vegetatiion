@@ -72,7 +72,7 @@ which(qqnorm(resid(pm1))$y == min(qqnorm(resid(pm1))$y))
 pm2 <- lmer(logit(C3Pr) ~ year * co2 + (1|block) +  (1|ring) + (1|id), data = C34grassDF[-1, ])
 plot(pm2)
 qqnorm(resid(pm2))
-qqline(resid(pm1))
+qqline(resid(pm2))
 AnvF_PropC3 <- Anova(pm2, test.statistic = "F")
 AnvF_PropC3
 # improved a lot. but needs to inspect more
