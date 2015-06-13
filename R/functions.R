@@ -144,9 +144,9 @@ stepLmer <- function(model, red.rndm = FALSE, ddf = "Kenward-Roger", ...){
 ###########################################
 # log OR sqrt OR power(1/3) OR inverse OR box-cox
 bxplts <- function(value, xval, ofst = 0, data, ...){
-  data$y <- data[[value]] + ofst #ofst is added to make y >0
+  data$y <- data[[value]] + ofst # ofst is added to make y >0
   data$xv <- data[[xval]]
-  a <- boxcox(y ~ xv * year, data = data)
+  a <- boxcox(y ~ xv * year, data = data, plotit = FALSE)
   par(mfrow = c(2, 3))
   boxplot(y ~ xv*year, data, main = "raw")
   boxplot(log(y) ~ xv*year, main = "log", data)
