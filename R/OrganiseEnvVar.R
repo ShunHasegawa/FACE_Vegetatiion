@@ -36,6 +36,7 @@ ftable(xtabs( ~ year + Month + depth, data = HtcnDF))
 llply(list(HtcnDF, TcnDF), function(x) subset(x, ring == 1 & year == 2013))
   # 2013 is the same. so just need 2014 from the above.
 
+
 # ring mean for each data frames at 0-10 cm from June or May
 TcnDF_Ring <- ldply(list(subset(TcnDF, year == 2014), subset(HtcnDF, Month %in% c(5, 6))), 
                     function(x) {
@@ -43,6 +44,16 @@ TcnDF_Ring <- ldply(list(subset(TcnDF, year == 2014), subset(HtcnDF, Month %in% 
                             TotalC = mean(TotalC), 
                             TotalN = mean(TotalN))
                       })
+# plot mean
+dd14 <- subset(TcnDF, year == 2014 & depth == "0-10cm", 
+               select = c("year", "ring", "plot", "TotalC", "TotalN"))
+dd13_15 <- subset(HtcnDF, Month %in% c(5, 6) & depth == "0-10cm", 
+                  select = c("year", "ring", "plot", "TotalC", "TotalN"))
+# fix plot labels
+dd13_15$plot <- factor(sub(".[.]", "", as.character(dd13_15$plot)))
+TcnDF_Plot <- rbind.fill(list(dd14, dd13_15))
+TcnDF_Plot <- TcnDF_Plot[order(TcnDF_Plot$year), ]
+save(TcnDF_Plot, file = "output/Data/TcnJune_Plot.RData")
 
 # check interaction beween ring and depth
 par(mfrow = c(2, 3))
@@ -83,6 +94,7 @@ ftable(xtabs( ~ year + Month + Depth, data = phDF))
   # use May/June at 0-10cm
 
 phDF_June <- subsetD(phDF, Depth == "0-10cm" & Month %in% 5:6)
+save(phDF_June, file = "output/Data/FACE_DrysoilPhJune.RData")
 
 # ring mean
 phDF_ring <- ddply(phDF_June, .(year, ring), summarise, Drysoil_ph = mean(Drysoil_ph))
