@@ -52,112 +52,311 @@ EnvDF_3df$block <- recode(EnvDF_3df$ring, "1:2 = 'A'; 3:4 = 'B'; 5:6 = 'C'")
 # combine environment and spp df
 seDF <- merge(RingSumVeg, EnvDF_3df, by = c("year", "ring", "block", "co2"))
 
+# possible explanatory variables
+expl <- c("co2",  "TotalC", "moist", "Drysoil_ph", "Depth_HL", "FloorPAR", "temp")
+
+###############
+# Single term #
+###############
+# R2adj for each single term
+
+adjR_singl_Lst <- list()
+for (i in 1:3) {
+  dd <- subsetD(seDF, year == levels(seDF$year)[i])
+  spdd <- dd[ , SppName]
+  # formula for each variable
+  singl_fmls <- llply(paste("log(spdd + 1) ~", expl), as.formula)
+  names(singl_fmls) <- expl
+  adjR_singl <- ldply(singl_fmls, function(y) 
+    RsquareAdj(rda(y, data = dd))$adj.r.squared, 
+    .id = "variable")
+  adjR_singl_Lst[[i]] <- adjR_singl
+  rm(dd, spdd, singl_fmls, adjR_singl)
+}
+names(adjR_singl_Lst) <- paste0("Year", 1:3)
+
+# Get variables with positive R2adj
+PosAdjR <- llply(adjR_singl_Lst, function(x) as.character(x$variable[x$V1 > 0]))
+
+# Formula for full models
+FullFormula <- llply(PosAdjR, function(x) {
+  comb_exp <- combn(x, 4) # combination of four
+  expl_fml <-apply(comb_exp, 2, function(x) paste(x, collapse = "+"))
+  return(expl_fml)
+  })
+
+# Y matric (lefthand part)
+LH <- list("log(df2013[ , SppName] + 1) ~",
+           "log(df2014[ , SppName] + 1) ~",
+           "log(df2015[ , SppName] + 1) ~")
+fmls <- llply(list(Year1 = 1, Year2 = 2, Year3 = 3), 
+              function(x) llply(paste(LH[[x]], FullFormula[[x]]), as.formula))
+
 ##############
 ## 1st year ##
 ##############
-
-# determine environmental variables driving initial difference in species
-# composition using the 1st year data
-
-names(EnvDF_3df)
 df2013 <- subsetD(seDF, year == 2013)
 
-rda1 <- rda(log(df2013[ , SppName] + 1) ~ TotalC + moist + Drysoil_ph + Depth_HL + FloorPAR, df2013)
+# There are too many environmental variables to fit. so choose four which showed
+# highest R2adj 
+# adjusted R2
+adjR <- ldply(fmls$Year1, function(x) RsquareAdj(rda(x, data = df2013))$adj.r.squared)
 
-# model simplification
-rdaRes <- llply(list("backward", "forward", "both"), 
-                function(x) ordistep(rda1, direction = x, trace = 0, 
-                                     permutations = allPerms(6)))
-  # possible permutation is 6! = 720 (small), so carry out exact permutation
-  # test it says number of permutations 198 but actually 720 (I think.. and
-  # don't know why it says 198)
+# highest R2
+rr <- rda(fmls$Year1[[which(max(adjR) == adjR)]], df2013)
 
-SimplModAnv <- llply(rdaRes, function(x) anova(x, by = "margin", 
-                                               permutations = allPerms(6)))
-SimplModAnv
-# TotalC and moist
-rda2 <- rdaRes[[1]] # constrained axis explains 71% of variation
-anova(rda2, permutations = allPerms(6))
-Res_Year1 <- anova(rda2, permutations = allPerms(6), by = "terms")
+# check multicollinearity
+vif.cca(rr)
+anova(rr, permutations = allPerms(6))
+rr2 <- rda(log(df2013[ , SppName] + 1) ~ 1, df2013)
+rr3 <- ordiR2step(rr2, rr, permutations = allPerms(6), direction = "forward", Pin = .1)
 
-# include co2
-rda3 <- rda(log(df2013[ , SppName] + 1) ~ co2 + Condition(TotalC + moist), df2013)
-anova(rda3, permutations = allPerms(6))
-# no co2 effect
-
-# plot
-p <- TriPlot(MultValRes = rda2, env = subset(seDF, year == 2013), 
-             yaxis = "RDA axis", axispos = c(1, 2, 3))
-ggsavePP(filename = "output//figs/FACE_RDA_EnvVar_Year1", plot = p, width = 6, height = 6)
-spenvcor(rda2)
+# summary result
+rda2013 <- list(IniRda = rr, FinRda = rr3)
 
 ##############
 ## 2nd year ##
 ##############
 df2014 <- subsetD(seDF, year == 2014)
-rda1 <- rda(log(df2014[ , SppName] + 1) ~ TotalC + moist + Drysoil_ph + Depth_HL, df2014)
-rda1   # Constrained (canonical) axes explains 84%
-anova(rda1, permutations = allPerms(6))  # 6! = 720
-anova(rda1, permutations = allPerms(6), by = "terms")  # 6! = 720
-# no significant association
 
-# model simplification
-rdaRes <- llply(list("backward", "forward", "both"), 
-                function(x) ordistep(rda1, direction = x, trace = 0, 
-                                     permutations = allPerms(6), 
-                                     Pin = .1, Pout = .11))
-SimplModAnv <- llply(rdaRes, function(x) anova(x, by = "margin", 
-                                               permutations = allPerms(6)))
-SimplModAnv
-# moist and Drysoil_ph is marginally significant
+# adjusted R2
+adjR <- laply(fmls$Year2, function(x) RsquareAdj(rda(x, data = df2014))$adj.r.squared)
 
-rda2 <- rdaRes[[1]]
-anova(rda2, permutations =0, allPerms(6))
-Res_Year2 <- anova(rda2, permutations = allPerms(6), by = "margin")
+# highest R2
+rr <- rda(fmls$Year2[[which(max(adjR) == adjR)]], df2014)
 
-# include co2
-rda3 <- rda(log(df2014[ , SppName] + 1) ~ co2 + Condition(moist + Drysoil_ph) , df2014)
-anova(rda3, permutations = allPerms(6))
-# no
+# check multicolliniarity using vif
+vif.cca(rr)
+anova(rr, permutations = allPerms(6))
+  # not significant
 
-# plot
-p <- TriPlot(MultValRes = rda2, env = df2014, yaxis = "RDA axis", axispos = c(1, 2, 3))
-ggsavePP(filename = "output//figs/FACE_RDA_EnvVar_Year2", plot = p, 
-         width = 6, height = 6)
+# choose only three terms
+comb_exp <- combn(PosAdjR$Year2, 3)
+expl_fml <-apply(comb_exp, 2, function(x) paste(x, collapse = "+"))
+fmls_3 <- llply(paste("log(df2014[ , SppName] + 1) ~", expl_fml), as.formula)
+
+adjR <- laply(fmls_3, function(x) RsquareAdj(rda(x, data = df2014))$adj.r.squared)
+rr <- rda(fmls_3[[which(max(adjR) == adjR)]], df2014)
+vif.cca(rr)
+anova(rr, permutations = allPerms(6))
+# good
+rr2 <- rda(log(df2014[ , SppName] + 1) ~ 1, df2014)
+rr3 <- ordiR2step(rr2, rr, permutations = allPerms(6), direction = "forward", Pin = .1)
+
+# summary result
+rda2014 <- list(IniRda = rr, FinRda = rr3)
 
 ##############
 ## 3rd year ##
 ##############
 df2015 <- subsetD(seDF, year == 2015)
-rda1 <- rda(log(df2015[ , SppName] + 1) ~ TotalC + moist + Drysoil_ph + Depth_HL, df2015)
-rda1   # Constrained (canonical) axes explains 89%
-anova(rda1, permutations = allPerms(6))  # marginaly significant
-anova(rda1, permutations = allPerms(6), by = "terms")  # 6! = 720
-# no significant association
 
-# model simplification
-rdaRes <- llply(list("backward", "forward", "both"), 
-                function(x) ordistep(rda1, direction = x, trace = 0))
-SimplModAnv <- llply(rdaRes, function(x) anova(x, by = "margin", 
-                                               permutations = allPerms(6)))
-SimplModAnv
-# TotalC, moist and Drysoil_ph
-rda2 <- rdaRes[[1]] 
-rda2 # 78%
-Res_Year3 <- anova(rda2, permutations = allPerms(6), by = "terms")  # 6! = 720
+# adjusted R2
+adjR <- laply(fmls$Year3, function(x) RsquareAdj(rda(x, data = df2015))$adj.r.squared)
 
-# include co2
-rda3 <- rda(log(df2015[ , SppName] + 1) ~ co2 + Condition(TotalC + moist + Drysoil_ph), df2015)
-rda3
-anova(rda3, permutations = allPerms(6))  
-# no co2 effect
+# highest R2
+rr <- rda(fmls$Year3[[which(max(adjR) == adjR)]], df2015)
 
-# plot
-p <- TriPlot(MultValRes = rda2, env = df2015, yaxis = "RDA axis", axispos = c(1, 2, 3))
-ggsavePP(filename = "output//figs/FACE_RDA_EnvVar_Year3", plot = p, width = 6, height = 6)
+# check multicollinearity
+vif.cca(rr)
+# TotalC, Depth_HL >10. 
+
+# Second highset R2adj
+adjR[which(max(adjR) == adjR)] <- NA
+rr <- rda(fmls$Year3[[which(max(adjR, na.rm = TRUE) == adjR)]], df2015)
+vif.cca(rr)
+anova(rr, permutations = allPerms(6))
+# good
+
+rr2 <- rda(log(df2015[ , SppName] + 1) ~ 1, df2015)
+rr3 <- ordiR2step(rr2, rr, permutations = allPerms(6), direction = "forward", Pin = .1)
+
+# summary result
+rda2015 <- list(IniRda = rr, FinRda = rr3)
+
+#############
+## Summary ##
+#############
+# R2adj for initial full model
+FuladjR_pv <- ldply(RdaLst, function(x){ 
+  data.frame(
+  Full = RsquareAdj(x$IniRda)$adj.r.squared, 
+  Pr = anova(x$IniRda, permutations = allPerms(6))$Pr[1])
+  }, 
+  .id = "year")
+FuladjR_pv <- dcast(variable ~ year, data = melt(FuladjR_pv, id = "year"))
+
+# Adjusted R2 for each term
+AdjTbl <- dcast(variable ~ .id, data = ldply(adjR_singl_Lst), value.var = "V1")
+AdjTbl <- rbind(AdjTbl, FuladjR_pv)
+AdjTbl[, 2:4] <- round(AdjTbl[, 2:4], 3)
+# replace negative values with <0
+AdjTbl[AdjTbl < 0] <- "<0" 
+# save
+write.csv(AdjTbl, file = "output/table/RDA_AdjR_Speices.csv")
+
+RdaLst <- list(Year1 = rda2013, Year2 = rda2014, Year3 = rda2015)
+llply(RdaLst, function(x) x$IniRda)
+
+AnovaRes <- ldply(RdaLst, 
+                  function(x) {
+                    dd <- anova(x$FinRda, permutations = allPerms(6), by = "margin")
+                    nr <- row.names(dd)
+                    data.frame(variable = nr, dd)
+                    }, 
+                  .id = "year")
+
+AdjR2 <- llply(RdaLst, function(x) RsquareAdj(x$FinRda)$adj.r.squared)
+AdjR2 <- laply(RdaLst, function(x) RsquareAdj(x$IniRda)$adj.r.squared)
+round(AdjR2, 3)
+llply(RdaLst, function(x) anova(x$IniRda, permutations = allPerms(6)))
+llply(RdaLst, function(x) anova(x$FinRda, permutations = allPerms(6)))
+
+#######
+# PFG #
+#######
+peDF <- merge(RingSumPFGMatrix, EnvDF_3df, by = c("year", "ring", "block", "co2")) 
+
+###############
+# Single term #
+###############
+# R2adj for each single term
+
+adjR_singl_Lst <- list()
+for (i in 1:3) {
+  dd <- subsetD(peDF, year == levels(peDF$year)[i])
+  spdd <- dd[ , PFGName]
+  # formula for each variable
+  singl_fmls <- llply(paste("log(spdd + 1) ~", expl), as.formula)
+  names(singl_fmls) <- expl
+  adjR_singl <- ldply(singl_fmls, function(y) 
+    RsquareAdj(rda(y, data = dd))$adj.r.squared, 
+    .id = "variable")
+  adjR_singl_Lst[[i]] <- adjR_singl
+  rm(dd, spdd, singl_fmls, adjR_singl)
+}
+names(adjR_singl_Lst) <- paste0("Year", 1:3)
+
+# Get variables with positive R2adj
+PosAdjR <- llply(adjR_singl_Lst, function(x) as.character(x$variable[x$V1 > 0]))
+ # less than 4 terms left
+
+# Formula for full models
+FullFormula <- llply(PosAdjR, function(x) paste(x, collapse = "+"))
+
+# Y matric (lefthand part)
+LH <- list("log(df2013[ , PFGName] + 1) ~",
+           "log(df2014[ , PFGName] + 1) ~",
+           "log(df2015[ , PFGName] + 1) ~")
+fmls <- llply(list(Year1 = 1, Year2 = 2, Year3 = 3), 
+              function(x) llply(paste(LH[[x]], FullFormula[[x]]), as.formula))
+
+##############
+## 1st year ##
+##############
+df2013 <- subsetD(peDF, year == 2013)
+
+# adjusted R2
+adjR <- laply(fmls$Year1, function(x) RsquareAdj(rda(x, data = df2013))$adj.r.squared)
+
+# highest R2
+rr <- rda(fmls$Year1[[which(max(adjR) == adjR)]], df2013)
+# check multicollinearity
+vif.cca(rr)
+anova(rr, permutations = allPerms(6))
+rr2 <- rda(log(df2013[ , PFGName] + 1) ~ 1, df2013)
+rr3 <- ordiR2step(rr2, rr, permutations = allPerms(6), direction = "forward", Pin = .1)
+
+# summary result
+rda2013 <- list(IniRda = rr, FinRda = rr3)
+
+##############
+## 2nd year ##
+##############
+df2014 <- subsetD(peDF, year == 2014)
+
+# adjusted R2
+adjR <- ldply(fmls$Year2, function(x) RsquareAdj(rda(x, data = df2014))$adj.r.squared)
+
+# highest R2
+rr <- rda(fmls$Year2[[which(max(adjR) == adjR)]], df2014)
+anova(rr, permutations = allPerms(6))
+rr2 <- rda(log(df2014[ , PFGName] + 1) ~ 1, df2014)
+rr3 <- ordiR2step(rr2, rr, permutations = allPerms(6), direction = "forward", Pin = .1)
+
+# summary result
+rda2014 <- list(IniRda = rr, FinRda = rr3)
+
+##############
+## 3rd year ##
+##############
+df2015 <- subsetD(peDF, year == 2015)
+
+# adjusted R2
+adjR <- laply(fmls$Year3, function(x) RsquareAdj(rda(x, data = df2015))$adj.r.squared)
+
+# highest R2
+rr <- rda(fmls$Year3[[which(max(adjR) == adjR)]], df2015)
+# check multicollinearity
+vif.cca(rr)
+anova(rr, permutations = allPerms(6))
+# not significant so use two terms instead
+
+# try only two variables
+comb_exp <- combn(PosAdjR$Year3, 2) 
+expl_fml <-apply(comb_exp, 2, function(x) paste(x, collapse = "+"))
+fmls_2 <- llply(paste("log(df2015[ , PFGName] + 1) ~", expl_fml), as.formula)
+adjR <- laply(fmls_2, function(x) RsquareAdj(rda(x, data = df2015))$adj.r.squared)
+rr <- rda(fmls_2[[which(max(adjR) == adjR)]], df2015)
+vif.cca(rr)
+anova(rr, permutations = allPerms(6))
+# good
+
+rr2 <- rda(log(df2015[ , PFGName] + 1) ~ 1, df2015)
+rr3 <- ordiR2step(rr2, rr, permutations = allPerms(6), direction = "forward", Pin = .1)
+
+# summary result
+rda2015 <- list(IniRda = rr, FinRda = rr3)
+
+#############
+## Summary ##
+#############
+RdaLst_pfg <- list(Year1 = rda2013, Year2 = rda2014, Year3 = rda2015)
+
+# R2adj for initial full model
+FuladjR_pv_pfg <- ldply(RdaLst_pfg, function(x){ 
+  data.frame(
+    Full = RsquareAdj(x$IniRda)$adj.r.squared, 
+    Pr = anova(x$IniRda, permutations = allPerms(6))$Pr[1])
+}, 
+.id = "year")
+FuladjR_pv_pfg <- dcast(variable ~ year, data = melt(FuladjR_pv_pfg, id = "year"))
+
+# Adjusted R2 for each term
+AdjTbl_pfg <- dcast(variable ~ .id, data = ldply(adjR_singl_Lst), value.var = "V1")
+AdjTbl_pfg <- rbind(AdjTbl_pfg, FuladjR_pv_pfg)
+AdjTbl_pfg[, 2:4] <- round(AdjTbl_pfg[, 2:4], 3)
+# replace negative values with <0
+AdjTbl_pfg[AdjTbl_pfg < 0] <- "<0" 
+AdjTbl_pfg
+write.csv(AdjTbl_pfg, file = "output/table/RDA_AdjR_PFG.csv")
+
+AnovaRes_pfg <- ldply(RdaLst_pfg, function(x) {
+                        aa <- anova(x$FinRda, permutations = allPerms(6), by = "margin")
+                        rn <- row.names(aa)
+                        data.frame(variable = rn, aa)},
+                  .id = "year")
+AdjR2 <- laply(RdaLst_pfg, function(x) RsquareAdj(x$FinRda)$adj.r.squared)
+round(AdjR2, 3)
+llply(RdaLst_pfg, function(x) anova(x$FinRda, permutations = allPerms(6)))
+
 
 #################
 # CO2 treatment #
+#################
+
+#################
+## All speices ##
 #################
 
 #############
@@ -285,36 +484,10 @@ rda_all
 p <- TriPlot(MultValRes = rda_all, env = seDF, yaxis = "RDA axis", axispos = c(1, 2, 3), centcons = 2)
 ggsavePP(filename = "output//figs/FACE_RDA_EnvVar_Year1_3", plot = p, width = 6, height = 6)
 
-#######
-# PFG #
-#######
-peDF <- merge(RingSumPFGMatrix, EnvDF_3df, by = c("year", "ring", "block", "co2")) 
 
-simpleRDAFun <- function(x) {
-  dd <- x
-  rda1 <- rda(log(dd[ , PFGName] + 1) ~ TotalC + moist + Drysoil_ph + Depth_HL, data = dd)
-  rda2 <- ordistep(rda1, direction = "backward", trace = 0, permutations = allPerms(6))
-  return(rda2)
-}
-
-dd1 <- subsetD(peDF, year == 2013)
-dd2 <- subset(peDF, year == 2014)
-dd3 <- subset(peDF, year == 2015)
-
-rda1 <- rda(log(dd1[ , PFGName] + 1) ~ TotalC + moist + Drysoil_ph + Depth_HL, data = dd1)
-rda2 <- rda(log(dd2[ , PFGName] + 1) ~ TotalC + moist + Drysoil_ph + Depth_HL, data = dd2)
-rda3 <- rda(log(dd3[ , PFGName] + 1) ~ TotalC + moist + Drysoil_ph + Depth_HL, data = dd3)
-
-rda1_2 <- ordistep(rda1, direction = "both", trace = 0, permutations = allPerms(6), Pin = .1, Pout = .11)
-rda2_2 <- ordistep(rda2, direction = "both", trace = 0, permutations = allPerms(6), Pin = .1, Pout = .11)
-rda3_2 <- ordistep(rda3, direction = "both", trace = 0, permutations = allPerms(6), Pin = .1, Pout = .11)
-
-peDF_res <- list(rda1_2, rda2_2, rda3_2)
-llply(peDF_res, function(x) anova(x, permutations = allPerms(6)))
-RdaPfgRes <- llply(peDF_res, function(x) anova(x, permutations = allPerms(6), by = "margin"))
-RdaPfgRes
-
-# TotalC, moist, Drysoil_ph and Depth_HL
+#########
+## PFG ##
+#########
 
 #########
 ## CO2 ##
