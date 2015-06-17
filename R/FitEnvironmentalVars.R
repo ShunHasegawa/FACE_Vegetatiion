@@ -378,28 +378,105 @@ allPerms(9,
 ambDF <- ambDF[order(ambDF$ring), ]
 
 # Run RDA
-rda_amb <- rda(log(ambDF[, SppName] + 1) ~ year + moist + TotalC + 
-                 Drysoil_ph + FloorPAR + Condition(ring) , ambDF)
+rda_amb <- rda(log(ambDF[, SppName] + 1) ~ year + Condition(ring) , ambDF)
 
 hh <- allPerms(9, how(within = Within(type = "free"), plot = Plots(strata = ambDF$ring)))
 
-# model simplificaiton
-rdaRes <- llply(list("backward", "forward", "both"), 
-                function(x) ordistep(rda_amb, direction = x, trace = 0, 
-                                     permutations = hh))
-SimplModAnv <- llply(rdaRes, function(x) anova(x, by = "margin", permutations = hh))
-SimplModAnv
-# only year is left
-rda_amb2 <- rdaRes[[1]]
-anova(rda_amb2, permutations = hh)
+anova(rda_amb, permutations = hh)
+# significant year effect
 
 # Axis
-anova(rda_amb2, permutations = hh, by = "axis")
+anova(rda_amb, permutations = hh, by = "axis")
 # RDA1 is significant
 
-# replace time with temp
-rda_amb <- rda(log(ambDF[, SppName] + 1) ~ temp + moist + TotalC + 
-                 Drysoil_ph + FloorPAR + Condition(ring) , ambDF)
+###############################################
+# Fit environmental variables instead of year #
+###############################################
+# possible explanatory variables
+expl <- c("TotalC", "moist", "Drysoil_ph", "FloorPAR", "temp")
+
+adjR_singl_Lst <- list()
+for (i in 1:2) {
+  dd <- subsetD(seDF, co2 == levels(seDF$co2)[i])
+  dd <- dd[order(dd$ring), ]
+  spdd <- dd[ , SppName]
+  # formula for each variable
+  singl_fmls <- llply(paste("log(spdd + 1) ~", expl, "+ Condition(ring)"), as.formula)
+  names(singl_fmls) <- expl
+  adjR_singl <- ldply(singl_fmls, function(y) 
+    RsquareAdj(rda(y, data = dd))$adj.r.squared, 
+    .id = "variable")
+  adjR_singl_Lst[[i]] <- adjR_singl
+  rm(dd, spdd, singl_fmls, adjR_singl)
+}
+names(adjR_singl_Lst) <- c("amb", "elev")
+
+# Get variables with positive R2adj
+PosAdjR <- llply(adjR_singl_Lst, function(x) as.character(x$variable[x$V1 > 0]))
+
+# Formula for full models
+FullFormula <- llply(PosAdjR, function(x) paste(x, collapse = "+"))
+  
+#   llply(PosAdjR, function(x) {
+#   comb_exp <- combn(x, 4) # combination of four
+#   expl_fml <-apply(comb_exp, 2, function(x) paste(x, collapse = "+"))
+#   return(expl_fml)
+# })
+
+# Y matric (lefthand part)
+LH <- list("log(ambDF[ , SppName] + 1) ~", "log(elevDF[ , SppName] + 1) ~")
+fmls <- llply(list(amb = 1, elev = 2), 
+              function(x) llply(paste(LH[[x]], FullFormula[[x]], " + Condition(ring)"), 
+                                as.formula))
+
+## Amb ##
+ambDF <- subsetD(seDF, co2 == "amb")
+ambDF <- ambDF[order(ambDF$ring), ]
+rr <- rda(fmls$amb[[1]], ambDF)
+vif.cca(rr)
+
+rr <- rda(fmls$Year1[[which(max(adjR) == adjR)]], df2013)
+
+# check multicollinearity
+vif.cca(rr)
+anova(rr, permutations = allPerms(6))
+rr2 <- rda(log(df2013[ , SppName] + 1) ~ 1, df2013)
+rr3 <- ordiR2step(rr2, rr, permutations = allPerms(6), direction = "forward", Pin = .1)
+
+
+
+
+
+
+
+
+
+rda_amb2 <- rda(log(ambDF[, SppName] + 1) ~ temp + moist + TotalC + 
+                  Drysoil_ph + FloorPAR + Condition(ring) , ambDF)
+
+## Single term ##
+adjR_singl_Lst <- list()
+for (i in 1:3) {
+  dd <- subsetD(peDF, year == levels(peDF$year)[i])
+  spdd <- dd[ , PFGName]
+  # formula for each variable
+  singl_fmls <- llply(paste("log(spdd + 1) ~", expl), as.formula)
+  names(singl_fmls) <- expl
+  adjR_singl <- ldply(singl_fmls, function(y) 
+    RsquareAdj(rda(y, data = dd))$adj.r.squared, 
+    .id = "variable")
+  adjR_singl_Lst[[i]] <- adjR_singl
+  rm(dd, spdd, singl_fmls, adjR_singl)
+}
+names(adjR_singl_Lst) <- paste0("Year", 1:3)
+
+
+
+
+
+
+
+
 rdaRes <- llply(list("backward", "forward", "both"), 
                 function(x) ordistep(rda_amb, direction = x, trace = 0, 
                                      permutations = hh))
