@@ -45,38 +45,25 @@ p2 <- Spplt +
 ggsavePP(filename = "output/figs/FACE_vegetation_CO2", plot = p2, width= 17, height = 11)
 
 ## Dominant spp ##
-
-# DmSppCov <- with(subset(SppSum, variable %in% DmSpp), paste0(variable, "(", Cov, "%)"))
-
-DmSppBar <- within(BarplDF, {
-  variable <- factor(ifelse(variable %in% DmSpp, as.character(variable), "Others"))
-})
+DmSppBar <- subsetD(BarplDF, variable %in% DmSpp)
 
 # Organise df
 DmSppBar <- within(DmSppBar, {
   co2 <- factor(co2, labels = c("Ambient", expression(eCO[2])))
   year <- factor(year, labels = paste0("Year", 1:3))
-  variable <- factor(variable, levels = c("Others", as.character(rev(DmSpp))))})
+  variable <- factor(variable, levels = as.character(rev(DmSpp)))})
 
 # create sp labels
-# SpLab <- gsub("[.]", "~", levels(DmSppBar$variable))
 SpLab <- gsub("[.]", "~", levels(DmSppBar$variable))
 SpLab <- parse(text = paste("italic(", SpLab, ")"))
 
 p <- ggplot(DmSppBar, aes(x = year, fill = variable))
 p2 <- p + geom_bar(col = "white") +
-  scale_fill_discrete(name = "Species", labels = SpLab) + 
+  scale_fill_discrete(name = "Dominant Species (>80%)", labels = SpLab) + 
   theme(legend.text.align = 0) +
   facet_grid(. ~ co2, labeller = label_parsed)
 p2
 
-?facet_grid
-?geom_bar
-
-head(DmSppBar)
-Spplt <- PltVeg(data = BarplDF, xval = "variable", size = 8) +
-  theme(strip.text.x = element_text(size = 6)) +
-  expand_limits(x = 4.5) 
 
 
 
