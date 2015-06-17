@@ -1,14 +1,7 @@
 head(veg)
 
 # Identify dominant spp
-SppSum <- ddply(veg, .(variable), summarise, value = sum(value))
-SppSum <- SppSum[order(SppSum$value, decreasing = TRUE),]
-SppSum <- within(SppSum, {
-  Cov <- round(value * 100/sum(value), 0)
-  CumSum <- cumsum(value)
-  Dominant <- CumSum <= .80 * sum(value)
-  })
-DmSpp <- SppSum$variable[SppSum$Dominant]
+DmSpp
 
 # plot sum of dominant species
 SppPlotSum <- ddply(subset(veg, variable %in% DmSpp), 
