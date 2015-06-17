@@ -18,11 +18,14 @@ load("output/Data/FACE_DominantVegetation_PFG_2015.RData")
 # check unknown spp
 all(!grepl("unknown", VegRes15$variable, ignore.case = TRUE))
 
-# co2, block and id
+# co2, block and id, combine sedge and grass, wood and shrub
 veg <- within(VegRes15, {
   block <- recode(ring, "1:2 = 'A'; 3:4 = 'B'; 5:6 = 'C'")
   co2 <- factor(ifelse(ring %in% c(1, 4, 5), "elev", "amb"))
   id <- ring:plot
+  form <- factor(ifelse(form %in% c("Tree", "Shrub"), "Wood",
+                        ifelse(form %in% c("Grass", "Sedge"), "Grass",
+                               as.character(form))))
 })
 
 #######################
