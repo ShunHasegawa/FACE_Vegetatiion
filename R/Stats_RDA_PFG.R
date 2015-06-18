@@ -45,7 +45,7 @@ fmls <- llply(list(Year1 = 1, Year2 = 2, Year3 = 3),
 ##############
 ## 1st year ##
 ##############
-df2013 <- subsetD(peDF, year == 2013)
+df2013 <- subsetD(peDF, year == "Year1")
 
 # adjusted R2
 adjR <- laply(fmls$Year1, function(x) RsquareAdj(rda(x, data = df2013))$adj.r.squared)
@@ -64,7 +64,7 @@ rda2013 <- list(IniRda = rr, FinRda = rr3)
 ##############
 ## 2nd year ##
 ##############
-df2014 <- subsetD(peDF, year == 2014)
+df2014 <- subsetD(peDF, year == "Year2")
 
 # adjusted R2
 adjR <- ldply(fmls$Year2, function(x) RsquareAdj(rda(x, data = df2014))$adj.r.squared)
@@ -81,7 +81,7 @@ rda2014 <- list(IniRda = rr, FinRda = rr3)
 ##############
 ## 3rd year ##
 ##############
-df2015 <- subsetD(peDF, year == 2015)
+df2015 <- subsetD(peDF, year == "Year3")
 
 # adjusted R2
 adjR <- laply(fmls$Year3, function(x) RsquareAdj(rda(x, data = df2015))$adj.r.squared)
@@ -241,7 +241,7 @@ sppdd <- ldply(SummaryRdaPfg, function(x) {
 sppdd$year <- "Species score"
 
 # value range
-daply(siteDD, .(co2), function(x) range(x$RDA1))
+daply(siteDD, .(co2), function(x) range(x$RDA1, na.rm = TRUE))
 daply(sppdd, .(co2), function(x) range(x$RDA1))
 sppdd$RDA1 <- ifelse(sppdd$co2 == "amb", sppdd$RDA1 * 3, sppdd$RDA1 * 10)
 
@@ -270,68 +270,6 @@ Rda_Year_PFG <- facet_wrap_labeller(p2, labels = labs)
 pp <- arrangeGrob(Rda_Year_PFG, StackBar_PFG, ncol = 1)
 ggsavePP(pp, filename = "output/figs/Fig_Thesis/RDAvsYearbyCO2_PFG", 
          width = 6.5, height = 7.5)
-
-###
-
-
-
-PlotRDA_Year <- function(rdaResLst, spscore = .3, env){
-  names(rdaResLst) <- c("amb", "elev")
-  
-  # % variance for RDA1
-  Rda1Prop <- laply(rdaResLst, function(x) {
-    ss <- round(summary(x)$cont$importance["Proportion Explained", "RDA1"] * 100, 2)
-    paste0(ss, "%")}
-  )
-  
-  # Spp score
-  RDAsppDF <- ldply(c("amb", "elev"), function(x) {
-    ll <- rdaResLst[[x]]
-    spdf <- vegan::scores(ll)$species
-    data.frame(spdf, 
-               co2 = x,
-               year = "Species score",
-               sp = row.names(spdf))
-  })
-  
-  RDAsppDF$co2 <- factor(RDAsppDF$co2, labels = paste0(c("Ambient (", "eCO2 ("), Rda1Prop, ")"))
-  RDAsppDF <- subset(RDAsppDF, abs(RDA1) > spscore)
-  
-  RDAsiteDF <- ldply(c("amb", "elev"), function(x) {
-    ll <- rdaResLst[[x]]
-    if(x == "amb") dd <- env[[1]] else dd <- env[[2]]
-    data.frame(vegan::scores(ll)$sites, co2 = x, dd)
-  }) 
-  RDAsiteDF$co2 <- factor(RDAsiteDF$co2, labels = paste0(c("Ambient (", "eCO2 ("), Rda1Prop, ")"))
-  
-  p <- ggplot(RDAsiteDF, aes(x = year, y = RDA1))
-  p2 <- p + 
-    geom_point(size = 4, alpha = .7) + 
-    geom_text(data = RDAsppDF, aes(x = year, y = RDA1 * 3, label = sp), size = 2) + 
-    geom_hline(xintercept = 0, linetype = "dashed") + 
-    facet_grid(. ~ co2)
-  p2
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-#
-
-
-
 
 #####################
 ## 3-year data set ## 
@@ -399,8 +337,9 @@ p2 <- p +
   geom_vline(yintercept = 0, linetype = "dashed") +
   science_theme+ 
   theme( legend.key = element_blank(),
-         legend.position = c(.85, .80), 
-         legend.box.just = "top", 
+         legend.position = c(.85, .15), 
+         legend.box = "horizontal", 
+         legend.box.just = "top",
          legend.key.height = unit(1, "lines")) +
   labs(x = axislabs[1], y = axislabs[2])
 RDA_Plot_PFG <- p2
@@ -408,22 +347,3 @@ RDA_Plot_PFG
 
 ggsavePP(plot = RDA_Plot_PFG, filename = "output/figs/Fig_Thesis/RDA_3yr_PFG", width = 6, height = 4)
 
-##################
-# Summary result #
-##################
-Res_list <- list(Res_Year1, Res_Year2, Res_Year3)
-names(Res_list) <- c("Year1", "Year2", "Year3")
-str(Res_Year1)
-
-SummaryRDAanova <- function(x){
-  data.frame(source = row.names(x), 
-             DF = x$Df,
-             Var = round(x$Variance*100/sum(x$Variance), 2),  
-             F = round(x$F, 2), 
-             P =  round(x$Pr, 3))
-}
-
-ResDF <- ldply(Res_list, SummaryRDAanova, .id = "Year")
-write.csv(ResDF, file = "output/table/Result_RDA_Anova.csv", row.names = FALSE)
-PfgResDF <- ldply(RdaPfgRes, SummaryRDAanova, .id = "Year")
-write.csv(PfgResDF, file = "output/table/Result_RDA_Anova_PFG.csv", row.names = FALSE)

@@ -52,7 +52,7 @@ fmls <- llply(list(Year1 = 1, Year2 = 2, Year3 = 3),
 ##############
 ## 1st year ##
 ##############
-df2013 <- subsetD(seDF, year == 2013)
+df2013 <- subsetD(seDF, year == "Year1")
 
 # There are too many environmental variables to fit. so choose four which showed
 # highest R2adj 
@@ -74,7 +74,7 @@ rda2013 <- list(IniRda = rr, FinRda = rr3)
 ##############
 ## 2nd year ##
 ##############
-df2014 <- subsetD(seDF, year == 2014)
+df2014 <- subsetD(seDF, year == "Year2")
 
 # adjusted R2
 adjR <- laply(fmls$Year2, function(x) RsquareAdj(rda(x, data = df2014))$adj.r.squared)
@@ -106,7 +106,7 @@ rda2014 <- list(IniRda = rr, FinRda = rr3)
 ##############
 ## 3rd year ##
 ##############
-df2015 <- subsetD(seDF, year == 2015)
+df2015 <- subsetD(seDF, year == "Year3")
 
 # adjusted R2
 adjR <- laply(fmls$Year3, function(x) RsquareAdj(rda(x, data = df2015))$adj.r.squared)
@@ -135,6 +135,7 @@ rda2015 <- list(IniRda = rr, FinRda = rr3)
 ## Summary ##
 #############
 # R2adj for initial full model
+RdaLst <- list(Year1 = rda2013, Year2 = rda2014, Year3 = rda2015)
 FuladjR_pv <- ldply(RdaLst, function(x){ 
   data.frame(
     Full = RsquareAdj(x$IniRda)$adj.r.squared, 
@@ -152,7 +153,6 @@ AdjTbl[AdjTbl < 0] <- "<0"
 # save
 write.csv(AdjTbl, file = "output/table/RDA_AdjR_Speices.csv")
 
-RdaLst <- list(Year1 = rda2013, Year2 = rda2014, Year3 = rda2015)
 llply(RdaLst, function(x) x$IniRda)
 
 AnovaRes <- ldply(RdaLst, 
@@ -289,12 +289,12 @@ sppdd <- ldply(SummaryRda, function(x) {
   dd <- data.frame(x$species, variable = row.names(x$species))
   return(dd)}, .id = "co2")
 sppdd$year <- "Species score"
-sppdd <- subset(sppdd, abs(RDA1) > .4)
+sppdd <- subset(sppdd, abs(RDA1) >= .4)
 
 # value range
 daply(siteDD, .(co2), function(x) range(x$RDA1, na.rm = TRUE))
 daply(sppdd, .(co2), function(x) range(x$RDA1, na.rm = TRUE))
-sppdd$RDA1 <- ifelse(sppdd$co2 == "amb", sppdd$RDA1 * 3, sppdd$RDA1 * 3)
+sppdd$RDA1 <- ifelse(sppdd$co2 == "amb", sppdd$RDA1 * 3.5, sppdd$RDA1 * 3)
 
 # create a plot
 p <- ggplot(siteDD, aes(x = year, y = RDA1))
@@ -398,7 +398,7 @@ p2 <- p +
   geom_hline(xintercept = 0, linetype = "dashed") +
   geom_vline(yintercept = 0, linetype = "dashed") +
   science_theme +
-  theme(legend.position = c(.15, .85), 
+  theme(legend.position = c(.15, .25), 
         legend.box = "horizontal", 
         legend.box.just = "top") +
   labs(x = axislabs[1], y = axislabs[2])

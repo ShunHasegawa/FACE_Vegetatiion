@@ -455,7 +455,7 @@ TriPlot <- function(MultValRes, env, yaxis, axispos, EnvNumeric = TRUE, lowx = .
   }
   
   # add ring and year columns for later
-  for (i in 2:length(Rlist)) Rlist[[i]] <- data.frame(Rlist[[i]], ring = "1", year = "2013")
+  for (i in 2:length(Rlist)) Rlist[[i]] <- data.frame(Rlist[[i]], ring = "1", year = "Year1")
   axisnames <- colnames(ResultScore$cont$importance)[axispos] # axes to be used
   Rlist_mlt <- llply(Rlist, function(x) {
     mltid <- names(x)[!names(x) %in% axisnames[-1]]

@@ -55,8 +55,32 @@ m3 <- lmer(logit(ratios) ~ year*co2 + (1|block) + (1|ring)  + (1|id), data = c3g
 plot(m3)
 qqnorm(resid(m3))
 qqline(resid(m3))
+
 AnvF_c3gc4 <- Anova(m3, test.statistic = "F")
 AnvF_c3gc4
+
+# one outlier. what if I remove
+rmv <- which(qqnorm(resid(m3))$y == min(qqnorm(resid(m3))$y))
+m4 <- update(m3, subset = -rmv)
+plot(m4)
+qqnorm(resid(m4))
+qqline(resid(m4))
+  # improved a lot
+AnvF_c3gc4 <- Anova(m4, test.statistic = "F")
+
+# update glm
+m5 <- update(m1, subset = -rmv)
+overdisp.glmer(m5)
+# overdispersed
+m6 <- update(m5, ~ . + (1|obs))
+overdisp.glmer(m6)
+Anova(m6)
+plot(m6)
+qqnorm(resid(m6))
+qqline(resid(m6))
+c3gc4_CompAic <- CompAIC(m6)
+c3gc4_CompAic
+
 # # contrast----
 # 
 # # contrast doesn't work with lmer. so use lme
@@ -174,9 +198,11 @@ SummaryAnvF_PFG <- ldply(list(c3gc4     = AnvF_c3gc4,
                              NativeR   = AnvF_NativeR ), 
                         function(x)data.frame(x, terms = row.names(x)),
                         .id = "variable")
-SummaryAnvF_PFG <- within(SummaryCompAIC, {
+summary(SummaryAnvF_PFG)
+
+SummaryAnvF_PFG <- within(SummaryAnvF_PFG, {
   Df.res = round(Df.res, 0)
-  Pr = round(SummaryCompAIC$Pr, 3)
+  Pr = round(SummaryAnvF_PFG$Pr, 3)
   Pr..F. = NULL})
 
 # Model comparison from GLMM
