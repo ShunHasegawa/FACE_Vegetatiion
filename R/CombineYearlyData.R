@@ -339,31 +339,31 @@ PlotDominantSpp(coverage = 0.05)
 # 5 % seems to cut too many species. Removeing <1% coverage species may be
 # suitable.
 
-###########################
-# Remove <1% coverage spp #
-###########################
-# Spp which coveres >1% at least one of three years
-tdf <- ddply(VegRes15_YearSum, .(ym), mutate, 
-             Dominant = ifelse(value > 0.01 * 2400, TRUE, FALSE))
-DominantSpp <- unique(tdf$variable[tdf$Dominant])
+#############################
+# Use full-combined Sep-Dec #
+#############################
 
-DomSpDf <- subset(VegRes15_SD, variable %in% DominantSpp & ym != "2013:December")
-
-DomVdf <- dcast(year + month + ring + plot + position + cell ~ variable,  
-                   value.var = "value", data = DomSpDf)
-DomVdf <- within(DomVdf, {
+# After discussion with Sally, we decided to use the whole data set. And accept
+# the fact species dropping between the 1st and 2nd year is in part due to this.
+FullSpdf <- subset(VegRes15_SD, ym != "2013:December")
+summary(FullSpdf)
+FullSpdf
+FullVdf <- dcast(year + month + ring + plot + position + cell ~ variable,  
+                value.var = "value", data = FullSpdf)
+FullVdf <- within(FullVdf, {
   month <- NULL
   cell <- factor(cell)
+  year <- factor(year, labels = paste0("Year", 1:3))
 })
 
-save(DomVdf, file = "output//Data/FACE_DominantVegetation_Raw_2013_2015.RData")
+save(FullVdf, file = "output//Data/FACE_FullVegetation_Raw_2013_2015.RData")
 
 ##############################
 # Create df including plant  #
 # characteristis (e.g. PFGs) #
 ##############################
-DomVdf_mlt <- melt(DomVdf, id = c("year", "ring", "plot", "position", "cell"))
+FullVdf_mlt <- melt(FullVdf, id = c("year", "ring", "plot", "position", "cell"))
 # plant properties
 spList <- read.csv("Data//FACE_Vegetation_sp.list.csv", na.strings = c("NA", ""))
-VegRes15 <- merge(DomVdf_mlt, spList, by.x = "variable", by.y = "sp", all.x = TRUE)
-save(VegRes15, file = "output/Data/FACE_DominantVegetation_PFG_2015.RData")
+VegRes15 <- merge(FullVdf_mlt, spList, by.x = "variable", by.y = "sp", all.x = TRUE)
+save(VegRes15, file = "output/Data/FACE_FullVegetation_PFG_2015.RData")

@@ -10,10 +10,10 @@ source("R/functions.R")
 # source("R/FACE_VegetationDataSheet2015.R")
 
 # Raw data for multi variate analysis
-load("output//Data/FACE_DominantVegetation_Raw_2013_2015.RData")
+load("output//Data/FACE_FullVegetation_Raw_2013_2015.RData")
 
 # Data frame with plant functional groups
-load("output/Data/FACE_DominantVegetation_PFG_2015.RData")
+load("output/Data/FACE_FullVegetation_PFG_2015.RData")
 
 # check unknown spp
 all(!grepl("unknown", VegRes15$variable, ignore.case = TRUE))
