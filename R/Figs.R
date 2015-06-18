@@ -117,8 +117,6 @@ p2 <- p +
 StackBar_PFG <- p2
 StackBar_PFG
 
-
-
 ########################
 # Native or introduced #
 ########################
@@ -214,8 +212,7 @@ Smmry_DivDF <- ddply(RngSmmry_DivDF, .(year, co2, variable), summarise,
 # change variable names
 Smmry_DivDF <- within(Smmry_DivDF, {
   variable <- factor(variable, labels = c("Evenness", "Species Richness", "Diversity (H')"))
-  year <- factor(year, levels = c("2013", "2014", "2015"), 
-                 labels = c("2013\n(Pre-CO2)", "2014", "2015"))
+  year <- factor(year, labels = c("Year1\n(Pre-CO2)", "Year2", "Year3"))
 })
 
 p <- ggplot(Smmry_DivDF, aes(x = year, y = Mean, group = co2, fill = co2))
