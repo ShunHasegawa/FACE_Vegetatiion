@@ -46,7 +46,7 @@ p2 <- p + geom_point(size = 3) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1),
         strip.text.x = element_text(size = 7))
 p2
-ggsavePP(plot = p2, filename = "output/figs/FACE_CO2ResponseRatio_Spp", width = 7.5, height = 10)
+ggsavePP(plot = p2, filename = "output/figs/FACE_CO2ResponseRatio_Spp", width = 7.5, height = 20)
 
 # organise it to export as a table
 RatioSE$co2R <- with(RatioSE, paste0(round(original, 2), "(", round(bootSE, 2), ")"))
