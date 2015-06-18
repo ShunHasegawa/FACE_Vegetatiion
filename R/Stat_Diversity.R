@@ -21,32 +21,22 @@ bxplts(value = "H", xval = "ring", data = DivDF)
 
 Dml1 <- lmer(H ~ co2 * year + (1|block) + (1|ring) + (1|id), data = DivDF)
 Anova(Dml1)
-Anova(Dml1, test.statistic = "F")
+AnvF_Dml <- Anova(Dml1, test.statistic = "F")
+AnvF_Dml
 plot(Dml1)
 qqnorm(resid(Dml1))
 qqline(resid(Dml1))
-# One on the left bottom is quite out of the line. what if I remove it.
-which(qqnorm(resid(Dml1))$y == min(qqnorm(resid(Dml1))$y))
-Dml2 <- lmer(H ~ co2 * year + (1|block) + (1|ring) + (1|id), data = DivDF[-6, ])
-plot(Dml2)
-qqnorm(resid(Dml2))
-qqline(resid(Dml2))
-# looks a lot better. Need to inspect more about this point.
-Anova(Dml2)
-AnvF_Dml <- Anova(Dml2, test.statistic = "F")
-AnvF_Dml
-plot(allEffects(Dml2))
+plot(allEffects(Dml1))
  # Diversity decreased in eCO2
 
 # contrast----
 # contrast doesn't work with lmer so rewrite the model with lme
-tdf <- DivDF[-6, ]
-Dml_lme <- lme(H ~ co2 * year, random = ~1|block/ring/id, data = tdf)
+Dml_lme <- lme(H ~ co2 * year, random = ~1|block/ring/id, data = DivDF)
 
 cntrst <- contrast(Dml_lme,
-                   a = list(year = levels(tdf$year), co2 = "amb"),
-                   b = list(year = levels(tdf$year), co2 = "elev"))
-H_CntrstRes <- cntrstTbl(cntrst, data = tdf, variable = "H", digit = 2)
+                   a = list(year = levels(DivDF$year), co2 = "amb"),
+                   b = list(year = levels(DivDF$year), co2 = "elev"))
+H_CntrstRes <- cntrstTbl(cntrst, data = DivDF, variable = "H", digit = 2)
 H_CntrstRes
 
 ####################
@@ -54,6 +44,7 @@ H_CntrstRes
 ####################
 bxplts(value = "S", xval = "co2", data = DivDF)
 bxplts(value = "S", xval = "ring", data = DivDF)
+
 Sml1 <- glmer(S ~ co2 * year + (1|block) + (1|ring) + (1|id), 
               data = DivDF, family = poisson)
 Sml2 <- glmer(S ~ co2 * year + (1|block) + (1|ring) + (1|id), 
@@ -61,12 +52,24 @@ Sml2 <- glmer(S ~ co2 * year + (1|block) + (1|ring) + (1|id),
 Sml3 <- glmer(S ~ co2 * year + (1|block) + (1|ring) + (1|id), 
               data = DivDF, family = poisson(link = power(1/3)))
 l_ply(list(Sml1, Sml2, Sml3), overdisp.glmer)
-# use Sml2
-summary(Sml2)
-plot(Sml2)
-qqnorm(resid(Sml2))
-qqline(resid(Sml2))
-Anova(Sml2)
+# use Sml1
+summary(Sml1)
+plot(Sml1)
+qqnorm(resid(Sml1))
+qqline(resid(Sml1))
+Anova(Sml1)
+S_CompAic <- CompAIC(Sml1)
+S_CompAic
+# AIC decrease when co2:year removed but
+
+# LMM
+SmlLmm <- lmer(log(S) ~ co2 * year + (1|block) + (1|ring) + (1|id), data = DivDF)
+summary(SmlLmm)
+plot(SmlLmm)
+qqnorm(resid(SmlLmm))
+qqline(resid(SmlLmm))
+AnvF_Sml <- Anova(SmlLmm, test.statistic = "F")
+AnvF_Sml
 
 ###########
 # Summary #
@@ -102,7 +105,7 @@ ratio <- function(d, w) sum(d$elev * w) / sum(d$amb * w) -1
 # * w)/sum(value[co2 == "amb"] * w)) -1
 
 RatioSE <- ddply(DivDF_RingMean_cst, .(year, variable), function(x) {
-  b <- boot::boot(x, ratio1, R = 999, stype = "w")
+  b <- boot::boot(x, ratio, R = 999, stype = "w")
   summary(b)
 })
 RatioSE$co2R <- RatioSE$original
