@@ -4,7 +4,7 @@ head(veg)
 # co2 effect (% change) #
 #########################
 # plant forms
-
+summary(veg)
 # get C3, grass, forb etc. abundance fo each plot
 PfgAbundDF <- ddply(veg, .(year, co2, block, ring), function(x){
   Total     = sum(x$value)
@@ -75,7 +75,7 @@ PropDF <- ddply(veg, .(year, co2, block, ring, plot, id), function(x){
   C4grass   = sum(x$value[x$PFG == "c4"])/Total
   Forbprop  = sum(x$value[x$form == "Forb"])/Total
   Grassprop = sum(x$value[x$form %in% c("Grass", "Sedge")])/Total
-  Woodprop  = sum(x$value[x$form %in% c("Tree", "Shrub")])/Total
+  Woodprop  = sum(x$value[x$form %in% "Wood"])/Total
   Mossprop  = sum(x$value[x$form == "Moss"])/Total
   data.frame(Total, C3prop, C4grass, Forbprop, Grassprop, Woodprop, Mossprop)
   })
@@ -84,6 +84,7 @@ PropDF$obs <- 1:nrow(PropDF)
 ########################################
 # C3 proportion in the whole community #
 ########################################
+boxplot(logit(C3prop) ~ year:ring, data = PropDF, main = "logit")
 
 # glm
 m1 <- glmer(C3prop ~ year * co2 +  (1|block) +(1|ring) + (1|id), 
@@ -151,8 +152,8 @@ m4 <- update(m3, ~. + (1|obs))
 overdisp.glmer(m4)
 Anova(m4)
 # compare AIC
-CompAIC(m4)
-
+c3PropComAIC <- CompAIC(m4)
+c3PropComAIC
 plot(m4)
 qqnorm(resid(m4))
 qqline(resid(m4))
@@ -205,15 +206,16 @@ overdisp.glmer(m3)
 # overdispersed
 # add obs
 m4 <- update(m3, ~. + (1|obs))
+overdisp.glmer(m4)
 plot(m4)
 qqnorm(resid(m4))
 qqline(resid(m4))
 C4grassCompAic <- CompAIC(m4)
 C4grassCompAic
 
-#################
-# Grass + Sedge #
-#################
+########################
+# Grass + Sedge + rush #
+########################
 m1 <- glmer(Grassprop ~ year * co2 +  (1|block) +(1|ring) + (1|id), 
             family = "binomial", data = PropDF, weight = Total)
 overdisp.glmer(m1)
@@ -245,7 +247,6 @@ qqline(resid(gm1))
 Anova(gm1)
 AnvF_Grass <- Anova(gm1, test.statistic = "F")
 AnvF_Grass
-# maybe not
 
 ########
 # Forb #
@@ -274,27 +275,13 @@ boxplot(logit(Forbprop) ~ year:ring, data = PropDF, main = "logit")
 # try logit
 fm1 <- lmer(logit(Forbprop) ~ year * co2 + (1|block) +  (1|ring) + (1|id), data = PropDF)
 Anova(fm1)
-Anova(fm1, test.statistic = "F")
-
-# model simplification
-fm2 <- stepLmer(fm1)
 AnvF_forb <- Anova(fm1, test.statistic = "F")
 AnvF_forb
 
 # model diagnosis
-plot(fm2)
-qqnorm(resid(fm2))
-qqline(resid(fm2))
-
-# what if I remove two outliers
-rmv <- which(qqnorm(resid(fm2), plot.it = FALSE)$y %in% 
-               sort(qqnorm(resid(fm2), plot.it = FALSE)$y)[1:2])
-
-fm3 <- update(fm1, subset = -rmv)
-plot(fm3)
-qqnorm(resid(fm3))
-qqline(resid(fm3))
-Anova(fm3) # no difference so just present fm2
+plot(fm1)
+qqnorm(resid(fm1))
+qqline(resid(fm1))
 
 ###########
 # Summary #
@@ -311,7 +298,7 @@ SummaryCompAIC
 
 # F from LMM
 SummaryAnvF_PFG <- ldply(list(Forb = AnvF_forb,
-                              Grass = AnvF_grass, 
+                              Grass = AnvF_Grass, 
                               C3total = AnvF_PropC3_total, 
                               C4grass = AnvF_C4grass), 
                          function(x) data.frame(x, terms = row.names(x)), .id = "variable")
