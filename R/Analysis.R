@@ -24,7 +24,7 @@ veg <- within(VegRes15, {
   co2 <- factor(ifelse(ring %in% c(1, 4, 5), "elev", "amb"))
   id <- ring:plot
   form <- factor(ifelse(form %in% c("Tree", "Shrub"), "Wood",
-                        ifelse(form %in% c("Grass", "Sedge"), "Grass",
+                        ifelse(form %in% c("Grass", "Sedge", "rush"), "Grass",
                                as.character(form))))
 })
 
@@ -34,6 +34,10 @@ veg <- subsetD(veg, variable != "Euc.seedling")
 # remove c3_4 as it's really small number and hard to deal with c3_4..
 sum(veg$value[veg$PFG == "c3_4"])
 veg <- subsetD(veg, PFG != "c3_4")
+
+# remove lichen
+veg <- subsetD(veg, form != "Lichen")
+
 
 #######################
 # organise data frame #
