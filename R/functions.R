@@ -578,3 +578,27 @@ CompAIC <- function(model){
   row.names(res) <- c("Full", "co2", "year", "year:co2")
   return(res)
 }
+
+############################
+# Add labels in facet_wrap #
+############################
+facet_wrap_labeller <- function(gg.plot,labels=NULL) {
+  #works with R 3.0.1 and ggplot2 0.9.3.1
+  # copied from http://stackoverflow.com/questions/19282897/
+  # how-to-add-expressions-to-labels-in-facet-wrap
+  # require(gridExtra)
+  
+  g <- ggplotGrob(gg.plot)
+  gg <- g$grobs      
+  strips <- grep("strip_t", names(gg))
+  
+  for(ii in seq_along(labels))  {
+    modgrob <- getGrob(gg[[strips[ii]]], "strip.text", 
+                       grep=TRUE, global=TRUE)
+    gg[[strips[ii]]]$children[[modgrob$name]] <- editGrob(modgrob,label=labels[ii])
+  }
+  
+  g$grobs <- gg
+  class(g) = c("arrange", "ggplot",class(g)) 
+  g
+}
