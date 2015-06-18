@@ -18,6 +18,9 @@ load("output/Data/FACE_DominantVegetation_PFG_2015.RData")
 # check unknown spp
 all(!grepl("unknown", VegRes15$variable, ignore.case = TRUE))
 
+# remove Euc seedlings as it's not reliable
+veg <- subsetD(veg, variable != "Euc.seedling")
+
 # co2, block and id, combine sedge and grass, wood and shrub
 veg <- within(VegRes15, {
   block <- recode(ring, "1:2 = 'A'; 3:4 = 'B'; 5:6 = 'C'")
