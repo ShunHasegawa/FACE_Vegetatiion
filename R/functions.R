@@ -572,9 +572,9 @@ CompAIC <- function(model){
   m1 <- update(model, ~ . - year:co2)
   m2 <- update(m1, ~ . - co2)
   m3 <- update(m1, ~ . - year)
-  res <- ldply(list(model, m1, m2, m3), r.squared)
+  res <- ldply(list(model, m2, m3, m1), r.squared)
   # delta AIC, for co2 and year, calculated from the 2nd model.
-  res$dAIC <- with(res, c(0, AIC[c(3, 4)] - AIC[2], AIC[2] - AIC[1]))
+  res$dAIC <- with(res, c(0, AIC[c(2, 3)] - AIC[4], AIC[4] - AIC[1]))
   row.names(res) <- c("Full", "co2", "year", "year:co2")
   return(res)
 }
