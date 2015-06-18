@@ -58,14 +58,20 @@ SpLab <- gsub("[.]", "~", levels(DmSppBar$variable))
 SpLab <- parse(text = paste("italic(", SpLab, ")"))
 
 p <- ggplot(DmSppBar, aes(x = year, fill = variable))
-p2 <- p + geom_bar(col = "white") +
-  scale_fill_discrete(name = "Dominant Species (>80%)", labels = SpLab) + 
-  theme(legend.text.align = 0) +
-  facet_grid(. ~ co2, labeller = label_parsed)
-p2
-
-
-
+p2 <- p + geom_bar(col = "white", size = .1) +
+  scale_fill_discrete(name = "Dominant\nSpecies(>80%)", labels = SpLab) + 
+  science_theme + 
+  theme(legend.text.align = 0,
+        legend.position = "right",
+        legend.key.size = unit(.6, "line"),
+        legend.title = element_text()) +
+#   guides(fill = guide_legend(nrow = 6)) +
+  facet_grid(. ~ co2, labeller = label_parsed) +
+  labs(x = NULL, y = "Frequency")
+StackBar_DomSpp <- p2
+StackBar_DomSpp
+ggsavePP(plot = StackBar_DomSpp, filename = "output/figs/Fig_Thesis/RDA_DomSppBar", 
+         width = 6.5, height = 3.5)
 
 #######
 # PFG #
@@ -87,6 +93,30 @@ ggsavePP(filename = "output/figs/FACE_PFG_Ring", plot = p, width= 8, height = 6)
 p <- PFGplt +
   facet_grid(co2 ~ form, scale = "free_x", space = "free_x", labeller = label_parsed)
 ggsavePP(filename = "output/figs/FACE_PFG_CO2", plot = p, width= 8, height = 6)
+
+## Stack bar plot ##
+# Organise DF
+PfgBarDF <- within(BarplDF, {
+  PFG <- factor(PFG, levels = c("c3", "c4", "legume", "Non_legume", "wood", "moss"))
+  co2 <- factor(co2, labels = c("Ambient", expression(eCO[2])))
+  year <- factor(year, labels  = paste0("Year", 1:3))
+  })
+
+pfgLabs <- c(expression(C[3]~grass), expression(C[4]~grass), "Legume", "Non-legume", 
+             "Woody plants", "Moss")
+p <- ggplot(PfgBarDF, aes(x = year, fill = PFG))
+p2 <- p + 
+  geom_bar(position = "fill", col = "white", size = .1) + 
+  scale_fill_discrete(name = "PFG", labels = pfgLabs) +
+  science_theme +
+  theme(legend.position = "bottom", 
+        legend.key.size = unit(.6, "line"),
+        legend.title = element_text()) +
+  facet_grid(. ~ co2, labeller = label_parsed) +
+  labs(x = NULL, y = "Fraction")
+StackBar_PFG <- p2
+StackBar_PFG
+
 
 
 ########################
