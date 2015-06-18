@@ -32,6 +32,8 @@ veg <- within(VegRes15, {
 veg <- subsetD(veg, variable != "Euc.seedling")
 
 # remove c3_4 as it's really small number and hard to deal with c3_4..
+# (Aristida.warburgii)
+unique(veg$variable[veg$PFG == "c3_4"])
 sum(veg$value[veg$PFG == "c3_4"])
 veg <- subsetD(veg, PFG != "c3_4")
 
@@ -44,6 +46,9 @@ veg <- subsetD(veg, form != "Lichen")
 #######################
 
 # all spp----
+FullVdf$Euc.seedling <- NULL
+FullVdf$Aristida.warburgii <- NULL
+
 veg.face <- within(FullVdf, {
   co2 <- factor(ifelse(ring %in% c(1, 4, 5), "elev", "amb"))
   block <- recode(ring, "1:2 = 'A'; 3:4 = 'B'; 5:6 = 'C'")
