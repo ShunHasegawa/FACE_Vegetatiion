@@ -18,9 +18,6 @@ load("output/Data/FACE_FullVegetation_PFG_2015.RData")
 # check unknown spp
 all(!grepl("unknown", VegRes15$variable, ignore.case = TRUE))
 
-# remove Euc seedlings as it's not reliable
-veg <- subsetD(veg, variable != "Euc.seedling")
-
 # co2, block and id, combine sedge and grass, wood and shrub
 veg <- within(VegRes15, {
   block <- recode(ring, "1:2 = 'A'; 3:4 = 'B'; 5:6 = 'C'")
@@ -31,12 +28,19 @@ veg <- within(VegRes15, {
                                as.character(form))))
 })
 
+# remove Euc seedlings as it's not reliable
+veg <- subsetD(veg, variable != "Euc.seedling")
+
+# remove c3_4 as it's really small number and hard to deal with c3_4..
+sum(veg$value[veg$PFG == "c3_4"])
+veg <- subsetD(veg, PFG != "c3_4")
+
 #######################
 # organise data frame #
 #######################
 
 # all spp----
-veg.face <- within(DomVdf, {
+veg.face <- within(FullVdf, {
   co2 <- factor(ifelse(ring %in% c(1, 4, 5), "elev", "amb"))
   block <- recode(ring, "1:2 = 'A'; 3:4 = 'B'; 5:6 = 'C'")
   id <- ring:plot
