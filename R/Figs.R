@@ -421,3 +421,43 @@ p2 <- p +
   facet_grid(. ~variable) 
 ggsavePP(filename = "output/figs/FACE_Vegetation_PCoA_EachRing", width = 6, height = 5, 
          plot = p2)
+
+
+##############################
+# Fig to see evenness change #
+##############################
+TreatSum <- ddply(veg, .(year, co2, variable), summarise, value = sum(value))
+
+EvennessPlot <- dlply(TreatSum, .(co2), function(x) {
+  dd <- x
+  
+  # 1st year df  
+  dfyear <- subsetD(dd, year == "Year1")
+  
+  # sum
+  sumdf <- ddply(dfyear, .(variable), value = sum(value))
+  
+  # species order
+  sporder <- with(sumdf, variable[order(value)])
+  
+  # reorder
+  dd$variable <- factor(dd$variable, levels = sporder)
+  
+  p <- ggplot(dd, aes(variable, y = log10(value +1)))
+  p2 <- p + 
+    geom_bar(aes(fill = year), 
+             stat = "identity", 
+             position = "identity", 
+             alpha = .5) +
+    science_theme + 
+    theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.2, size = 5),
+          legend.position = c(.1, .85)) +
+    labs(x = NULL, y = expression(log[10](Frequency+1)))
+  return(p2)
+})
+
+
+pp <- arrangeGrob(EvennessPlot[[1]] + ggtitle("Ambient"), 
+                  EvennessPlot[[2]] + ggtitle(expression(eCO[2])))
+ggsavePP(plot = pp, filename = "output/figs/EvennessChange", width = 6.5, 
+         height = 7.5)
