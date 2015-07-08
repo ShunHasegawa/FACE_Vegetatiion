@@ -353,7 +353,7 @@ FullVdf <- dcast(year + month + ring + plot + position + cell ~ variable,
 FullVdf <- within(FullVdf, {
   month <- NULL
   cell <- factor(cell)
-  year <- factor(year, labels = paste0("Year", 1:3))
+  year <- factor(year, labels = paste0("Year", 0:2))
 })
 
 save(FullVdf, file = "output//Data/FACE_FullVegetation_Raw_2013_2015.RData")
