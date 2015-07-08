@@ -26,7 +26,7 @@ for (i in 1:3) {
   adjR_singl_Lst[[i]] <- adjR_singl
   rm(dd, spdd, singl_fmls, adjR_singl)
 }
-names(adjR_singl_Lst) <- paste0("Year", 1:3)
+names(adjR_singl_Lst) <- paste0("Year", 0:2)
 
 # Get variables with positive R2adj
 PosAdjR <- llply(adjR_singl_Lst, function(x) as.character(x$variable[x$V1 > 0]))
@@ -39,19 +39,19 @@ FullFormula <- llply(PosAdjR, function(x) paste(x, collapse = "+"))
 LH <- list("log(df2013[ , PFGName] + 1) ~",
            "log(df2014[ , PFGName] + 1) ~",
            "log(df2015[ , PFGName] + 1) ~")
-fmls <- llply(list(Year1 = 1, Year2 = 2, Year3 = 3), 
+fmls <- llply(list(Year0 = 1, Year1 = 2, Year2 = 3), 
               function(x) llply(paste(LH[[x]], FullFormula[[x]]), as.formula))
 
 ##############
 ## 1st year ##
 ##############
-df2013 <- subsetD(peDF, year == "Year1")
+df2013 <- subsetD(peDF, year == "Year0")
 
 # adjusted R2
-adjR <- laply(fmls$Year1, function(x) RsquareAdj(rda(x, data = df2013))$adj.r.squared)
+adjR <- laply(fmls$Year0, function(x) RsquareAdj(rda(x, data = df2013))$adj.r.squared)
 
 # highest R2
-rr <- rda(fmls$Year1[[which(max(adjR) == adjR)]], df2013)
+rr <- rda(fmls$Year0[[which(max(adjR) == adjR)]], df2013)
 # check multicollinearity
 vif.cca(rr)
 anova(rr, permutations = allPerms(6))
@@ -64,13 +64,13 @@ rda2013 <- list(IniRda = rr, FinRda = rr3)
 ##############
 ## 2nd year ##
 ##############
-df2014 <- subsetD(peDF, year == "Year2")
+df2014 <- subsetD(peDF, year == "Year1")
 
 # adjusted R2
-adjR <- ldply(fmls$Year2, function(x) RsquareAdj(rda(x, data = df2014))$adj.r.squared)
+adjR <- ldply(fmls$Year1, function(x) RsquareAdj(rda(x, data = df2014))$adj.r.squared)
 
 # highest R2
-rr <- rda(fmls$Year2[[which(max(adjR) == adjR)]], df2014)
+rr <- rda(fmls$Year1[[which(max(adjR) == adjR)]], df2014)
 anova(rr, permutations = allPerms(6))
 rr2 <- rda(log(df2014[ , PFGName] + 1) ~ 1, df2014)
 rr3 <- ordiR2step(rr2, rr, permutations = allPerms(6), direction = "forward", Pin = .1)
@@ -81,20 +81,20 @@ rda2014 <- list(IniRda = rr, FinRda = rr3)
 ##############
 ## 3rd year ##
 ##############
-df2015 <- subsetD(peDF, year == "Year3")
+df2015 <- subsetD(peDF, year == "Year2")
 
 # adjusted R2
-adjR <- laply(fmls$Year3, function(x) RsquareAdj(rda(x, data = df2015))$adj.r.squared)
+adjR <- laply(fmls$Year2, function(x) RsquareAdj(rda(x, data = df2015))$adj.r.squared)
 
 # highest R2
-rr <- rda(fmls$Year3[[which(max(adjR) == adjR)]], df2015)
+rr <- rda(fmls$Year2[[which(max(adjR) == adjR)]], df2015)
 # check multicollinearity
 vif.cca(rr)
 anova(rr, permutations = allPerms(6))
 # not significant so use two terms instead
 
 # try only two variables
-comb_exp <- combn(PosAdjR$Year3, 2) 
+comb_exp <- combn(PosAdjR$Year2, 2) 
 expl_fml <-apply(comb_exp, 2, function(x) paste(x, collapse = "+"))
 fmls_2 <- llply(paste("log(df2015[ , PFGName] + 1) ~", expl_fml), as.formula)
 adjR <- laply(fmls_2, function(x) RsquareAdj(rda(x, data = df2015))$adj.r.squared)
@@ -112,7 +112,7 @@ rda2015 <- list(IniRda = rr, FinRda = rr3)
 #############
 ## Summary ##
 #############
-RdaLst_pfg <- list(Year1 = rda2013, Year2 = rda2014, Year3 = rda2015)
+RdaLst_pfg <- list(Year0 = rda2013, Year1 = rda2014, Year2 = rda2015)
 
 # R2adj for initial full model
 FuladjR_pv_pfg <- ldply(RdaLst_pfg, function(x){ 
@@ -221,55 +221,46 @@ ggsavePP(filename = "output/figs/FACE_RDAvsYearbyCO2_PFG", plot = p2,
 ## Plot for thesis ##
 RdaResPfgLst <- list(amb = rda_amb, elev = rda_elev)
 envDFLst <- list(amb = ambDF_pfg, elev = elevDF_pfg)
-elevDF_pfg
 
 SummaryRdaPfg <- llply(RdaResPfgLst, summary)
 
 # Site score
 siteDD <- ldply(c("amb", "elev"), function(x) data.frame(SummaryRdaPfg[[x]]$site, envDFLst[[x]]))
-siteDD$year <- factor(siteDD$year, labels = paste0("Year", 1:3))
-siteDD$year <- factor(siteDD$year, levels = c(paste0("Year", 1:3), "Species score"))
-siteDD[nrow(siteDD) + 1, c("co2", "year")] <- c("amb", "Species score")
-
-# Sp score
-sppdd <- ldply(SummaryRdaPfg, function(x) {
-  dd <- data.frame(x$species, variable = row.names(x$species))
-  dd$variable <- factor(dd$variable, 
-                        labels = c(expression(C[3]~grass), expression(C[4]~grass), 
-                                   "Legume", "Moss", "Non~legume", "Woody~plant"))
-  return(dd)}, .id = "co2")
-sppdd$year <- "Species score"
-
-# value range
-daply(siteDD, .(co2), function(x) range(x$RDA1, na.rm = TRUE))
-daply(sppdd, .(co2), function(x) range(x$RDA1))
-sppdd$RDA1 <- ifelse(sppdd$co2 == "amb", sppdd$RDA1 * 3, sppdd$RDA1 * 10)
+siteDD$year <- factor(siteDD$year, labels = paste0("Year", 0:2))
 
 # create a plot
+
+# Site score plot
 p <- ggplot(siteDD, aes(x = year, y = RDA1))
-p2 <- p + 
-  geom_point(size = 3, alpha = .7, drop = FALSE) +
+SiteScorePlot <- p + 
+  geom_point(size = 3) +
   geom_hline(yintercept = 0, linetype = "dashed") +
-  geom_text(data = sppdd, aes(x = year, y = RDA1, label = variable), parse = TRUE, 
-            size = 3)+
   facet_wrap(~co2, scale = "free_y") +
   labs(x = NULL, y = "RDA1") +
   science_theme
-
+SiteScorePlot
 # change facet_label
 
 # % variance for RDA1
 Rda1Prop <- laply(SummaryRdaPfg, function(x) 
-  round(x$cont$importance["Proportion Explained", "RDA1"] * 100, 2)
+  format(x$cont$importance["Proportion Explained", "RDA1"] * 100, 
+         digits = 2, nsmall = 2)
   )
 
-labs <- c(paste0("Ambient ", Rda1Prop[1], "%"), 
-          parse(text = paste("eCO[2]~", Rda1Prop[2], "*'%'")))
-Rda_Year_PFG <- facet_wrap_labeller(p2, labels = labs)
-#StackBar_PFG from Figs.R
-pp <- arrangeGrob(Rda_Year_PFG, StackBar_PFG, ncol = 1)
-ggsavePP(pp, filename = "output/figs/Fig_Thesis/RDAvsYearbyCO2_PFG", 
-         width = 6.5, height = 7.5)
+labs <- c(paste0("Ambient (", Rda1Prop[1], "%)"), 
+          parse(text = paste("eCO[2]~(", Rda1Prop[2], "*'%')")))
+Rda_Year_PFG <- facet_wrap_labeller(SiteScorePlot, labels = labs)
+ggsavePP(Rda_Year_PFG, filename = "output/figs/Fig_Thesis/RDAvsYearbyCO2_PFG", 
+         width = 4, height = 3)
+
+# Species score Table
+sppdd <- ldply(SummaryRdaPfg, function(x) 
+  data.frame(x$species, variable = row.names(x$species)), 
+  .id = "co2")
+sppdd$RDA1 <- round(sppdd$RDA1, 2)
+sppdd_cst <- dcast(variable ~ co2, value.var = "RDA1", data = sppdd)
+sppdd_cst <- sppdd_cst[order(sppdd_cst$amb, decreasing = TRUE), ]
+write.csv(sppdd_cst, file = "output/table/RDA_PFG_SpScore.csv", row.names = FALSE)
 
 #####################
 ## 3-year data set ## 
@@ -282,26 +273,28 @@ rda_pfg_all <- rda(log(peDF[, PFGName] + 1) ~ Drysoil_ph, peDF)
 # plot
 p <- TriPlot(MultValRes = rda_pfg_all, env = peDF, yaxis = "RDA axis", axispos = c(1, 2, 3), 
              centcons = 2, spcons = .5, biplcons = 1, lowx = 0, lowy = 0)
-ggsavePP(filename = "output//figs/FACE_RDA_EnvVar_PFG_Year1_3", plot = p, width = 6, height = 6)
+ggsavePP(filename = "output//figs/FACE_RDA_EnvVar_PFG_Year0_3", plot = p, width = 6, height = 6)
 
 # Fig for thesis
 
 RdaAllRes <- summary(rda_pfg_all)
-peDF$year <- factor(peDF$year, labels = paste0("Year", 1:3))
+peDF$year <- factor(peDF$year, labels = paste0("Year", 0:2))
 sitedd <- data.frame(RdaAllRes$site, peDF)
 
-sppdd <- data.frame(RdaAllRes$species, year = "Year1", PFG = row.names(RdaAllRes$species))
-sppdd$PFG <- factor(sppdd$PFG, labels = c("C[3]~grass","C[4]~grass", "Legume", "Moss", "Non~legume", 
-                                          "Woody~plant"))
+sppdd <- data.frame(RdaAllRes$species, year = "Year0", 
+                    PFG = factor(row.names(RdaAllRes$species)))
+sppdd$PFG <- factor(sppdd$PFG, 
+                    labels = c("Non~legume", 
+                               "C[3*'\u005F'*grass]","C[4*'\u005F'*grass]",
+                               "Legume", "Moss",  "Woody~plants"))
 
-bipldd <- data.frame(RdaAllRes$biplot, co2 = "amb", year = "Year1", 
+bipldd <- data.frame(RdaAllRes$biplot, co2 = "amb", year = "Year0", 
                      variable = row.names(RdaAllRes$biplot))
 bipldd$variable <- factor(bipldd$variable, labels = c("Soil pH"))
 VarProp <- RdaAllRes$cont$importance["Eigenvalue",]/RdaAllRes$tot.chi
 axislabs <- paste0(c("RDA1", "PC1"), "(", round(VarProp[c(1, 2)] * 100, 2), "%)")
 
 # make a plot
-theme_set(theme_bw())
 p <- ggplot(data = sitedd, aes(x = RDA1, y = PC1, shape = year))
 p2 <- p + 
   geom_path(aes(group = ring), col = "black") +
@@ -337,7 +330,7 @@ p2 <- p +
   geom_vline(yintercept = 0, linetype = "dashed") +
   science_theme+ 
   theme( legend.key = element_blank(),
-         legend.position = c(.85, .15), 
+         legend.position = c(.8, .15), 
          legend.box = "horizontal", 
          legend.box.just = "top",
          legend.key.height = unit(1, "lines")) +
