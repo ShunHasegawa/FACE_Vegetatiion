@@ -283,13 +283,13 @@ source("R/rsquaredglmm.R")
 ########################
 # Compute dissimilarity for each plot between 2013 & 2014 and 2014 & 2015
 YearDssmlrty <- function(x, spp) {
-  df1 <- subset(x, year %in% c("Year1", "Year2"))
+  df1 <- subset(x, year %in% c("Year0", "Year1"))
   dis1_bc <- vegdist(log(df1[, spp] + 1), method = "bray")
   dis1_eu <- vegdist(log(df1[, spp] + 1), method = "euclidean")
-  df2 <- subset(x, year %in% c("Year2", "Year3"))
+  df2 <- subset(x, year %in% c("Year1", "Year2"))
   dis2_bc <- vegdist(log(df2[, spp] + 1), method = "bray")
   dis2_eu <- vegdist(log(df2[, spp] + 1), method = "euclidean")
-  dfs <- data.frame(year = c("Year1_2", "Year2_3"), 
+  dfs <- data.frame(year = c("Year0-1", "Year1-2"), 
                     BC = c(dis1_bc, dis2_bc), 
                     EU  = c(dis1_eu, dis2_eu))
   return(dfs)
