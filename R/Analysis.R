@@ -7,7 +7,7 @@ source("R/functions.R")
 ################
 # Process Data #
 ################
-# source("R/FACE_VegetationDataSheet2015.R")
+# source("R/CombineYearlyData.R")
 
 # Raw data for multi variate analysis
 load("output//Data/FACE_FullVegetation_Raw_2013_2015.RData")
@@ -39,7 +39,6 @@ veg <- subsetD(veg, PFG != "c3_4")
 
 # remove lichen
 veg <- subsetD(veg, form != "Lichen")
-
 
 #######################
 # organise data frame #
