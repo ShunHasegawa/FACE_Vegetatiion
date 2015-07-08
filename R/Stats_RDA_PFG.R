@@ -251,7 +251,7 @@ labs <- c(paste0("Ambient (", Rda1Prop[1], "%)"),
           parse(text = paste("eCO[2]~(", Rda1Prop[2], "*'%')")))
 Rda_Year_PFG <- facet_wrap_labeller(SiteScorePlot, labels = labs)
 ggsavePP(Rda_Year_PFG, filename = "output/figs/Fig_Thesis/RDAvsYearbyCO2_PFG", 
-         width = 4, height = 3)
+         width = 4.5, height = 2.5)
 
 # Species score Table
 sppdd <- ldply(SummaryRdaPfg, function(x) 
