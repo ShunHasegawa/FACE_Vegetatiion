@@ -188,9 +188,9 @@ FlorLight_Ring <- ddply(LightNovDec, .(year, ring), summarise, FloorPAR = mean(F
 load("Data/SoilVariables/FACE_IEM.RData")
 
 # use only Nov-Jan
-iemNovJan <- subsetD(iem, month(date) == c(1, 11, 12))
+iemNovJan <- subsetD(iem, time %in% c(6, 7, 13, 14))
 # add year; January is counted as an year before
-iemNovJan$year <- with(iemNovJan, factor(ifelse(month(date) == 1, year(date), year(date) + 1)))
+iemNovJan$year <- with(iemNovJan, factor(ifelse(time %in% c(6, 7), "2013", "2014")))
 
 iem_ring <- ddply(iemNovJan, .(ring, year), summarise,
                   IEM_no = mean(no, na.rm = TRUE), 
@@ -260,3 +260,129 @@ EnvVarDF <- within(EnvVarDF, {
 })
 
 save(EnvVarDF, file = "output/Data/FACE_EnvironmenVars.RData")
+
+#######################################################
+# Sumamry and simple stats on environmental variables #
+#######################################################
+# only use totalC, moist, ph, depth of HL, Par and temp
+names(EnvVarDF)
+
+envDF <- EnvVarDF[, c("year", "ring", "co2","TotalC", 
+                      "moist", "Drysoil_ph", "Depth_HL", 
+                      "FloorPAR", "temp")]
+envDF$moist <- envDF$moist * 100
+# Treatment mean and SE
+envDF_mlt <- melt(envDF, id = c("year", "ring", "co2"))
+TreatSummary <- ddply(envDF_mlt, .(year, co2, variable), summarise,  
+                      Mean = mean(value), 
+                      SE = ci(value)[4], 
+                      N = sum(!is.na(value)))
+TreatSummary$value <- with(TreatSummary, paste0(round(Mean, 2), 
+                                                "(",
+                                                round(SE, 2),
+                                                ")"))
+TreatSummary_cst <- dcast(variable ~ year + co2, data = TreatSummary)
+
+#########
+# Stats #
+#########
+
+# totalC----
+bxplts(value = "TotalC", xval = "co2", data = envDF)
+m1 <- lmer(TotalC ~ co2 * year + (1|ring), data = envDF)
+m2 <- stepLmer(m1)
+plot(m2)
+qqnorm(resid(m2))
+qqline(resid(m2))
+AnvF_totalC <- Anova(m2, test.statistic = "F")
+AnvF_totalC
+
+# moist----
+bxplts(value = "moist", xval = "co2", data = envDF)
+m1 <- lmer(moist ~ co2 * year + (1|ring), data = envDF)
+qqnorm(resid(m2))
+qqline(resid(m2))
+AnvF_moist <- Anova(m1, test.statistic = "F")
+AnvF_moist
+
+# ph----
+bxplts(value = "Drysoil_ph", xval = "co2", data = envDF)
+m1 <- lmer(Drysoil_ph ~ co2 * year + (1|ring), data = envDF)
+m2 <- stepLmer(m1)
+plot(m2)
+qqnorm(resid(m2))
+qqline(resid(m2))
+AnvF_ph <- Anova(m2, test.statistic = "F")
+AnvF_ph
+
+# dpeth HL-----
+bxplts(value = "Depth_HL", xval = "co2", data = envDF)
+m1 <- lm(Depth_HL ~ co2, data = envDF, subset = year == "2013")
+AnvF_HL <- summary.aov(m1)
+AnvF_HL
+# PAR----
+bxplts(value = "FloorPAR", xval = "co2", data = envDF)
+m1 <- lmer(FloorPAR ~ co2 * year + (1|ring), data = envDF)
+m2 <- stepLmer(m1)
+plot(m2)
+qqnorm(resid(m2))
+qqline(resid(m2))
+AnvF_par <- Anova(m2, test.statistic = "F")
+AnvF_par
+
+# temp----
+bxplts(value = "temp", xval = "co2", data = envDF)
+m1 <- lmer(temp ~ co2 * year + (1|ring), data = envDF)
+m2 <- stepLmer(m1)
+plot(m2)
+qqnorm(resid(m2))
+qqline(resid(m2))
+AnvF_temp <- Anova(m2, test.statistic = "F")
+AnvF_temp
+
+# Summary----
+AnvF_Env <- ldply(list(TotalC = AnvF_totalC, moist = AnvF_moist,
+                       temp = AnvF_temp, 
+                       Drysoil_ph = AnvF_ph, FloorPAR = AnvF_par),
+                  function(x) data.frame(x, term = row.names(x)),
+                  .id = "variable")
+AnvF_Env_p <- AnvF_Env[, c("variable", "term", "Pr..F.")]
+names(AnvF_Env_p)[3] <- "Pr"
+AnvF_Env_p <- rbind(AnvF_Env_p, data.frame(variable = "Depth_HL", 
+                                           term = "co2",
+                                           Pr = AnvF_HL[[1]]$Pr[1]))
+
+AnvF_Env_p$stats <- cut(AnvF_Env_p$Pr, breaks = c(0, 0.001, 0.01, 0.05, 0.1, 1), 
+                        labels = c("***", "**", "*", ".", "ns"))
+
+
+AnvF_Env_p_cst <- dcast(variable ~ term, value.var = "stats", data = AnvF_Env_p)
+AnvF_Env_p_cst[is.na(AnvF_Env_p_cst)] <- "ns"
+
+# combine treatment summary and stats
+Env_summary <- merge(TreatSummary_cst, AnvF_Env_p_cst, by = "variable")
+Env_summary <- Env_summary[match(c("TotalC", "moist", "Drysoil_ph", 
+                                   "Depth_HL", "FloorPAR", "temp"), 
+                                 Env_summary$variable), ]
+write.csv(Env_summary, file = "output/table/FACE_EnvVarSummary.csv", row.names = FALSE)
+
+##################################
+# Extractable NO vs. Dry soil pH #
+##################################
+extJun <- subset(extr, month(date) == 6)
+extJun$year <- factor(year(extJun$date)+1)
+phDF_June$year <- factor(phDF_June$year)
+llply(list(extJun, phDF_June), nrow)
+dd <- merge(extJun, phDF_June, all.x = TRUE, by = c("year", "ring", "plot"))
+
+# get ring mean and remove pseudoreplication
+dd_Mean <- ddply(dd, .(ring), function(x) colMeans(x[, c("Drysoil_ph", "no")]))
+plot(Drysoil_ph ~ exp(no), data = dd_Mean)
+m <- lm(Drysoil_ph ~ exp(no), data = dd_Mean)
+summary(m)
+anova(m)
+abline(m)
+plot(Drysoil_ph ~ no, data = dd_Mean)
+xval <- seq(.5, 3.5, length.out = 100)
+yval <- predict(m, data.frame(no = xval))
+lines(xval, yval)
