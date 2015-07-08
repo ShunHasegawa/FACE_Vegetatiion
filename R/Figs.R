@@ -170,27 +170,28 @@ DmSppBar <- ddply(DmSppBar, .(co2, year), transform,
                   yend = cumsum(Mean) + SE)
 
 # create sp labels
-SpLab <- gsub("[.]", "~", levels(DmSppBar$OrginalVar))
-SpLab <- parse(text = paste("italic(", SpLab, ")"))
+SpLab <- gsub("[.]", " ", levels(DmSppBar$OrginalVar))
 
 p <- ggplot(DmSppBar, aes(x = year, y = Mean, fill = variable))
 p2 <- p + 
   geom_bar(size = .1, stat = "identity") +
-  geom_segment(aes(xend = year, y = CumSum, yend = yend), 
+  geom_segment(aes(xend = year, y = CumSum, yend = yend, col = variable), 
                arrow = arrow(angle = 90, length = unit(.1, "inches"))) + 
   # geom_errorbar(aes(ymin = CumSum, ymax = yend, col = variable), width = .3, size = .5) +
   scale_fill_discrete(name = "Dominant\nSpecies(>70%)", labels = SpLab) + 
+  scale_colour_discrete(name = "Dominant\nSpecies(>70%)", labels = SpLab) + 
   science_theme + 
-  theme(legend.text.align = 0,
-        legend.position = "right",
-        legend.key.size = unit(.6, "line"),
-        legend.title = element_text()) +
+  theme(legend.text = element_text(face = "italic", size = 9),
+        legend.text.align = 0,
+        legend.position = "bottom",
+        legend.title = element_text(size = 9)) +
+  guides(fill = guide_legend(nrow = 2)) +
   facet_grid(. ~ co2, labeller = label_parsed) +
   labs(x = NULL, y = expression(Abundance~(Count~m^'-2')))
 StackBar_DomSpp <- p2
 StackBar_DomSpp
 ggsavePP(plot = StackBar_DomSpp, filename = "output/figs/Fig_Thesis/RDA_DomSppBar", 
-         width = 6.5, height = 3.5)
+         width = 6, height = 4)
 
 #######
 # PFG # 
