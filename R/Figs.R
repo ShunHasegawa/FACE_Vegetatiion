@@ -61,23 +61,51 @@ ggsavePP(filename = "output/figs/FACE_vegetation_Ring", plot = p2,
          width= 17, height = 11)
 
 ## CO2 ##
+posdos <- .6
 p <- ggplot(veg_co2, aes(x = variable, y = log10(Mean + 1), fill = year))
 p2 <- p + 
-  geom_bar(alpha = .4, position = position_dodge(width = .4), stat = "identity") +
+  geom_bar(alpha = .5, position = position_dodge(width = posdos), stat = "identity") +
   geom_errorbar(aes(x = variable, 
                     ymin = log10(Mean-SE + 1), 
                     ymax = log10(Mean+SE + 1), col = year), 
-                position = position_dodge(width = .4), 
+                position = position_dodge(width = posdos), 
                 width = 0, size = .1) +
   theme(axis.text.x = element_text(angle = 90, hjust =1, vjust = .5, face = "italic"), 
-        strip.text.x = element_text(size = 6),
-        legend.title = element_blank()) +
+        strip.text.x = element_text(size = 7),
+        legend.title = element_blank(),
+        legend.position = c(.85, .87)) +
   expand_limits(x = 4) +
   labs(x = NULL, y = expression(log[10](Abundance+1~(Count~m^'-2')))) + 
   facet_grid(co2 ~ PFG, scale = "free_x", space = "free_x", 
              labeller = label_parsed)
 p2
-ggsavePP(filename = "output/figs/FACE_vegetation_CO2", plot = p2, width= 17, height = 11)
+ggsavePP(filename = "output/figs/FACE_vegetation_CO2", plot = p2, 
+         width= 9.6, height = 5.5)
+
+# scatter
+p <- ggplot(veg_co2, aes(x = variable, y = log10(Mean + 1), col = year))
+p2 <- p + 
+  geom_point(alpha = .5, position = position_dodge(width = posdos)) +
+  geom_errorbar(aes(x = variable, 
+                    ymin = log10(Mean-SE + 1), 
+                    ymax = log10(Mean+SE + 1), 
+                    col = year), 
+                position = position_dodge(width = posdos), 
+                width = 0, size = .2) +
+  theme(axis.text.x = element_text(angle = 90, hjust =1, vjust = .5, face = "italic", 
+                                   size = 7), 
+        strip.text.x = element_text(size = 7),
+        legend.title = element_blank(),
+        legend.position = c(.85, .87), 
+        panel.grid.major = element_line(colour = "grey90", size = .2),
+        panel.grid.major.y = element_blank()) +
+  expand_limits(x = 4) +
+  labs(x = NULL, y = expression(log[10](Abundance+1~(Count~m^'-2')))) + 
+  facet_grid(co2 ~ PFG, scale = "free_x", space = "free_x", 
+             labeller = label_parsed)
+p2
+ggsavePP(filename = "output/figs/FACE_vegetation_CO2_Scatter", plot = p2, 
+         width= 9.6, height = 5.5)
 
 # log scale
 RingSummary <- ddply(veg, .(variable, year, ring, co2, PFG), summarise, 
@@ -392,7 +420,7 @@ Smmry_DivDF <- ddply(RngSmmry_DivDF, .(year, co2, variable), summarise,
 Smmry_DivDF <- within(Smmry_DivDF, {
   variable <- factor(variable, 
                      levels = c("S", "H", "J"),
-                     labels = c("(a) Species Richness", "(c) Diversity", "(b) Evenness"))
+                     labels = c("Species Richness", "Diversity", "Evenness"))
 })
 
 p <- ggplot(Smmry_DivDF, aes(x = year, y = Mean, group = co2, fill = co2))
@@ -411,7 +439,7 @@ p2 <- p +
   science_theme +
   theme(legend.position = c(.51, .9),
         legend.key.width = unit(2.5, "lines"))
-ggsavePP(filename = "output/figs/FACE_CO2_DiversityIndx", 
+ggsavePP(filename = "output/figs/Fig_Thesis/FACE_CO2_DiversityIndx", 
          width = 6, height = 3, plot = p2)
 
 ##############################
