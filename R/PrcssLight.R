@@ -99,6 +99,28 @@ UnderstryPAR <- Lightdf %>%
   group_by(Date, ring) %>%
   summarise(FloorPAR = mean(ProbMean, na.rm = TRUE))
 
+## anova between ring ##
+
+# load("output/Data/FACE_FloorPAR.RData")
+head(Lightdf)
+# yearly mean for each ring (use only November and December as these months are
+# used in RDA)
+ndDf <- subset(Lightdf, month(Date) %in% c(11, 12))
+ndDf$year <- factor(year(ndDf$Date))
+some(ndDf)
+
+YR_DF <- ndDf %>%
+  group_by(year, ring) %>% 
+  summarise(PAR_Den_1_Avg = mean(PAR_Den_1_Avg, na.rm = TRUE), 
+            PAR_Den_2_Avg = mean(PAR_Den_2_Avg, na.rm = TRUE), 
+            PAR_Den_3_Avg = mean(PAR_Den_3_Avg, na.rm = TRUE) )
+YR_DF_mlt <- melt(data.frame(YR_DF), id = c("year", "ring"))
+boxplot(value ~ ring * year, data = YR_DF_mlt)
+dlply(YR_DF_mlt, .(year), function(x) {
+  m <- lm(value ~ ring, data = x)
+  anova(m)})
+# no significant spatial variation
+
 ##########################
 # canopy light intensity #
 ##########################
