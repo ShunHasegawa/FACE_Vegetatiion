@@ -67,6 +67,7 @@ vif.cca(rr)
 anova(rr, permutations = allPerms(6))
 rr2 <- rda(log(df2013[ , SppName] + 1) ~ 1, df2013)
 rr3 <- ordiR2step(rr2, rr, permutations = allPerms(6), direction = "forward", Pin = .1)
+summary(rr3)
 
 # summary result
 rda2013 <- list(IniRda = rr, FinRda = rr3)

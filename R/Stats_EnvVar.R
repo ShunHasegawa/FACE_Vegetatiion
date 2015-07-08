@@ -46,7 +46,7 @@ Anova(lmer(TotalC ~ year + (1|ring), data = tcRingMean), test.statistic = "F")
 load("output/Data/FACE_FloorPAR.RData")
 head(Lightdf)
 
-# subset November
+# subset November and December
 LightNovDec <- subsetD(Lightdf, month(Date) %in% c(11, 12), select = c(-ProbMean, -DateTime))
 
 # Daily Mean
