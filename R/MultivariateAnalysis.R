@@ -55,9 +55,9 @@ qqline(resid(m2))
 ##########
 # summary df---
 disDF$type <- "All species"
-PFG_vsDF$type <- "PFG"
+Pfg_disDF$type <- "PFG"
 
-disDF_Ring <- ldply(list(disDF, PFG_vsDF), function(x) {
+disDF_Ring <- ldply(list(disDF, Pfg_disDF), function(x) {
   ddply(x, .(type, year, block, co2, ring), summarise, EU = mean(EU))
 })
 
