@@ -3,7 +3,7 @@
 load("output//Data/FACE_EnvironmenVars.RData")
 
 names(EnvVarDF)
-EnvVarDF$year <- factor(EnvVarDF$year, labels = paste0("Year", 1:3))
+EnvVarDF$year <- factor(EnvVarDF$year, labels = paste0("Year", 0:2))
 
 # remove all minor metals
 rmMetal <- c("Silver", "Arsenic", "Lead", "Cadmium", "Chromium", "Copper", "Manganese", 
