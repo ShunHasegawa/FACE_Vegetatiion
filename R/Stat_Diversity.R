@@ -71,6 +71,24 @@ qqline(resid(SmlLmm))
 AnvF_Sml <- Anova(SmlLmm, test.statistic = "F")
 AnvF_Sml
 
+# number of species
+totalSum <- ddply(veg, .(variable), summarise, value = sum(value, na.rm = TRUE))
+summary(totalSum)
+length(unique(totalSum$variable))
+
+
+treatSum <- ddply(veg, .(variable, co2), summarise, value = sum(value, na.rm = TRUE))
+nrow(treatSum)
+# remove 0
+treatSum <- subset(treatSum, value != 0)
+nrow(treatSum)
+
+vs <- dlply(treatSum, .(co2), function(x) droplevels(unique(x$variable)))
+
+sapply(vs, length)
+intersect(vs[[1]], vs[[2]])
+
+
 ###########
 # Summary #
 ###########
