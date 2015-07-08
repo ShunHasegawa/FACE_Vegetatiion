@@ -102,13 +102,13 @@ ggsavePP <- function(filename, plot, width, height){
 # Create bargraphs #
 ####################
 PltVeg <- function(data, xval, xlab = NULL, ..., 
-                   pfgLabs = c("C[3]", "C[3-4]", "C[4]", "Legume", "Lichen", "Moss", "Non_legume", "wood"),
+                   pfgLabs = c("C[3]", "C[4]", "Legume", "Moss", "Non_legume", "wood"),
                    orgnLabs = c("Native", "Introduced")){
   # change factor lablles for labbeling in figs
   data$co2 <- factor(data$co2, levels = c("amb", "elev"), labels = c("Ambient", "eCO[2]"))
   
   data$PFG <- factor(data$PFG, 
-                     levels = c("c3", "c3_4", "c4", "legume", "Lichen", "moss", "Non_legume", "wood"),
+                     levels = c("c3", "c4", "legume", "moss", "Non_legume", "wood"),
                      labels = pfgLabs)
   data$origin <- factor(data$origin, 
                         levels = c("native", "naturalised"), 
@@ -283,11 +283,15 @@ source("R/rsquaredglmm.R")
 ########################
 # Compute dissimilarity for each plot between 2013 & 2014 and 2014 & 2015
 YearDssmlrty <- function(x, spp) {
-  df1 <- subset(x, year %in% c(2013, 2014))
-  dis1 <- vegdist(log(df1[, spp] + 1), method = "bray")
-  df2 <- subset(x, year %in% c(2014, 2015))
-  dis2 <- vegdist(log(df2[, spp] + 1), method = "bray")
-  dfs <- data.frame(year = c("Year1", "Year2"), BC = c(dis1, dis2))
+  df1 <- subset(x, year %in% c("Year1", "Year2"))
+  dis1_bc <- vegdist(log(df1[, spp] + 1), method = "bray")
+  dis1_eu <- vegdist(log(df1[, spp] + 1), method = "euclidean")
+  df2 <- subset(x, year %in% c("Year2", "Year3"))
+  dis2_bc <- vegdist(log(df2[, spp] + 1), method = "bray")
+  dis2_eu <- vegdist(log(df2[, spp] + 1), method = "euclidean")
+  dfs <- data.frame(year = c("Year1_2", "Year2_3"), 
+                    BC = c(dis1_bc, dis2_bc), 
+                    EU  = c(dis1_eu, dis2_eu))
   return(dfs)
 }
 
