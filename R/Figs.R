@@ -83,6 +83,10 @@ ggsavePP(filename = "output/figs/FACE_vegetation_CO2", plot = p2,
          width= 9.6, height = 5.5)
 
 # scatter
+levels(veg_co2$PFG)
+veg_co2$PFG <- factor(veg_co2$PFG, 
+                      levels = c("C[3*'_'*grass]", "C[4*'_'*grass]", "Legume", 
+                                 "Non*-legume", "Wood", "Moss"))
 p <- ggplot(veg_co2, aes(x = variable, y = log10(Mean + 1), col = year))
 p2 <- p + 
   geom_point(alpha = .5, position = position_dodge(width = posdos)) +
