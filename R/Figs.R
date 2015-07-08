@@ -23,7 +23,7 @@ BarplDF <- subsetD(veg, value != 0)
 ###########
 # All Spp #
 ###########
-pfgLabs <- c("C[3]", "C[3-4]", "C[4]", "Legume", "Lichen", "Moss", "Non_legume", "wood")
+pfgLabs <- c("C[3]","C[4]", "Legume", "Moss", "Non_legume", "wood")
 orgnLabs <- c("Native", "Introduced")
 
 Spplt <- PltVeg(data = BarplDF, xval = "variable", size = 8) +
@@ -35,14 +35,108 @@ Spplt <- PltVeg(data = BarplDF, xval = "variable", size = 8) +
 
 ## Ring ##
 p2 <- Spplt +
-  facet_grid(ring ~ form + PFG + origin, scale = "free_x", space = "free_x", labeller = label_parsed)
+  facet_grid(ring ~ PFG, scale = "free_x", space = "free_x", labeller = label_parsed)
+# p2 <- Spplt +
+#   facet_grid(ring ~ form + PFG + origin, scale = "free_x", space = "free_x", labeller = label_parsed)
 ggsavePP(filename = "output/figs/FACE_vegetation_Ring", plot = p2, 
          width= 17, height = 11)
 
 ## CO2 ##
 p2 <- Spplt +
-  facet_grid(co2 ~ form + PFG + origin, scale = "free_x", space = "free_x", labeller = label_parsed)
+  facet_grid(co2 ~ PFG, scale = "free_x", space = "free_x", labeller = label_parsed)
+# p2 <- Spplt +
+#   facet_grid(co2 ~ form + PFG + origin, scale = "free_x", space = "free_x", labeller = label_parsed)
 ggsavePP(filename = "output/figs/FACE_vegetation_CO2", plot = p2, width= 17, height = 11)
+
+# log scale
+RingSummary <- ddply(veg, .(variable, year, ring, co2, PFG), summarise, 
+                     value = sum(value, na.rm = TRUE))
+RingSummary$logValue <- log10(RingSummary$value + 1)
+Co2Summary <- ddply(RingSummary, .(variable, year, co2, PFG), summarise, 
+                    Mean = mean(logValue), SE = ci(logValue)[4], N = sum(!is.na(logValue)))
+p <- ggplot(Co2Summary, aes(x = variable, y = Mean, fill = year))
+p2 <- p + 
+  geom_bar(alpha = 0.4, position = position_dodge(width = .4), stat = "identity") + 
+  geom_errorbar(aes(x = variable, ymin = Mean + SE, ymax = Mean - SE, col = year), 
+                position = position_dodge(width = .4), 
+                width = 0, size = .1) +
+  facet_grid(co2 ~ PFG, scales = "free_x", space = "free_x") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)) +
+  labs(x = NULL, y = "log10(Abundance+1)")
+p2
+ggsavePP(filename = "output/figs/FACE_vegetation_CO2_log", plot = p2, width= 17, height = 11)
+
+
+# log scale, PFG
+RingSummary_pfg <- ddply(veg, .(year, ring, co2, PFG), summarise, 
+                         value = sum(value, na.rm = TRUE))
+RingSummary_pfg$logValue <- log10(RingSummary_pfg$value + 1)
+Co2Summary_pfg <- ddply(RingSummary_pfg, .(year, co2, PFG), summarise, 
+                        Mean = mean(logValue), SE = ci(logValue)[4], N = sum(!is.na(logValue)))
+p <- ggplot(Co2Summary_pfg, aes(x = PFG, y = Mean, fill = year))
+p2 <- p + 
+  geom_bar(alpha = 0.4, position = position_dodge(width = .4), stat = "identity") + 
+  geom_errorbar(aes(x = PFG, ymin = Mean + SE, ymax = Mean - SE, col = year), 
+                position = position_dodge(width = .4), 
+                width = 0, size = .1) +
+  facet_grid(co2 ~ ., scales = "free_x", space = "free_x") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)) +
+  labs(x = NULL, y = "log10(Abundance+1)")
+p2
+ggsavePP(filename = "output/figs/FACE_vegetation_CO2_PFG_log", plot = p2, width= 17, height = 11)
+
+
+## Difference from the 1st year ##
+
+# subset year1 and get co2 mean and grand mean
+Year1DF <- subsetD(RingSummary, year == "Year1")
+Year1_co2 <- ddply(Year1DF, .(variable, co2, PFG), summarise, value = sum(value))
+Year1_total <- ddply(Year1DF, .(variable, PFG), summarise, value = sum(value)/sum(Year1DF$value))
+
+# reorder according to abundance
+Year1_co2$variable <- factor(Year1_co2$variable, 
+                             levels = Year1_total$variable[order(Year1_total$value)])
+Year1_co2 <- Year1_co2[order(as.numeric(Year1_co2$variable)), ]
+
+# yearly difference
+YearDiff <- ddply(RingSummary, .(variable, ring, co2, PFG), function(x) {
+  d1 <- with(x, log10(value[year == "Year2"] + 1) - log10(value[year == "Year1"] + 1))
+  d2 <- with(x, log10(value[year == "Year3"] + 1) - log10(value[year == "Year1"] + 1))
+  data.frame(year = c("Year2", "Year3"), Dif = c(d1, d2))
+})
+YearDiff_co2 <- ddply(YearDiff, .(variable, co2, year, PFG), summarise, 
+                      Mean = mean(Dif), 
+                      SE = ci(Dif)[4],
+                      N = sum(!is.na(Dif)))
+YearDiff_co2$variable <- factor(YearDiff_co2$variable, 
+                                levels = unique(Year1_co2$variable))
+YearDiff_co2 <- YearDiff_co2[order(as.numeric(YearDiff_co2$variable)), ]
+
+Year1_total$year <- "Year1"
+Year1_total$co2 <- "Year1"
+
+# p <- ggplot(YearDiff_co2, aes(x = variable, y = Mean, col = year))
+# p2 <- p + geom_point() + 
+#   geom_errorbar(aes(x = variable, ymin = Mean - SE, ymax = Mean + SE, width = 0)) +
+#   geom_hline(yintercept = 0, linetype = "dashed") +
+#   facet_grid(co2 ~ PFG, scale = "free", space = "free_x") +
+#   coord_cartesian(ylim = c(-50, 50))+
+#   theme_bw() +
+#   theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)) 
+# +geom_point(data = Year1_total, aes(x = variable, y = value*100))
+
+p <- ggplot(YearDiff_co2, aes(x = variable, y = Mean, col = co2))
+p2 <- p + 
+  geom_point(position = position_dodge(.2), size = 4, alpha = .7) + 
+  geom_errorbar(aes(x = variable, ymin = Mean - SE, ymax = Mean + SE, width = 0), 
+                position = position_dodge(.2)) +
+  geom_hline(yintercept = 0, linetype = "dashed") +
+  facet_grid(year ~ PFG, scale = "free", space = "free_x") +
+  # coord_cartesian(ylim = c(-45, 100))+
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)) 
+p2
+ggsavePP(filename = "output/figs/FACE_vegetation_YearDif", plot = p2, width= 17, height = 11)
+
 
 ## Dominant spp ##
 DmSppBar <- subsetD(BarplDF, variable %in% DmSpp)
