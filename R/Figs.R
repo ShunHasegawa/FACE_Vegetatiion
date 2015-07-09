@@ -83,33 +83,34 @@ ggsavePP(filename = "output/figs/FACE_vegetation_CO2", plot = p2,
          width= 9.6, height = 5.5)
 
 # scatter
+posdos <- 1
 levels(veg_co2$PFG)
 veg_co2$PFG <- factor(veg_co2$PFG, 
                       levels = c("C[3*'_'*grass]", "C[4*'_'*grass]", "Legume", 
                                  "Non*-legume", "Wood", "Moss"))
-p <- ggplot(veg_co2, aes(x = variable, y = log10(Mean + 1), col = year))
+veg_co2$variable2 <- factor(veg_co2$variable, 
+                            levels = rev(unique(veg_co2$variable)))
+p <- ggplot(veg_co2, aes(y = variable2, x = log10(Mean + 1), col = year))
 p2 <- p + 
-  geom_point(alpha = .5, position = position_dodge(width = posdos)) +
-  geom_errorbar(aes(x = variable, 
-                    ymin = log10(Mean-SE + 1), 
-                    ymax = log10(Mean+SE + 1), 
+  geom_errorbarh(aes(xmin = log10(Mean-SE + 1), 
+                    xmax = log10(Mean+SE + 1), 
                     col = year), 
-                position = position_dodge(width = posdos), 
-                width = 0, size = .2) +
-  theme(axis.text.x = element_text(angle = 90, hjust =1, vjust = .5, face = "italic", 
-                                   size = 7), 
-        strip.text.x = element_text(size = 7),
+                height = 0, size = .5, alpha = .6) +
+  geom_point(alpha = .8) +
+  theme(axis.text.y = element_text(face = "italic", size = 7), 
+        strip.text.y = element_text(size = 7),
         legend.title = element_blank(),
-        legend.position = c(.85, .87), 
+        legend.position = c(.88, .67), 
         panel.grid.major = element_line(colour = "grey90", size = .2),
-        panel.grid.major.y = element_blank()) +
-  expand_limits(x = 4) +
-  labs(x = NULL, y = expression(log[10](Abundance+1~(Count~m^'-2')))) + 
-  facet_grid(co2 ~ PFG, scale = "free_x", space = "free_x", 
+        panel.grid.major.x = element_blank(),
+        panel.margin = unit(0, "lines")) +
+  expand_limits(y = 4.2) +
+  labs(y = NULL, x = expression(log[10](Abundance+1~(Count~m^'-2')))) + 
+  facet_grid(PFG ~ co2, scale = "free_y", space = "free", 
              labeller = label_parsed)
 p2
 ggsavePP(filename = "output/figs/FACE_vegetation_CO2_Scatter", plot = p2, 
-         width= 9.6, height = 5.5)
+         width= 6, height = 9)
 
 # log scale
 RingSummary <- ddply(veg, .(variable, year, ring, co2, PFG), summarise, 
