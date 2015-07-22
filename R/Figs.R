@@ -105,7 +105,7 @@ p2 <- p +
         panel.grid.major.x = element_blank(),
         panel.margin = unit(0, "lines")) +
   expand_limits(y = 4.2) +
-  labs(y = NULL, x = expression(log[10](Abundance+1~(Count~m^'-2')))) + 
+  labs(y = NULL, x = expression(log[10](Abundance+1)~(Count~m^'-2'))) + 
   facet_grid(PFG ~ co2, scale = "free_y", space = "free", 
              labeller = label_parsed)
 p2
@@ -128,7 +128,7 @@ p2 <- p +
   theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)) +
   labs(x = NULL, y = "log10(Abundance+1)")
 p2
-ggsavePP(filename = "output/figs/FACE_vegetation_CO2_log", plot = p2, width= 17, height = 11)
+ggsavePP(filename = "output/figs/Fig_Thesis/FACE_vegetation_CO2_log", plot = p2, width= 6, height = 9)
 
 
 # log scale, PFG
@@ -307,7 +307,7 @@ PFG_Fraction <- ddply(PFG_Fraction, .(year, co2), transform,
                       ystart = cumsum(original) - bootSE, 
                       yend = cumsum(original) + bootSE)
 
-pfgLabs <- c(expression(C[3]~grass), expression(C[4]~grass), "Legume", "Non-legume", 
+pfgLabs <- c(expression(C[3]~grass), expression(C[4]~grass), "Legume", "Forb", 
              "Woody plants", "Moss")
 p <- ggplot(PFG_Fraction, aes(x = year, y = original, fill = PFG))
 p2 <- p + 
@@ -322,7 +322,7 @@ p2 <- p +
         legend.key.size = unit(.6, "line"),
         legend.title = element_text()) +
   facet_grid(. ~ co2, labeller = label_parsed) +
-  labs(x = NULL, y = "Fraction")
+  labs(x = NULL, y = "Proportion")
 p2
 StackBar_PFG <- p2
 StackBar_PFG
@@ -425,7 +425,7 @@ Smmry_DivDF <- ddply(RngSmmry_DivDF, .(year, co2, variable), summarise,
 Smmry_DivDF <- within(Smmry_DivDF, {
   variable <- factor(variable, 
                      levels = c("S", "H", "J"),
-                     labels = c("Species Richness", "Diversity", "Evenness"))
+                     labels = c("(a) Species richness", "(b) Diversity", "(c) Evenness"))
 })
 
 p <- ggplot(Smmry_DivDF, aes(x = year, y = Mean, group = co2, fill = co2))
@@ -435,17 +435,17 @@ p2 <- p +
                 width = 0) +
   geom_line(aes(linetype = co2), position = position_dodge(.3)) + 
   geom_point(position = position_dodge(.3), size = 3, shape = 21) + 
-  labs(x = "Year", y = NULL) + 
+  labs(x = NULL, y = NULL) + 
   scale_fill_manual(values = c("black", "white"), 
                     labels = c("Ambient", expression(eCO[2]))) +
   scale_linetype_manual(values = c("solid", "dashed"), 
                         labels = c("Ambient", expression(eCO[2]))) +
   facet_wrap(~variable, scales = "free_y") +
   science_theme +
-  theme(legend.position = c(.51, .9),
+  theme(legend.position = c(.18, .87),
         legend.key.width = unit(2.5, "lines"))
 ggsavePP(filename = "output/figs/Fig_Thesis/FACE_CO2_DiversityIndx", 
-         width = 6, height = 3, plot = p2)
+         width = 6, height = 2.5, plot = p2)
 
 ##############################
 # Fig to see evenness change #
