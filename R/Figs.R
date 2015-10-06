@@ -226,6 +226,28 @@ StackBar_DomSpp
 ggsavePP(plot = StackBar_DomSpp, filename = "output/figs/Fig_Thesis/RDA_DomSppBar", 
          width = 6, height = 4)
 
+######################################
+# For each block for FACE manuscript #
+######################################
+DmSppBar_ring <- subsetD(Veg_Ring, OrginalVar %in% DmSpp & year == "Year0")
+DmSppBar_ring$Block <- recode(DmSppBar_ring$ring, 
+                              "c(1, 2) = 'Block A'; c(3, 4) = 'Block B'; c(5, 6) = 'Block C'")
+p <- ggplot(DmSppBar_ring, aes(x = ring, y = value, fill = variable))
+p2 <- p + 
+  geom_bar(size = .1, stat = "identity") +
+  scale_fill_discrete(name = "Dominant\nSpecies", labels = SpLab) + 
+  scale_colour_discrete(name = "Dominant\nSpecies", labels = SpLab) + 
+  science_theme + 
+  theme(legend.text = element_text(face = "italic", size = 9),
+        legend.text.align = 0,
+        legend.position = "bottom",
+        legend.title = element_text(size = 9)) +
+  guides(fill = guide_legend(nrow = 2)) +
+  facet_grid(. ~ Block, scales = "free_x", shrink = TRUE) +
+  labs(x = "FACE ring number", y = expression(Abundance~(Count~m^'-2')))
+ggsavePP(plot = p2, filename = "output/figs/FACE_BlockDominantSpecies", 
+         width = 6, height = 4)
+
 #######
 # PFG # 
 #######
