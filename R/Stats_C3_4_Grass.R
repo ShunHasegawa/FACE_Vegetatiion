@@ -204,7 +204,8 @@ SummaryAnvF_PFG <- within(SummaryAnvF_PFG, {
   Df.res = round(Df.res, 0)
   Pr = round(SummaryAnvF_PFG$Pr, 3)
   Pr..F. = NULL})
-
+write.csv(SummaryAnvF_PFG, file = "output/table/FACE_EachPFG_Prop_AnvovaF.csv", 
+          row.names = FALSE)
 # Model comparison from GLMM
 SummaryCompAIC <- ldply(list(c3gc4 = c3gc4_CompAic, 
                              c3totalc4 = c3totalc4_CompAic,

@@ -96,6 +96,16 @@ Anv_lst <- list('Species richness' = AnvF_Sml,
                 'Diveristy' = AnvF_Dml,
                 'Evenness' = AnvF_Eml)
 
+DivAnvF <- ldply(Anv_lst, function(x) {
+  x$tems <- row.names(x)
+  return(x)}, .id = "Reponse")
+names(DivAnvF)[5] <- "Pr"
+DivAnvF <- within(DivAnvF, {
+  F <- round(F, 2)
+  Pr <- round(Pr, 3)
+})
+write.csv(DivAnvF, "output/table/SummaryResultDiversity.csv", row.names = FALSE)
+
 Anv_df <- ldply(Anv_lst, function(x) {
   predictors = factor(row.names(x), levels = c("co2", "year", "co2:year"))
   pval = x$Pr

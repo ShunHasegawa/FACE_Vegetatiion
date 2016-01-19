@@ -183,7 +183,7 @@ C4grassCompAic
 
 # LMM
 boxplot(logit(C4grass) ~ year:ring, data = PropDF, main = "logit")
-m2Lmer <- lmer(logit(C4grass) ~ year * co2 +  (1|block) +(1|ring) + (1|id), data = PropDF, weight = Total)
+m2Lmer <- lmer(logit(C4grass) ~ year * co2 +  (1|block) +(1|ring) + (1|id), data = PropDF)
 Anova(m2Lmer, test.statistic = "F")
 
 plot(m2Lmer)
@@ -302,6 +302,22 @@ SummaryAnvF_PFG <- ldply(list(Forb = AnvF_forb,
                               C3total = AnvF_PropC3_total, 
                               C4grass = AnvF_C4grass), 
                          function(x) data.frame(x, terms = row.names(x)), .id = "variable")
+
+# summary of anova
+PFGResAnvF <- SummaryAnvF_PFG
+names(PFGResAnvF)[5] <- "Pr"
+PFGResAnvF <- within(PFGResAnvF, {
+  F <- round(F, 2)
+  Df.res <- round(Df.res, 0)
+  Pr <- round(Pr, 3)
+})
+write.csv(PFGResAnvF, "output/table/FACE_PFG_AnvF.csv", row.names = FALSE)
+
+format(SummaryAnvF_PFG, digit = 2, nsmall = 0)
+
+
+
+
 SumamryStat <- merge(SummaryCompAIC, SummaryAnvF_PFG, by = c("variable", "terms"), all = TRUE)
 SumamryStat$terms <- factor(SumamryStat$terms, levels = c("Full", "co2", "year", "year:co2"))
 SumamryStat <- SumamryStat[order(SumamryStat$variable, SumamryStat$terms), ]
