@@ -1,3 +1,7 @@
+# restore required packages
+library(checkpoint)
+checkpoint("2015-09-30")
+
 library(XLConnect)
 library(xlsx)
 library(plyr)
