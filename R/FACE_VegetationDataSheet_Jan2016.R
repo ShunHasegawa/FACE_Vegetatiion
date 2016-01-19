@@ -9,6 +9,9 @@ str(FullVdf)
 levels(FullVdf$year)
 vegYear3 <- subset(FullVdf, year == "Year2")
 
+# turn cell into numeric
+vegYear3$cell <- as.numeric(vegYear3$cell) 
+
 NotPlntCol <- names(vegYear3)[1:5]
 PlntCol <- names(vegYear3)[-1:-5]
 
