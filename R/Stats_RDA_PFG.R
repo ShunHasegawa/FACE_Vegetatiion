@@ -283,10 +283,10 @@ sitedd <- data.frame(RdaAllRes$site, peDF)
 
 sppdd <- data.frame(RdaAllRes$species, year = "Year0", 
                     PFG = factor(row.names(RdaAllRes$species)))
+levels(sppdd$PFG)
 sppdd$PFG <- factor(sppdd$PFG, 
-                    labels = c("Non~legume", 
-                               "C[3*'\u005F'*grass]","C[4*'\u005F'*grass]",
-                               "Legume", "Moss",  "Woody~plants"))
+                    labels = c("C[3*'\u005F'*grass]","C[4*'\u005F'*grass]",
+                               "Legume", "Moss","Forb", "Woody~plants"))
 
 bipldd <- data.frame(RdaAllRes$biplot, co2 = "amb", year = "Year0", 
                      variable = row.names(RdaAllRes$biplot))
