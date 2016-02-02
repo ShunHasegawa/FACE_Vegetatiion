@@ -55,18 +55,18 @@ source("R/functions.R")
 load("output/Data/AllObj.RData")
 @
 
-\section{Reduncancy analysis}
+\section{Redundancy analysis}
 Here's the summary of redundancy analysis (RDA). Due to the complexity of experimental design (i.e. split plot design with repeated measures), I, first, performed RDA for each year separately and tested if there is significant association between species or plant functional group (PFG) community and environmental variables and CO$_2$ treatments.
 
-There are a number of potentail environmental variables to be used, for example soil chemistry and properties such as organic matter, moisture, temperature etc. Some variables are not complete for three years. Some variables are highly correlated one another and really redundant, so the following variables will be used.
+There are a number of potential environmental variables to be used, for example soil chemistry and properties such as organic matter, moisture, temperature etc. Some variables are not complete for three years. Some variables are highly correlated one another and really redundant, so the following variables will be used.
 
 \begin{itemize}
   \item CO$_2$
-  \item TotalC
+  \item Total C
   \item Moisture 
-  \item Drysoil pH 
+  \item Dry soil pH 
   \item Depth of hard layers 
-  \item FloorPAR
+  \item Floor Par
   \item Temperature
 \end{itemize}
 
@@ -154,7 +154,7 @@ rr
 @
 
 \item Check multicollinearity
-\noindent check multicolliarity of the fitted variables
+\noindent check multicollinearity of the fitted variables
 <<Multicollinearity, results='markup'>>=
 vif.cca(rr)
 @
@@ -178,33 +178,43 @@ rda2013
 @
 \end{enumerate}
 
-\section{Summary}
-\noindent Repeate the above procedures for each year. As a result, important environmental drivers are identified as follows.
+\subsection{Summary}
+\noindent Repeat the above procedures for each year. As a result, important environmental drivers are identified as follows.
 
 \begin{itemize}
   \item Total Carbon
   \item Moisture
 \end{itemize}
-
 \noindent The whole data with the above environmental variables is plotted.
-
 \begin{figure}[!ht]\label{figure:Triplot_3yrdata}
 \includegraphics[width = 4in]{../output/figs/Fig_Thesis/RDA_3yr_AllSpp.pdf}
 \caption{Species composition}
 \end{figure}
 
+\subsection{Questions}
+\begin{itemize}
+  \item Can I use sub-plot as a true replicate as other people do?
+  \item Is there any way to analyse the whole data set together?
+  \item Is there any way to handle small number of permutation (6!)?
+  \item Model simplification; does is make sence?
+\end{itemize}
+
+%%%%%%%%%%%%%%%%%%%%%%%
+% Univariate analysis %
+%%%%%%%%%%%%%%%%%%%%%%%
+
 \section{Univariate analysis}
-I also anlysed the following response variables using linear-mixed effects models (LMM).
+I also analysed the following response variables using linear-mixed effects models (LMM).
 \begin{itemize}
   \item Species richness
   \item Diversity (Shannon-Weiver)
   \item Species evenness
-  \item Magunitude of yearly shift (dissimilarity between years)
+  \item Magnitude of yearly shift (dissimilarity between years)
   \item Proportion of plant functional groups (e.g. C$_3$ vs. C$_4$ plants)
 \end{itemize}
 
 \subsection{C3 vs C4 plant}
-\noindent This is propotation data, but logit transformation seems to work quite well.
+\noindent This is propitiation data, but logit transformation seems to work quite well.
 <<C3C4Ratios, results='markup'>>=
 #########################
 # C3:C4 (grass + sedge) #
@@ -236,7 +246,7 @@ c3gc4_CompAic
 @
 
 \subsubsection{LMM}
-\noindent GLMM indicated a CO2 x Year interaction, but it doeesn't provide reliable p-values. So I also run LMM, folling logit transformation.
+\noindent GLMM indicated a CO2 x Year interaction, but it doesn't provide reliable p-values. So I also run LMM, following logit transformation.
 
 <<LMM_C34Ratio, results='markup', fig.width=3, fig.height=3, fig.show='hold'>>=
 # lmm
