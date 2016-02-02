@@ -33,6 +33,7 @@ PfgRDF <- llply(PfgRDF, function(x) within(x, (obs = 1:nrow(x))))
 #########################
 c3gc4DF <- PfgRDF[[1]]
 head(c3gc4DF)
+par(mfrow = c(1, 2))
 boxplot(logit(ratios) ~ year:co2, data = c3gc4DF, main = "logit")
 boxplot(logit(ratios) ~ year:ring, data = c3gc4DF, main = "logit")
 
