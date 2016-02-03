@@ -173,8 +173,13 @@ rr2 <- rda(log(df2013[ , SppName] + 1) ~ 1, df2013)
 rr3 <- ordiR2step(rr2, rr, permutations = allPerms(6), direction = "forward", Pin = .1)
 
 # summary result
-rda2013 <- list(IniRda = rr, FinRda = rr3)
-rda2013
+  # Full model
+  anova(rr, permutations = allPerms(6))
+  anova(rr, permutations = allPerms(6), by = "margin")
+
+  # Persimonious model
+  anova(rr3, permutations = allPerms(6))
+  anova(rr3, permutations = allPerms(6), by = "margin")
 @
 \end{enumerate}
 
@@ -197,6 +202,8 @@ rda2013
   \item Is there any way to analyse the whole data set together?
   \item Is there any way to handle small number of permutation (6!)?
   \item Model simplification; does is make sence?
+  \item scaling? which scaling should be used? And what's the difference
+  \item scaling: can I rescale species and site scores in order to plot nicely?
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%
