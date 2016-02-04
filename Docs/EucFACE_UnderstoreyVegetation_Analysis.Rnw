@@ -206,6 +206,13 @@ rr3 <- ordiR2step(rr2, rr, permutations = allPerms(6), direction = "forward", Pi
   \item scaling: can I rescale species and site scores in order to plot nicely?
 \end{itemize}
 
+\subsection{Other analyses I tried}
+\begin{itemize}
+  \item Principal response curve
+  \item CAP
+  \item PCoA
+\end{itemize}
+
 %%%%%%%%%%%%%%%%%%%%%%%
 % Univariate analysis %
 %%%%%%%%%%%%%%%%%%%%%%%
