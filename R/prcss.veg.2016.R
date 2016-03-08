@@ -166,4 +166,4 @@ Spp <- sort(names(veg.2016)[which(!(names(veg.2016) %in% NotSpp))])
 veg.2016 <- veg.2016[c(NotSpp, Spp)]
 
 # save
-save(veg.2016, file = "output//Data/FAVE_vegetation2016.RData")
+save(veg.2016, file = "output//Data/FACE_vegetation2016.RData")
