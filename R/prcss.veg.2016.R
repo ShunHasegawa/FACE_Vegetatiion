@@ -63,6 +63,9 @@ veg.2016 <- OrgSpp(df = veg.2016,
                        KeepCol = "Cynodon.dactylon", 
                        CombineCol = ns[grepl("Cynodon.dactylon", ns)])
 
+# Dianella.longifolia
+names(veg.2016)[which(names(veg.2016) == "Dianella")] <- "Dianella.longifolia"
+
 # Dichondra.repens
 veg.2016 <- OrgSpp(df = veg.2016, 
                    KeepCol = "Dichondra.repens", 
@@ -77,6 +80,11 @@ veg.2016 <- OrgSpp(df = veg.2016,
 veg.2016 <- OrgSpp(df = veg.2016, 
                    KeepCol = "Eragrostis.benthamii", 
                    CombineCol = ns[grepl("benthamii", ns)])
+
+# Eragostis.leptopsachea <- Eragrostis.leptopsachya
+veg.2016 <- OrgSpp(df = veg.2016, 
+                   KeepCol = "Eragrostis.leptostachya", 
+                   CombineCol = ns[grepl("lepto", ns)])
 
 # Glycine.like
 summary(veg.2016$Glycine.like)
@@ -104,6 +112,9 @@ veg.2016 <- OrgSpp(df = veg.2016,
                    KeepCol = "Lantana.camara", 
                    CombineCol = ns[grepl("^Lant", ns, ignore.case = TRUE)])
 
+# Lachnagrostis.sp <- Lachnagrostis.filiformis
+names(veg.2016)[which(names(veg.2016) == "Lachnagrostis.sp")] <- "Lachnagrostis.filiformis"
+
 # Leontodon.taraxacoides
 veg.2016 <- OrgSpp(df = veg.2016, 
                    KeepCol = "Leontodon.taraxacoides", 
@@ -118,6 +129,9 @@ veg.2016 <- OrgSpp(df = veg.2016,
 veg.2016 <- OrgSpp(df = veg.2016, 
                    KeepCol = "Lomandra.sp", 
                    CombineCol = ns[grepl("Lom.ndra", ns, ignore.case = TRUE)])
+# Lotus.pedunculatus <- Lotus.uliginosus
+# (http://plantnet.rbgsyd.nsw.gov.au/cgi-bin/NSWfl.pl?page=nswfl&lvl=sp&name=Lotus~uliginosus)
+names(veg.2016)[which(names(veg.2016) == "Lotus.pedunculatus")] <- "Lotus.uliginosus"
 
 # Parsonsia.straminea
 veg.2016 <- OrgSpp(df = veg.2016, 
