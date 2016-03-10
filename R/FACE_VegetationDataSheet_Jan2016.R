@@ -10,7 +10,7 @@ levels(FullVdf$year)
 vegYear3 <- subset(FullVdf, year == "Year2")
 
 # turn cell into numeric
-vegYear3$cell <- as.numeric(vegYear3$cell) 
+vegYear3$cell <- as.numeric(as.character(vegYear3$cell)) 
 
 NotPlntCol <- names(vegYear3)[1:5]
 PlntCol <- names(vegYear3)[-1:-5]
@@ -156,5 +156,5 @@ for (i in ival){
 }
 
 # save
-xlsx::saveWorkbook(wb, "output/FACE_Vegetation_Datasheet_Jan2016.xlsx")
+xlsx::saveWorkbook(wb, "output/FACE_Vegetation_Datasheet_Jan2016_Corrected.xlsx")
 # saveWorkbook is also difined by XLConnect so specify which package to use
