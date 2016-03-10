@@ -2,6 +2,9 @@
 # Combine 2013, 2014 2015 Data #
 ################################
 
+# vector for site
+SiteVec <- c("year", "month", "ring", "plot", "position", "cell")
+
 # 2013
 # source("R/veg.12.process.R")
 load("output/Data/FACE_Vegetation_2013.RData")
@@ -16,7 +19,18 @@ veg.14$month <- "December"
 load("output//Data/FAVE_vegetation2015.RData")
 veg.2015$month <- "December"
 
-vdf <- rbind.fill(df2013, veg.14, veg.2015)
+# 2016
+# source("R/prcss.veg.2016.R")
+load("output/Data/FACE_vegetation2016.RData")
+veg.2016$month <- "February"
+
+# remove Litter
+veg.2016$Litter <- NULL
+# turn all values >0 into 1
+Sp2016 <- names(veg.2016)[!names(veg.2016) %in% SiteVec]
+veg.2016[, Sp2016][which(veg.2016[, Sp2016] > 0, arr.ind = TRUE)] <- 1
+
+vdf <- rbind.fill(df2013, veg.14, veg.2015, veg.2016)
 
 ####################
 # organise dataset #
@@ -25,7 +39,6 @@ vdf <- rbind.fill(df2013, veg.14, veg.2015)
 vdf[is.na(vdf)] <- 0
 
 # remove spp which were not observed
-SiteVec <- c("year", "month", "ring", "plot", "position", "cell")
 SppVec <- names(vdf)[!names(vdf) %in% SiteVec]
 all(colSums(vdf[, SppVec]) > 0)
 
@@ -106,15 +119,14 @@ vdf <- OrgSpp(vdf, siteVec = SiteVec,
 vdf <- OrgSpp(vdf, siteVec = SiteVec,  
               KeepCol = "Solanum.nigrum", 
               CombineCol = SpName[grepl("Solanum", SpName, ignore.case = TRUE)])
-names(vdf)
 
 # check all values <2
 tsp <- names(vdf)[!names(vdf) %in% SiteVec]
 all(vdf[, tsp] < 2)
 # FALSE
 which(vdf[, tsp] > 1, arr.ind = TRUE)
-names(vdf[, tsp])[42]
-names(vdf[, tsp])[34]
+names(vdf[, tsp])[36]
+names(vdf[, tsp])[44]
 
 # Glycine sp. and Eragrostis.brownii; turn those into 1
 vdf[, tsp][which(vdf[, tsp] > 1, arr.ind = TRUE)] <- 1
@@ -124,13 +136,15 @@ all(vdf[, tsp] < 2)
 # Spp list----
 vdf.mlt <- melt(vdf, id = c("year", "month", "ring", "plot", "position", "cell"))
 spp <- data.frame(sp = sort(levels(vdf.mlt$variable)))
-write.csv(spp, file = "output/Data/spp_2015.csv", row.names = FALSE)
+write.csv(spp, file = "output/Data/spp_2016.csv", row.names = FALSE)
 
-# Spp which were found only in 2015
+# Spp which were found only in 2015 and in 2016
 Spp <- names(vdf)[!names(vdf) %in% SiteVec]
 YearSum <- ddply(vdf, .(year), function(x) colSums(x[Spp]))
-newSp <- names(YearSum)[apply(rbind(YearSum[1:2, ] == 0, YearSum[3, ] != 0), 2, all)]
-YearSum[newSp] # very small..
+newSp_2015 <- names(YearSum)[apply(rbind(YearSum[1:2, ] == 0, YearSum[3, ] != 0), 2, all)]
+newSp_2016 <- names(YearSum)[apply(rbind(YearSum[1:3, ] == 0, YearSum[4, ] != 0), 2, all)]
+YearSum[newSp_2015] # very small..
+YearSum[newSp_2016] 
 
 # remove Lichen and Carex.breviformis for the time being----
 vdf$Lichen <- NULL
@@ -258,8 +272,37 @@ vdf[vdf$year == "2013" &
       vdf$Parsonsia.straminea == 0, 
     "Parsonsia.straminea"][1] <- 1
 
+# Coordination of Breynia in 2016 was not very consistent with 2015, so inspect
+# this
+# Creatae a df for coordination
+CorDF <- expand.grid(position = LETTERS[1:4], cell = 1:25)
+CorDF$yv <- as.numeric(as.character(cut(CorDF$cell, 5, labels = 5:1)))
+CorDF$xv <- CorDF$cell %% 5
+CorDF$xv[CorDF$xv == 0] <- 5
+CorDF$xv <- ifelse(CorDF$position %in% c("A", "C"), CorDF$xv - 5.5, CorDF$xv - 0.5)
+CorDF$yv <- ifelse(CorDF$position %in% c("C", "D"), CorDF$yv - 5.5, CorDF$yv - 0.5)
+plot(yv ~ xv, data = CorDF, type = "n")
+with(CorDF, text(x = xv, y = yv, labels = paste0(position,cell)))
+veg.2015$Breynia.oblongifolia
+# merge with vdf
+CorVeg <- merge(vdf, CorDF, by = c("position", "cell"))
+head(CorVeg)
+
+cmdf <- subset(CorVeg, ring == 3 & Breynia.oblongifolia > 0, 
+               select =c ("year", "month", "ring", "plot", "position", "cell", "xv", "yv"))
+
+cmdf$ym <- cmdf$year:cmdf$month
+p <- ggplot(cmdf, aes(x = xv, y = yv, col = ym))
+p2 <- p + 
+  geom_point(position= position_dodge(0.7), cex = 5, alpha = 0.5) +
+  facet_wrap( ~ plot) +
+  scale_x_continuous(breaks = seq(-5, 5, 1), minor_breaks = NULL, limits = c(-5, 5)) +
+  scale_y_continuous(breaks = seq(-5, 5, 1), minor_breaks = NULL, limits = c(-5, 5))
+p2  
+# it seems fine.. suggesting that the data sheet I created may be wrong..  
+
 # save----
-save(vdf, file = "output//Data/FACE_Vegetation_Raw_2013_2015_PreInspection.RData")
+save(vdf, file = "output//Data/FACE_Vegetation_Raw_2013_2016_PreInspection.RData")
 
 #######################################
 # How to process 1st year Sep and Dec #
@@ -278,29 +321,29 @@ DF2013_merged <- DF2013 %>%
   summarise(value = sum(value, na.rm = TRUE))
 
 # Remove double count
-DF2013_merged$value[which(DF2013_merged$valu == 2)] <- 1
+DF2013_merged$value[which(DF2013_merged$value == 2)] <- 1
 DF2013_merged$month <- factor("Sep_Dec")
 
-# Create a new data frame containing Dec2013, S+D2013, 2014 and 2015
-VegRes15_SD <- rbind.fill(subset(vdf.mlt, month == "December"), DF2013_merged)
+# Create a new data frame containing Dec2013, S+D2013, 2014, 2015 and 2016
+VegRes16_SD <- rbind.fill(subset(vdf.mlt, month %in% c("December", "February")), DF2013_merged)
 
 # Create a barplot for each year
-VegRes15_SD$ym <- with(VegRes15_SD, year:month)
+VegRes16_SD$ym <- with(VegRes16_SD, year:month)
 
 # Yearly sum
-VegRes15_YearSum <- ddply(VegRes15_SD, .(ym, variable), summarise, value = sum(value))
+VegRes16_YearSum <- ddply(VegRes16_SD, .(ym, variable), summarise, value = sum(value))
 
 # Reorder accoridng to abundance
-Total_sum <- ddply(subset(VegRes15_YearSum, ym != "2013:December"), 
+Total_sum <- ddply(subset(VegRes16_YearSum, ym != "2013:December"), 
                    .(variable), 
                    summarise, value = sum(value))
 OderedSpp <- Total_sum$variable[order(Total_sum$value, decreasing = TRUE)]
 
-VegRes15_YearSum$variable <- factor(VegRes15_YearSum$variable, levels = OderedSpp)
+VegRes16_YearSum$variable <- factor(VegRes16_YearSum$variable, levels = OderedSpp)
 
 # Barplot
 theme_set(theme_bw())
-p <- ggplot(VegRes15_YearSum, aes(x = variable, y = value))
+p <- ggplot(VegRes16_YearSum, aes(x = variable, y = value))
 p2 <- p + geom_bar(stat = "identity") + 
   facet_grid(ym ~ .) + 
   theme(axis.text.x = element_text(angle = 90))
@@ -314,7 +357,7 @@ p2 + coord_cartesian(ylim = c(0, 50))
   # them are observed only <5 cells
 
 # Plot only dominant spp
-PlotDominantSpp <- function(coverage, dfs = VegRes15_YearSum){
+PlotDominantSpp <- function(coverage, dfs = VegRes16_YearSum){
   # coverage: percentage coverage for threshhold. Spp below this is removed
   tdf <- ddply(dfs, .(ym), mutate, 
                Dominant = ifelse(value > coverage * 2400, TRUE, FALSE))
@@ -345,7 +388,7 @@ PlotDominantSpp(coverage = 0.05)
 
 # After discussion with Sally, we decided to use the whole data set. And accept
 # the fact species dropping between the 1st and 2nd year is in part due to this.
-FullSpdf <- subset(VegRes15_SD, ym != "2013:December")
+FullSpdf <- subset(VegRes16_SD, ym != "2013:December")
 summary(FullSpdf)
 FullSpdf
 FullVdf <- dcast(year + month + ring + plot + position + cell ~ variable,  
@@ -353,10 +396,10 @@ FullVdf <- dcast(year + month + ring + plot + position + cell ~ variable,
 FullVdf <- within(FullVdf, {
   month <- NULL
   cell <- factor(cell)
-  year <- factor(year, labels = paste0("Year", 0:2))
+  year <- factor(year, labels = paste0("Year", 0:3))
 })
 
-save(FullVdf, file = "output//Data/FACE_FullVegetation_Raw_2013_2015.RData")
+save(FullVdf, file = "output//Data/FACE_FullVegetation_Raw_2013_2016.RData")
 
 ##############################
 # Create df including plant  #
@@ -365,5 +408,5 @@ save(FullVdf, file = "output//Data/FACE_FullVegetation_Raw_2013_2015.RData")
 FullVdf_mlt <- melt(FullVdf, id = c("year", "ring", "plot", "position", "cell"))
 # plant properties
 spList <- read.csv("Data//FACE_Vegetation_sp.list.csv", na.strings = c("NA", ""))
-VegRes15 <- merge(FullVdf_mlt, spList, by.x = "variable", by.y = "sp", all.x = TRUE)
-save(VegRes15, file = "output/Data/FACE_FullVegetation_PFG_2015.RData")
+VegRes16 <- merge(FullVdf_mlt, spList, by.x = "variable", by.y = "sp", all.x = TRUE)
+save(VegRes16, file = "output/Data/FACE_FullVegetation_PFG_2016.RData")
