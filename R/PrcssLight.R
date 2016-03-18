@@ -10,27 +10,90 @@ setToken(tokenfile = "Data/token.txt")
 ###############
 
 # download files from HIEv
-Light_Hiev <- downloadTOA5("FACE.*AirVars.*dat", 
-                           cachefile = "Data/hievdata/tmp.RData",
-                           topath = "Data/hievdata/raw_data",
-                           maxnfiles = 999)
+fls <- searchHIEv("FACE.*AirVars.*dat")
+
+# Remove subfiles of ata/hievdata/raw_data//FACE_R1_B1_AirVars_20140430.dat such
+# as ata/hievdata/raw_data//FACE_R1_B1_AirVars_20140430_1.dat as this would
+# cause issues when using downloadTOA5
+DwnldFiles <- fls[!grepl(pattern = "_..dat|_...dat", fls$filename), ]
+
+Light1 <- downloadTOA5(hievSearch = DwnldFiles, 
+                    cachefile = "Data/hievdata/tmp.RData",
+                    topath = "Data/hievdata/raw_data",
+                    maxnfiles = 999)
   # LI190SB_PAR_Den_Avg at 23 m
   # PAR_Den_1-3_Avg at 0.15 m
   # Look at
   # https://sites.google.com/site/hievuws/facilities/eucface/collection-codes for
   # the description of each variables
 
-# save(Light_Hiev, file = "output/Data/FACE_AirVars_Raw.RData")
-# load("output/Data/FACE_AirVars_Raw.RData")
-
 # organise data frame. Note that this is really huge so use dplyr----
+Light1 <- select(mutate(Light1, ring = factor(substr(Light1$Source, 7, 7))), -Source)
 
-# Add ring number and remove Source
-Light_Hiev <- select(mutate(Light_Hiev, 
-                            ring = factor(substr(Light_Hiev$Source, 7, 7))), 
-                     -Source)
-# remove duplicates
+# inspect Ring 1, 2014 April data becuase FACE_R1_B1_AirVars_20140430.dat may
+# not store all measurements from this month
+ring1 <- subset(Light1, ring == 1 & year(DateTime) == 2014 & month(DateTime) == 4)
+unique(ring1$Date)
+
+# There only meausurements from five dates so I need to call subfiles of
+# FACE_R1_B1_AirVars_20140430.dat as well.
+
+# downloadTOA5 causes errors on Mac, but not on Windows with those subfiles. 
+# However Windows just ignore unformattable rows. On Mac manually download and
+# read those files
+
+DwnldFiles2 <- fls[grepl(pattern = "_..dat|_...dat", fls$filename), ]
+downloadHIEv(DwnldFiles2, topath = "Data/hievdata/raw_data/FACE_R1_B1_AirVars_20140430_sub")
+Filenames2 <- paste0("Data/hievdata/raw_data/FACE_R1_B1_AirVars_20140430_sub/", 
+                     DwnldFiles2$filename)
+dd <- ldply(Filenames2, readTOA5)
+dd <- select(mutate(dd, ring = factor(substr(dd$Source, 7, 7))), -Source)
+dd <- distinct(dd)
+dd <- dd[!is.na(dd$DateTime), ]
+dd <- dd[order(dd$RECORD), ]
+dd$h <- hour(dd$DateTime)
+dh <- ddply(dd, .(Date, h), summarise, length(RECORD))
+dh 
+  # There are some missing measurements as they are meant to be measured every
+  # minute every day
+
+#######################################
+# ACE_R1_B1_AirVars_20140430 subfiles #
+#######################################
+
+# Quatation in DateTime column (e.g. 2014-03-31 06:00:"00) causes probelems 
+# e.g.
+readLines(Filenames2[1])[64]
+  # On Windows, relevant parts of first characters read by as.POSIXc and return
+  # DateTime withough erros (but removed withought warning).
+  # On Mac, this returns error
+
+# set quote = "" in read.csv in order to ignore
+dat <- ldply(Filenames2, function(x) {
+  h <- readLines(x, n = 4)
+  h <- gsub(",([0-9])", "\\1", h)
+  d <- read.csv(x, skip = 4, header = FALSE, na.strings = "NAN", quote = "")
+  colnames <- gsub("\"", "", strsplit(paste(h[2], collapse = ""), ",")[[1]])
+  names(d) <- make.names(colnames)
+  names(d)[1] <- "DateTime"
+  d$DateTime <- ymd_hms(d$DateTime)
+  return(d)}
+  )
+dat <- within(dat, {
+  ring <- factor("1")
+  Date <- as.Date(DateTime)}
+  )
+unique(dat$Date)
+
+# Combine all data frames
+Light_Hiev <- rbind(Light1, dat)
 Light_Hiev <- distinct(Light_Hiev)
+Light_Hiev <- arrange(Light_Hiev, ring, DateTime)
+
+ring1 <- filter(Light_Hiev, ring == 1 & year(DateTime) == 2014 & month(DateTime) == 4)
+unique(ring1$Date)
+ring1$h <- hour(ring1$DateTime)
+ddply(ring1, .(Date, h), summarise, length(RECORD))
 
 # save
 save(Light_Hiev, file = "output/Data/FACE_AirVars_Processed.RData")
@@ -39,6 +102,7 @@ save(Light_Hiev, file = "output/Data/FACE_AirVars_Processed.RData")
 Lightdf <- select(Light_Hiev, DateTime, Date, ring, PAR_Den_1_Avg, PAR_Den_2_Avg, PAR_Den_3_Avg)
 
 # Daily mean
+head(Lightdf)
 Lightdf_DayMean <- Lightdf %>%
   group_by(Date, ring) %>% 
   summarise(PAR_Den_1_Avg = mean(PAR_Den_1_Avg, na.rm = TRUE), 
@@ -50,22 +114,22 @@ Lightdf_DayMean <- data.frame(Lightdf_DayMean)
 tdf <- melt(Lightdf_DayMean, id = c("Date", "ring"))
 summary(tdf)
 p <- ggplot(tdf, aes(x = Date, y = value, col = variable))
-p2 <- p + geom_point(size = .05) + facet_grid(ring ~ .)
+p2 <- p + geom_point(size = .5) + facet_grid(ring ~ .)
 p2
+
 # some weird values in the beginning
 tdf12 <- subset(tdf, Date < as.Date("2012-08-5"))
 p <- ggplot(tdf12, aes(x = Date, y = value, col = variable))
 p2 <- p + geom_point() + facet_grid(ring ~ .) + 
-  scale_x_date(minor_breaks = "days", 
-               labels = date_format("%b-%d"))
+  scale_x_date(minor_breaks = date_breaks("1 day"), labels = date_format("%b-%d"))
 p2
 # don't use before August 2012
 
 tdf <- subset(tdf, Date > as.Date("2012-08-1"))
 p <- ggplot(tdf, aes(x = Date, y = value, col = variable))
-p2 <- p + geom_point() + facet_grid(ring ~ .) + 
-  scale_x_date(breaks = "2 week",
-               minor_breaks = "days", 
+p2 <- p + geom_point(size = .3) + facet_grid(ring ~ .) + 
+  scale_x_date(breaks = date_breaks("2 week"),
+               minor_breaks = date_breaks("1 day"), 
                labels = date_format("%b-%d")) +
   theme(axis.text.x = element_text(angle = 90))
 p2
@@ -73,8 +137,8 @@ p2
 tdf <- subset(tdf, Date > as.Date("2012-08-1") & Date < as.Date("2012-11-1"))
 p <- ggplot(tdf, aes(x = Date, y = value, col = variable))
 p2 <- p + geom_point() + facet_grid(ring ~ .) + 
-  scale_x_date(breaks = "2 week",
-               minor_breaks = "days", 
+  scale_x_date(breaks = date_breaks("2 week"),
+               minor_breaks = date_breaks("1 day"), 
                labels = date_format("%b-%d")) +
   theme(axis.text.x = element_text(angle = 90))
 p2
@@ -83,7 +147,7 @@ p2
 tdf_Oct2012 <- filter(Lightdf, Date > as.Date("2012-10-10") & Date < as.Date("2012-10-20"))
 tdf_Oct2012_mlt <- melt(data.frame(tdf_Oct2012), id = c("DateTime", "Date", "ring"))
 p <- ggplot(tdf_Oct2012_mlt, aes(x = DateTime, y = value, col = variable))
-p2 <- p + geom_point(size = .05) + facet_grid(ring + variable ~ .)
+p2 <- p + geom_point(size = .5) + facet_grid(ring + variable ~ .)
 p2
 # when I look at the raw data, it's not too weird actually so just stay with
 # this. Just remove observations before August 2012
