@@ -174,9 +174,9 @@ AnvF_Eml
 ## ---- Stats_DiversityInx_Diversity
 # Shannon's index
 # The model
-Dml2@call
+Dml1@call
 # Chisq
-Anova(Dml2)
+Anova(Dml1)
 # F
 AnvF_Dml
 # Contrast
@@ -188,8 +188,6 @@ Sml3@call
 Anova(Sml3)
 # F test
 AnvF_Sml
-# Contrast
-S_CntrstRes
 
 # Model diagnosis
 plot(Sml3)

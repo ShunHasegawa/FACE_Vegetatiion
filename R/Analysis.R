@@ -10,16 +10,16 @@ source("R/functions.R")
 # source("R/CombineYearlyData.R")
 
 # Raw data for multi variate analysis
-load("output//Data/FACE_FullVegetation_Raw_2013_2015.RData")
+load("output//Data/FACE_FullVegetation_Raw_2013_2016.RData")
 
 # Data frame with plant functional groups
-load("output/Data/FACE_FullVegetation_PFG_2015.RData")
+load("output/Data/FACE_FullVegetation_PFG_2016.RData")
 
 # check unknown spp
-all(!grepl("unknown", VegRes15$variable, ignore.case = TRUE))
+all(!grepl("unknown", VegRes16$variable, ignore.case = TRUE))
 
 # co2, block and id, combine sedge and grass, wood and shrub
-veg <- within(VegRes15, {
+veg <- within(VegRes16, {
   block <- recode(ring, "1:2 = 'A'; 3:4 = 'B'; 5:6 = 'C'")
   co2 <- factor(ifelse(ring %in% c(1, 4, 5), "elev", "amb"))
   id <- ring:plot

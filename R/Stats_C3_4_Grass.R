@@ -82,18 +82,18 @@ qqline(resid(m6))
 c3gc4_CompAic <- CompAIC(m6)
 c3gc4_CompAic
 
-# # contrast----
-# 
-# # contrast doesn't work with lmer. so use lme
-# tdf <- C34grassDF[-1, ]
-# lmeMod <- lme(logit(C3Pr) ~ year * co2, random = ~1|block/ring/id, data = tdf)
+# contrast----
+
+# contrast doesn't work with lmer. so use lme
+# tdf <- c3gc4DF[-rmv, ]
+# lmeMod <- lme(logit(ratios) ~ year * co2, random = ~1|block/ring/id, data = tdf)
 # cntrst<- contrast(lmeMod, 
 #                   a = list(year = levels(tdf$year), co2 = "amb"),
 #                   b = list(year = levels(tdf$year), co2 = "elev"))
 # PropC3_CntrstRes <- cntrstTbl(cntrst, data = tdf, variable = "C3Prop")
 # PropC3_CntrstRes
-# # no significant differece between treatments, but still c3 proportion decreased
-# # at amb
+# no significant differece between treatments, but still c3 proportion decreased
+# at amb
 
 ###############
 # C3 total:C4 #
@@ -292,21 +292,3 @@ p2 <- p +
   facet_wrap( ~ variable, scale = "free_y")
 p2
 ggsavePP(plot = p2, filename = "output/figs/FACE_CO2ResponseRatio_SpecificPFG", width = 4, height = 4)
-
-## ---- Stats_C34PropSmmry
-# The model
-pm2@call
-
-# Chisq
-Anova(pm2)
-
-# F test
-AnvF_PropC3
-
-# Contrast
-PropC3_CntrstRes
-
-# Model diagnosis
-plot(pm2)
-qqnorm(resid(pm2))
-qqline(resid(pm2))

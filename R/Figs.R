@@ -166,7 +166,8 @@ Year0_co2 <- Year0_co2[order(as.numeric(Year0_co2$variable)), ]
 YearDiff <- ddply(RingSummary, .(variable, ring, co2, PFG), function(x) {
   d1 <- with(x, log10(value[year == "Year1"] + 1) - log10(value[year == "Year0"] + 1))
   d2 <- with(x, log10(value[year == "Year2"] + 1) - log10(value[year == "Year0"] + 1))
-  data.frame(year = c("Year1", "Year2"), Dif = c(d1, d2))
+  d3 <- with(x, log10(value[year == "Year2"] + 1) - log10(value[year == "Year0"] + 1))
+  data.frame(year = paste0("Year", 1:3), Dif = c(d1, d2, d3))
 })
 YearDiff_co2 <- ddply(YearDiff, .(variable, co2, year, PFG), summarise, 
                       Mean = mean(Dif), 
@@ -351,22 +352,22 @@ StackBar_PFG
 ggsavePP(plot = StackBar_PFG, filename = "output/figs/Fig_Thesis/StackBar_PFG", 
          width = 6, height = 3.5)
 
-########################
-# Native or introduced #
-########################
-Orgnplt  <- PltVeg(data = BarplDF, xval = "origin", xlab = "Orgin", size = 8) +
-  theme(strip.text.x = element_text(size = 7)) +
-  expand_limits(x = 2)
-  
-## Ring ##
-p <- Orgnplt +
-  facet_grid(ring ~ form, scale = "free_x", space = "free_x", labeller = label_parsed, margins= "form") 
-ggsavePP(filename = "output/figs/FACE_Origin_Ring", plot = p, width= 8, height = 6)
-
-## CO2 ##
-p <- Orgnplt +
-  facet_grid(co2 ~ form, scale = "free_x", space = "free_x", labeller = label_parsed, margins= "form") 
-ggsavePP(filename = "output/figs/FACE_Origin_CO2", plot = p, width= 8, height = 6)
+# ########################
+# # Native or introduced #
+# ########################
+# Orgnplt  <- PltVeg(data = BarplDF, xval = "origin", xlab = "Orgin", size = 8) +
+#   theme(strip.text.x = element_text(size = 7)) +
+#   expand_limits(x = 2)
+#   
+# ## Ring ##
+# p <- Orgnplt +
+#   facet_grid(ring ~ form, scale = "free_x", space = "free_x", labeller = label_parsed, margins= "form") 
+# ggsavePP(filename = "output/figs/FACE_Origin_Ring", plot = p, width= 8, height = 6)
+# 
+# ## CO2 ##
+# p <- Orgnplt +
+#   facet_grid(co2 ~ form, scale = "free_x", space = "free_x", labeller = label_parsed, margins= "form") 
+# ggsavePP(filename = "output/figs/FACE_Origin_CO2", plot = p, width= 8, height = 6)
 
 #####################
 # Figure for thesis #

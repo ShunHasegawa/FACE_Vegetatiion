@@ -19,6 +19,7 @@ bxplts(value = "EU", xval = "ring", data = disDF)
 # raw data
 m1 <- lmer(EU ~ co2 * year + (1|block) + (1|ring) + (1|id), data = disDF)
 DisAllSp_AnvF <- Anova(m1, test.statistic = "F")
+DisAllSp_AnvF
 plot(m1)
 qqnorm(resid(m1))
 qqline(resid(m1))
@@ -42,13 +43,13 @@ bxplts(value = "EU", xval = "co2", data = Pfg_disDF)
 ## perform LMM ##
 #################
 # raw data
-m1 <- lmer(EU ~ co2 * year + (1|block) + (1|ring) + (1|id), data = Pfg_disDF)
+m1 <- lmer(EU^(1/3) ~ co2 * year + (1|block) + (1|ring) + (1|id), data = Pfg_disDF)
 Anova(m1)
-m2 <- stepLmer(m1)
-DisPfg_AnvF <- Anova(m2, test.statistic = "F")
-plot(m2)
-qqnorm(resid(m2))
-qqline(resid(m2))
+DisPfg_AnvF <- Anova(m1, test.statistic = "F")
+DisPfg_AnvF
+plot(m1)
+qqnorm(resid(m1))
+qqline(resid(m1))
 
 ##########
 # Figure #
@@ -120,7 +121,7 @@ RatioSE$co2R <- with(RatioSE, paste0(round(original, 2), "(", round(bootSE, 2), 
 
 # reorder
 RatioSE_cst <- dcast(RatioSE, type ~ year, value.var = "co2R")
-write.csv(RatioSE_domspp_cst, file = "output/table/CO2ResponseRatio_Dissimilarity.csv", row.names = FALSE)
+write.csv(RatioSE_cst, file = "output/table/CO2ResponseRatio_Dissimilarity.csv", row.names = FALSE)
 
 ###########
 # Summary #
