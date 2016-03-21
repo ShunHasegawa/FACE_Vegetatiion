@@ -13,7 +13,7 @@ TcnDF <- read.xlsx2("Data/SoilVariables/Soil.TC.TN.xlsx",
 # organise
 names(TcnDF)[grepl("tc|tn", names(TcnDF))] <- c("TotalC", "TotalN")
 TcnDF[, c("TotalC", "TotalN")] <- apply(TcnDF[, c("TotalC", "TotalN")], 2, as.numeric)
-TcnDF$year <- factor(TcnDF$year, labels = c(2013, 2014))
+TcnDF$year <- factor(TcnDF$year, labels = paste0("Year", 0:1))
 TcnDF$depth <- factor(paste0(TcnDF$depth, "cm"))
 
 #######################
@@ -23,29 +23,29 @@ HtcnDF <- read.csv("Data/SoilVariables/FACE_P0014_ALL_ SoilCN_June2012-Spet2014_
 HtcnDF <- within(HtcnDF, {
   Date <- as.Date(dmy(as.character(Date)))
   ring <- factor(ring)
-  year <- year(Date) + 1 # in order to combine with vegetation results from January next year
+  year <- factor(year(Date), labels = paste0("Year", c(0, 2))) 
   Month <- month(Date)
 })
 HtcnDF <- subsetD(HtcnDF, plot != "Backfill")
 names(HtcnDF)[grepl("tc|tn", names(HtcnDF))] <- c("TotalC", "TotalN")
 ftable(xtabs( ~ year + Month + depth, data = HtcnDF))
-# 2014 is completely missing
-# no 20-30 cm for 2013
+# Year1 is completely missing
+# no 20-30 cm for Year0
 
 # compre the above two data frames
-llply(list(HtcnDF, TcnDF), function(x) subset(x, ring == 1 & year == 2013))
-  # 2013 is the same. so just need 2014 from the above.
+llply(list(HtcnDF, TcnDF), function(x) subset(x, ring == 1 & year == "Year0"))
+  # Year0 is the same. so just need Year1 from the above.
 
 
 # ring mean for each data frames at 0-10 cm from June or May
-TcnDF_Ring <- ldply(list(subset(TcnDF, year == 2014), subset(HtcnDF, Month %in% c(5, 6))), 
+TcnDF_Ring <- ldply(list(subset(TcnDF, year == "Year1"), subset(HtcnDF, Month %in% c(5, 6))), 
                     function(x) {
                       ddply(x, .(year, ring, depth), summarise, 
                             TotalC = mean(TotalC), 
                             TotalN = mean(TotalN))
                       })
 # plot mean
-dd14 <- subset(TcnDF, year == 2014 & depth == "0-10cm", 
+dd14 <- subset(TcnDF, year == "Year1" & depth == "0-10cm", 
                select = c("year", "ring", "plot", "TotalC", "TotalN"))
 dd13_15 <- subset(HtcnDF, Month %in% c(5, 6) & depth == "0-10cm", 
                   select = c("year", "ring", "plot", "TotalC", "TotalN"))
@@ -61,7 +61,7 @@ d_ply(TcnDF_Ring, .(year), function(x)
   with(x, interaction.plot(depth, ring, TotalC, main = unique(x$year))))
 d_ply(TcnDF_Ring, .(year), function(x) 
   with(x, interaction.plot(depth, ring, TotalN, main = unique(x$year))))
-# There doesn't seem to be interaction so just use top 0-10 cm
+  # There doesn't seem to be interaction so just use top 0-10 cm
 
 TcnDF_Ring <- subsetD(TcnDF_Ring, depth == "0-10cm", select = -depth)
 
@@ -77,14 +77,15 @@ unique(phDF$Plot)
 # some of pots contains ring number so remove
 
 phDF <- within(phDF, {
-  Date <- as.Date(dmy(Date))
-  Ring <- factor(Ring)
-  Plot <- as.character(factor(Plot)) # 1.0->1, 1.1->1.1
-  Plot <- factor(gsub(".[.]", "", Plot)) # 1->1, 1.1->1
+  Date  <- as.Date(dmy(Date))
+  Ring  <- factor(Ring)
+  Plot  <- as.character(factor(Plot)) # 1.0->1, 1.1->1.1
+  Plot  <- factor(gsub(".[.]", "", Plot)) # 1->1, 1.1->1
   Depth <- factor(gsub(" ", "", as.character(Depth)))
-  year <- year(Date) + 1  # in order to combine with vegetation results from January next year
+  year  <- factor(year(Date), labels = paste0("Year", 0:2)) 
   Month <- month(Date)
   })
+
 names(phDF)[c(3, 4, 6)] <- c("ring", "plot", "Drysoil_ph")
 # remove NA
 phDF <- phDF[!is.na(phDF$Drysoil_ph), ]
@@ -94,6 +95,20 @@ ftable(xtabs( ~ year + Month + Depth, data = phDF))
   # use May/June at 0-10cm
 
 phDF_June <- subsetD(phDF, Depth == "0-10cm" & Month %in% 5:6)
+
+# pH data from June 2015
+ph_2016 <- read.xlsx2(file = "Data/Soil pH June 2015.xlsx", 
+                      sheetIndex = 1,
+                      colClasses = c("numeric", "character", "character", "numeric"))
+names(ph_2016) <- c("Sample.ID", "ring", "plot", "Drysoil_ph") 
+
+ph_2016 <- within(ph_2016, {
+  Depth <- "0-10cm"
+  Month <- 6
+  year  <- "Year3"
+})
+
+phDF_June <- rbind.fill(phDF_June, ph_2016)
 save(phDF_June, file = "output/Data/FACE_DrysoilPhJune.RData")
 
 # ring mean
@@ -120,7 +135,7 @@ SoilChemDF <- within(SoilChemDF, {
   Ring <- factor(Ring)
   Plot <- factor(Plot)
   Depth <- factor(gsub(" ", "", as.character(Depth)))
-  year <- year(Date) + 1
+  year <- factor(year(Date), labels = paste0("Year", 0:2))
   Month <- month(Date)
   Sulfur <- NULL
 })
@@ -141,7 +156,7 @@ par(mfrow = c(2, 3))
 l_ply(1:6, function(x)
 boxplot(Phosphorus ~ Date, data = subset(SoilChemDF, Depth == "0-10cm" & ring == x), cex.axis = .7, 
         main = paste("Ring", x)))
-# there is a monthly variation, so ideally want to use measurment from the same month
+  # there is a monthly variation, so ideally want to use measurment from the same month
 
 # use March at 0-10 cm for time being
 SoilChemDF_Mar <- subsetD(SoilChemDF, Depth == "0-10cm" & Month == 3)
@@ -157,9 +172,9 @@ load("Data//SoilVariables/soil.var_ring.means.RData")
 
 # 1st year is only from August so just use August-December
 SoilMTdf <- subsetD(ring.means, 
-                    month(Date) %in% c(8:12) & year(Date) %in% c(2012:2014),
+                    month(Date) %in% c(8:12) & year(Date) %in% c(2012:2015),
                     select = -co2)
-SoilMTdf$year <- factor(year(SoilMTdf$Date), labels = c(2013:2015))
+SoilMTdf$year <- factor(year(SoilMTdf$Date), labels = paste0("Year", 0:3))
 dlply(SoilMTdf, .(year), summary)
 
 # Ring mean
@@ -173,14 +188,15 @@ SoilMTdf_Ring <- ddply(SoilMTdf, .(year, ring), function(x) colMeans(x[, Probes]
 #########
 load("output//Data/FACE_Light_DayMean.RData")
 head(FACE_Light_DayMean)
-# understorey and canopy PAR is highly correlated so just use understorey
-# October 2012 values are little bit weird. It goes up on a sudden.
-# Just use Nov-Dec for the time being cause measurements in these months are
-# complete in all the three years.
+  # understorey and canopy PAR is highly correlated so just use understorey
+  # October 2012 values are little bit weird. It goes up in a sudden.
+  # Just use Nov-Dec for the time being cause measurements in these months are
+  # complete in all the three years.
 LightNovDec <- subsetD(FACE_Light_DayMean, month(Date) %in% c(11, 12))
-LightNovDec$year <- factor(year(LightNovDec$Date), labels = c(2013:2015))
+LightNovDec$year <- factor(year(LightNovDec$Date), labels = paste0("Year", 0:3))
 
-FlorLight_Ring <- ddply(LightNovDec, .(year, ring), summarise, FloorPAR = mean(FloorPAR, na.rm = TRUE))
+FlorLight_Ring <- ddply(LightNovDec, .(year, ring), summarise, 
+                        FloorPAR = mean(FloorPAR, na.rm = TRUE))
 
 #######
 # IEM #
@@ -190,12 +206,13 @@ load("Data/SoilVariables/FACE_IEM.RData")
 # use only Nov-Jan
 iemNovJan <- subsetD(iem, time %in% c(6, 7, 13, 14))
 # add year; January is counted as an year before
-iemNovJan$year <- with(iemNovJan, factor(ifelse(time %in% c(6, 7), "2013", "2014")))
+iemNovJan$year <- with(iemNovJan, factor(ifelse(time %in% c(6, 7), "Year0", "Year1")))
 
 iem_ring <- ddply(iemNovJan, .(ring, year), summarise,
-                  IEM_no = mean(no, na.rm = TRUE), 
-                  IEM_nh = mean(nh, na.rm = TRUE), 
-                  IEM_p = mean(p, na.rm = TRUE))
+                    IEM_no = mean(no, na.rm = TRUE), 
+                    IEM_nh = mean(nh, na.rm = TRUE), 
+                    IEM_p  = mean(p, na.rm = TRUE)
+                  )
 
 #################
 # Soil Extracts #
@@ -207,13 +224,14 @@ tdf <- within(extr, {
 })
 xtabs(~ Y + M, data = tdf)
 
-# use december
+# use December
 ExtrDec <- subsetD(extr, month(date) == 12)
-ExtrDec$year <- factor(year(ExtrDec$date), labels = c(2013, 2014))
+ExtrDec$year <- factor(year(ExtrDec$date), labels = paste0("Year", 0:1))
 Extract_ring <- ddply(ExtrDec, .(year, ring), summarise, 
                       Ext_no = mean(no, na.rm = TRUE),
                       Ext_nh = mean(nh, na.rm = TRUE),
-                      Ext_p = mean(po, na.rm = TRUE))
+                      Ext_p  = mean(po, na.rm = TRUE)
+                      )
 
 ##################
 # Mineralisation #
@@ -226,12 +244,13 @@ tdf <- within(mine, {
 xtabs(~ Y + M, data = tdf)
 # use January
 MineJan <- subsetD(mine, month(date) == 1)
-MineJan$year <- factor(year(MineJan$date))
+MineJan$year <- factor(year(MineJan$date), labels = paste0("Year", 0:1))
 
 Mineralisation_ring <- ddply(MineJan, .(year, ring), summarise,
-                             n.min = mean(n.min, na.rm = TRUE), 
-                             nitrification = mean(nitrification, na.rm = TRUE), 
-                             p.min = mean(p.min, na.rm = TRUE))
+                               n.min         = mean(n.min, na.rm = TRUE), 
+                               nitrification = mean(nitrification, na.rm = TRUE), 
+                               p.min         = mean(p.min, na.rm = TRUE)
+                             )
 #############
 # Lysimeter #
 #############
@@ -317,9 +336,10 @@ AnvF_ph
 
 # dpeth HL-----
 bxplts(value = "Depth_HL", xval = "co2", data = envDF)
-m1 <- lm(Depth_HL ~ co2, data = envDF, subset = year == "2013")
+m1 <- lm(Depth_HL ~ co2, data = envDF, subset = year == "Year0")
 AnvF_HL <- summary.aov(m1)
 AnvF_HL
+
 # PAR----
 bxplts(value = "FloorPAR", xval = "co2", data = envDF)
 m1 <- lmer(FloorPAR ~ co2 * year + (1|ring), data = envDF)
