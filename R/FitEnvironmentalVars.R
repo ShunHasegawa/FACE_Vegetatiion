@@ -32,7 +32,7 @@ EnvVarDF <- EnvVarDF[, !names(EnvVarDF) %in% RmVar]
 CorMatrix <- cor(Rm_ymc(EnvVarDF), use = "pairwise.complete.obs")
 corrplot.mixed(CorMatrix, tl.cex = .5, mar = par()$mar)
 
-# some of the variables are not complete for three years
+# some of the variables are not complete for four years
 
 # Variables measured only in the 1 and 2nd years----
 naCol_2ndYear <-cbind(EnvVarDF[, c("year", "ring")], 

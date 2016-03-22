@@ -6,16 +6,55 @@ SoilDf <- read.csv("Data//FACE_Environmtal_Variable.csv", header = TRUE)
 #############
 # TC and TN #
 #############
-TcnDF <- read.xlsx2("Data/SoilVariables/Soil.TC.TN.xlsx", 
-                    sheetName = "FACE.soil.tc.tn", 
-                    header = TRUE, startRow = 1, endRow = 97, 
-                    stringsAsFactors = FALSE)
-# organise
-names(TcnDF)[grepl("tc|tn", names(TcnDF))] <- c("TotalC", "TotalN")
-TcnDF[, c("TotalC", "TotalN")] <- apply(TcnDF[, c("TotalC", "TotalN")], 2, as.numeric)
-TcnDF$year <- factor(TcnDF$year, labels = paste0("Year", 0:1))
-TcnDF$depth <- factor(paste0(TcnDF$depth, "cm"))
 
+# 2012-2014
+  TcnDF <- read.xlsx2("Data/SoilVariables/Soil.TC.TN.xlsx", 
+                      sheetName = "FACE.soil.tc.tn", 
+                      header = TRUE, startRow = 1, endRow = 97, 
+                      stringsAsFactors = FALSE)
+  # organise
+  names(TcnDF)[grepl("tc|tn", names(TcnDF))] <- c("TotalC", "TotalN")
+  TcnDF[, c("TotalC", "TotalN")] <- apply(TcnDF[, c("TotalC", "TotalN")], 2, as.numeric)
+  TcnDF$year <- factor(TcnDF$year, labels = paste0("Year", 0:1))
+  TcnDF$depth <- factor(paste0(TcnDF$depth, "cm"))
+
+# 2015
+  TcnDF_2015 <- read.xlsx2("Data/SoilVariables/TotalCN_June2015.xlsx",
+                           sheetIndex = 1, 
+                           colClasses = c("character", rep("numeric", 3)))
+  names(TcnDF_2015) <- c("ID", "Mass", "TotalC", "TotalN")
+  
+  # Subset required rows
+  TcnDF_2015$ID <- as.numeric(as.character(TcnDF_2015$ID))
+  TcnDF_2015 <- TcnDF_2015[complete.cases(TcnDF_2015), ]
+  
+  # remove 5 from ID (it was meant to be S but Simmy got it wrong)
+  TcnDF_2015$ID <- TcnDF_2015$ID - 500000
+  
+  # Sample ID
+  TcnDF_2015_ID <- read.xlsx2("Data/SoilVariables/TotalCN_June2015_SampleID.xlsx",
+                              sheetIndex = 1,
+                              startRow = 2,
+                              colClasses = c("numeric", rep("character", 2))
+                              )
+  
+  # Merge
+  TcnDF_2015dd <- merge(TcnDF_2015, TcnDF_2015_ID, by.x = "ID", by.y = "Sample")
+  
+  # Organise
+  TcnDF_2015dd <- subset(TcnDF_2015dd, 
+                         select = c("TotalC", "TotalN", "Ring", "Plot"),
+                         !grepl("Backfill", as.character(Ring))
+                         )
+  names(TcnDF_2015dd)[3:4] <- c("ring", "plot") 
+  TcnDF_2015dd <- within(TcnDF_2015dd, {
+    year  <- "Year3"
+    depth <- "0-10cm"
+  })
+
+# Merge all year data
+  TcnDF <- rbind.fill(TcnDF, TcnDF_2015dd)
+    
 #######################
 # TC and TN from Hiev #
 #######################
@@ -34,11 +73,10 @@ ftable(xtabs( ~ year + Month + depth, data = HtcnDF))
 
 # compre the above two data frames
 llply(list(HtcnDF, TcnDF), function(x) subset(x, ring == 1 & year == "Year0"))
-  # Year0 is the same. so just need Year1 from the above.
-
+  # Year0 is the same. so just need Year1 and Year3 from the above.
 
 # ring mean for each data frames at 0-10 cm from June or May
-TcnDF_Ring <- ldply(list(subset(TcnDF, year == "Year1"), subset(HtcnDF, Month %in% c(5, 6))), 
+TcnDF_Ring <- ldply(list(subset(TcnDF, year %in% c("Year1", "Year3")), subset(HtcnDF, Month %in% c(5, 6))), 
                     function(x) {
                       ddply(x, .(year, ring, depth), summarise, 
                             TotalC = mean(TotalC), 
@@ -56,7 +94,7 @@ TcnDF_Plot <- TcnDF_Plot[order(TcnDF_Plot$year), ]
 save(TcnDF_Plot, file = "output/Data/TcnJune_Plot.RData")
 
 # check interaction beween ring and depth
-par(mfrow = c(2, 3))
+par(mfrow = c(2, 4))
 d_ply(TcnDF_Ring, .(year), function(x) 
   with(x, interaction.plot(depth, ring, TotalC, main = unique(x$year))))
 d_ply(TcnDF_Ring, .(year), function(x) 

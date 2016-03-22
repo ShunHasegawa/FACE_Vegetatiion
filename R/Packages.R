@@ -29,6 +29,7 @@ library(dplyr)
 library(corrplot)
 library(RVAideMemoire)
 library(pbkrtest)
+library(corrplot)
 
 # HIEv
 .libPaths("/Library/Frameworks/R.framework/Versions/3.2/Resources/library")
