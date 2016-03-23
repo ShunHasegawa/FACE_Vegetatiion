@@ -215,131 +215,131 @@
   llply(RdaLst, function(x) anova(x$FinRda, permutations = allPerms(6)))
   llply(RdaLst, function(x) anova(x$FinRda, permutations = allPerms(6), by = "margin"))
 
-#################
-# CO2 treatment #
-#################
-
-  #############
-  ## Ambient ##
-  #############
-  ambDF <- subsetD(seDF, co2 == "amb")
-  
-  # permutaiton Possible number of permutation is (3!)^3 = 216. it's small so need
-  # to use exact permutation test
-  
-  allPerms(9, 
-           how(within = Within(type = "free"), plot = Plots(strata = ambDF$ring)))
-  # Null hypothesis is no difference between years. Ring is no exchangeable but 
-  # subplots are. NOTE # First three colmuns of the above indices are for the 1st 
-  # factor of ring, and four to six are for the 2nd and seven to nine are for 3rd.
-  # So that data frame needs to be reordered to match this. 
-  
-  # reorder by ring
-  ambDF <- ambDF[order(ambDF$ring), ]
-  
-  # Run RDA
-  rda_amb <- rda(log(ambDF[, SppName] + 1) ~ year + Condition(ring) , ambDF)
-  
-  hh <- allPerms(9, how(within = Within(type = "free"), plot = Plots(strata = ambDF$ring)))
-  
-  anova(rda_amb, permutations = hh)
-  # significant year effect
-  
-  # Axis
-  anova(rda_amb, permutations = hh, by = "axis")
-  # RDA1 is significant
-  
-  summary(rda_amb)
-  
-  #########
-  ## co2 ##
-  #########
-  
-  elvDF <- subsetD(seDF, co2 == "elev")
-  # reorder by ring
-  elvDF <- elvDF[order(elvDF$ring), ]
-  
-  # Run RDA
-  rda_elev <- rda(log(elvDF[, SppName] + 1) ~ year + Condition(ring) , elvDF)
-  
-  hh <- allPerms(9, how(within = Within(type = "free"), plot = Plots(strata = elvDF$ring)))
-  
-  anova(rda_elev, permutations = hh)
-  # significant year effect
-  anova(rda_elev, permutations = hh, by = "axis")
-  # only RDA1 is significant
-  
-  ############
-  # Summary  #
-  ############
-  RdaResLst <- list(amb = rda_amb, elev = rda_elev)
-  
-  # Driving spp
-  SpScores <- ldply(RdaResLst, function(x) {
-    sp <- vegan::scores(x)$species
-    data.frame(sp, species = row.names(sp))
-  }, .id = "co2")
-  
-  drvSpp <- unique(SpScores$specie[abs(SpScores$RDA1) > .4])
-  drvSppDF <- subset(SpScores, species %in% drvSpp)
-  
-  # add covrage column and PFG
-  drvSppDF <- Reduce(function(x, y) {
-    merge(x, y, by.x = "species", by.y = "variable", all.x = TRUE)},
-    list(drvSppDF, SppSum[, c("variable", "Cov")], unique(veg[, c("variable", "PFG")])))
-    
-  drvSppDF$species <- with(drvSppDF, 
-                           paste0(gsub("[.]", " ", as.character(species)), 
-                                  "(", format(Cov, digit = 1, nsmall = 1), ")"))
-  drvSppDF_cst <- dcast(species + PFG ~ co2, value.var = "RDA1", data = drvSppDF)
-  drvSppDF_cst <- drvSppDF_cst[order(drvSppDF_cst$amb, decreasing = TRUE), ]
-  drvSppDF_cst <- within(drvSppDF_cst, {
-    amb <- format(amb, digit = 2, nsmall = 2)
-    elev <- format(elev, digit = 2, nsmall = 2)
-  })
-  write.csv(drvSppDF_cst, file = "output/table/RDA_AllSpp_SpScore.csv", row.names = FALSE)
-  
-  ########
-  # Plot #
-  ########
-  p2 <- PlotRDA_Year(rdaResLst = list(rda_amb, rda_elev), env = list(ambDF, elvDF), 
-                     spscore = .4)
-  ggsavePP(filename = "output/figs/FACE_RDAvsYearbyCO2", plot = p2, 
-           width = 6.65, height = 4)
-  
-  ## Plot for thesis ##
-  RdaResLst
-  envDFLst <- list(amb = ambDF, elev = elvDF)
-  
-  SummaryRda <- llply(RdaResLst, summary)
-  
-  # Site score
-  siteDD <- ldply(c("amb", "elev"), function(x) data.frame(SummaryRda[[x]]$site, envDFLst[[x]]))
-  siteDD$year <- factor(siteDD$year, labels = paste0("Year", 0:2))
-  
-  # create a plot
-  p <- ggplot(siteDD, aes(x = year, y = RDA1))
-  SiteScorePlot <- p + 
-    geom_point(size = 3) +
-    geom_hline(yintercept = 0, linetype = "dashed") +
-    facet_wrap(~co2, scale = "free_y") +
-    labs(x = NULL, y = "RDA1") +
-    science_theme
-  SiteScorePlot
-  # change facet_label
-  
-  # % variance for RDA1
-  Rda1Prop <- laply(SummaryRda, function(x) 
-    format(x$cont$importance["Proportion Explained", "RDA1"] * 100, 
-           digits = 2, nsmall = 2)
-  )
-  
-  labs <- c(paste0("Ambient (", Rda1Prop[1], "%)"), 
-            parse(text = paste("eCO[2]~(", Rda1Prop[2], "*'%')")))
-  Rda_Year_AllSp <- facet_wrap_labeller(SiteScorePlot, labels = labs)
-  
-  ggsavePP(Rda_Year_AllSp, filename = "output/figs/Fig_Thesis/RDAvsYearbyCO2_AllSpp", 
-           width = 4.5, height = 2.5)
+# #################
+# # CO2 treatment #
+# #################
+# 
+#   #############
+#   ## Ambient ##
+#   #############
+#   ambDF <- subsetD(seDF, co2 == "amb")
+#   
+#   # permutaiton Possible number of permutation is (3!)^3 = 216. it's small so need
+#   # to use exact permutation test
+#   
+#   allPerms(9, 
+#            how(within = Within(type = "free"), plot = Plots(strata = ambDF$ring)))
+#   # Null hypothesis is no difference between years. Ring is no exchangeable but 
+#   # subplots are. NOTE # First three colmuns of the above indices are for the 1st 
+#   # factor of ring, and four to six are for the 2nd and seven to nine are for 3rd.
+#   # So that data frame needs to be reordered to match this. 
+#   
+#   # reorder by ring
+#   ambDF <- ambDF[order(ambDF$ring), ]
+#   
+#   # Run RDA
+#   rda_amb <- rda(log(ambDF[, SppName] + 1) ~ year + Condition(ring) , ambDF)
+#   
+#   hh <- allPerms(9, how(within = Within(type = "free"), plot = Plots(strata = ambDF$ring)))
+#   
+#   anova(rda_amb, permutations = hh)
+#   # significant year effect
+#   
+#   # Axis
+#   anova(rda_amb, permutations = hh, by = "axis")
+#   # RDA1 is significant
+#   
+#   summary(rda_amb)
+#   
+#   #########
+#   ## co2 ##
+#   #########
+#   
+#   elvDF <- subsetD(seDF, co2 == "elev")
+#   # reorder by ring
+#   elvDF <- elvDF[order(elvDF$ring), ]
+#   
+#   # Run RDA
+#   rda_elev <- rda(log(elvDF[, SppName] + 1) ~ year + Condition(ring) , elvDF)
+#   
+#   hh <- allPerms(9, how(within = Within(type = "free"), plot = Plots(strata = elvDF$ring)))
+#   
+#   anova(rda_elev, permutations = hh)
+#   # significant year effect
+#   anova(rda_elev, permutations = hh, by = "axis")
+#   # only RDA1 is significant
+#   
+#   ############
+#   # Summary  #
+#   ############
+#   RdaResLst <- list(amb = rda_amb, elev = rda_elev)
+#   
+#   # Driving spp
+#   SpScores <- ldply(RdaResLst, function(x) {
+#     sp <- vegan::scores(x)$species
+#     data.frame(sp, species = row.names(sp))
+#   }, .id = "co2")
+#   
+#   drvSpp <- unique(SpScores$specie[abs(SpScores$RDA1) > .4])
+#   drvSppDF <- subset(SpScores, species %in% drvSpp)
+#   
+#   # add covrage column and PFG
+#   drvSppDF <- Reduce(function(x, y) {
+#     merge(x, y, by.x = "species", by.y = "variable", all.x = TRUE)},
+#     list(drvSppDF, SppSum[, c("variable", "Cov")], unique(veg[, c("variable", "PFG")])))
+#     
+#   drvSppDF$species <- with(drvSppDF, 
+#                            paste0(gsub("[.]", " ", as.character(species)), 
+#                                   "(", format(Cov, digit = 1, nsmall = 1), ")"))
+#   drvSppDF_cst <- dcast(species + PFG ~ co2, value.var = "RDA1", data = drvSppDF)
+#   drvSppDF_cst <- drvSppDF_cst[order(drvSppDF_cst$amb, decreasing = TRUE), ]
+#   drvSppDF_cst <- within(drvSppDF_cst, {
+#     amb <- format(amb, digit = 2, nsmall = 2)
+#     elev <- format(elev, digit = 2, nsmall = 2)
+#   })
+#   write.csv(drvSppDF_cst, file = "output/table/RDA_AllSpp_SpScore.csv", row.names = FALSE)
+#   
+#   ########
+#   # Plot #
+#   ########
+#   p2 <- PlotRDA_Year(rdaResLst = list(rda_amb, rda_elev), env = list(ambDF, elvDF), 
+#                      spscore = .4)
+#   ggsavePP(filename = "output/figs/FACE_RDAvsYearbyCO2", plot = p2, 
+#            width = 6.65, height = 4)
+#   
+#   ## Plot for thesis ##
+#   RdaResLst
+#   envDFLst <- list(amb = ambDF, elev = elvDF)
+#   
+#   SummaryRda <- llply(RdaResLst, summary)
+#   
+#   # Site score
+#   siteDD <- ldply(c("amb", "elev"), function(x) data.frame(SummaryRda[[x]]$site, envDFLst[[x]]))
+#   siteDD$year <- factor(siteDD$year, labels = paste0("Year", 0:2))
+#   
+#   # create a plot
+#   p <- ggplot(siteDD, aes(x = year, y = RDA1))
+#   SiteScorePlot <- p + 
+#     geom_point(size = 3) +
+#     geom_hline(yintercept = 0, linetype = "dashed") +
+#     facet_wrap(~co2, scale = "free_y") +
+#     labs(x = NULL, y = "RDA1") +
+#     science_theme
+#   SiteScorePlot
+#   # change facet_label
+#   
+#   # % variance for RDA1
+#   Rda1Prop <- laply(SummaryRda, function(x) 
+#     format(x$cont$importance["Proportion Explained", "RDA1"] * 100, 
+#            digits = 2, nsmall = 2)
+#   )
+#   
+#   labs <- c(paste0("Ambient (", Rda1Prop[1], "%)"), 
+#             parse(text = paste("eCO[2]~(", Rda1Prop[2], "*'%')")))
+#   Rda_Year_AllSp <- facet_wrap_labeller(SiteScorePlot, labels = labs)
+#   
+#   ggsavePP(Rda_Year_AllSp, filename = "output/figs/Fig_Thesis/RDAvsYearbyCO2_AllSpp", 
+#            width = 4.5, height = 2.5)
 
 
 
