@@ -21,12 +21,16 @@ all(!grepl("unknown", VegRes16$variable, ignore.case = TRUE))
 # co2, block and id, combine sedge and grass, wood and shrub
 veg <- within(VegRes16, {
   block <- recode(ring, "1:2 = 'A'; 3:4 = 'B'; 5:6 = 'C'")
-  co2 <- factor(ifelse(ring %in% c(1, 4, 5), "elev", "amb"))
-  id <- ring:plot
-  form <- factor(ifelse(form %in% c("Tree", "Shrub"), "Wood",
+  co2   <- factor(ifelse(ring %in% c(1, 4, 5), "elev", "amb"))
+  id    <- ring:plot
+  form  <- factor(ifelse(form %in% c("Tree", "Shrub"), "Wood",
                         ifelse(form %in% c("Grass", "Sedge", "rush"), "Grass",
-                               as.character(form))))
-})
+                               as.character(form)
+                               )
+                        )
+                  )
+  }
+  )
 
 # remove Euc seedlings as it's not reliable
 veg <- subsetD(veg, variable != "Euc.seedling")
