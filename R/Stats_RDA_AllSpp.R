@@ -21,39 +21,46 @@
   
   adjR_singl_Lst <- list()
   for (i in 1:4) {
-    dd <- subsetD(seDF, year == levels(seDF$year)[i])
-    spdd <- dd[ , SppName]
+    dd                  <- subsetD(seDF, year == levels(seDF$year)[i])
+    spdd                <- dd[ , SppName]
     # formula for each variable
-    singl_fmls <- llply(paste("log(spdd + 1) ~", expl), as.formula)
-    names(singl_fmls) <- expl
-    adjR_singl <- ldply(singl_fmls, function(y) 
-      RsquareAdj(rda(y, data = dd))$adj.r.squared, 
-      .id = "variable")
+    singl_fmls          <- llply(paste("log(spdd + 1) ~", expl), as.formula)
+    names(singl_fmls)   <- expl
+    adjR_singl          <- ldply(singl_fmls, 
+                                 function(y) {
+                                   RsquareAdj(rda(y, data = dd))$adj.r.squared
+                                   },
+                                 .id = "variable"
+                                 )
     adjR_singl_Lst[[i]] <- adjR_singl
     rm(dd, spdd, singl_fmls, adjR_singl)
   }
+  
   names(adjR_singl_Lst) <- paste0("Year", 0:3)
   
   # Get variables with positive R2adj
   PosAdjR <- llply(adjR_singl_Lst, function(x) as.character(x$variable[x$V1 > 0]))
   
   # Formula for full models
-  FullFormula <- llply(PosAdjR, function(x) {
-    comb_exp <- combn(x, 4) # combination of four
-    expl_fml <- apply(comb_exp, 2, function(x) paste(x, collapse = "+"))
-    return(expl_fml)
-  })
+  FullFormula <- llply(PosAdjR, 
+                       function(x) {
+                          comb_exp <- combn(x, 4) # combination of four
+                          expl_fml <- apply(comb_exp, 
+                                            2, 
+                                            function(x) paste(x, collapse = "+")
+                                            )
+                          return(expl_fml)
+                          }
+                       )
   
   # Y matric (lefthand part)
-  LH <- list("log(df2013[ , SppName] + 1) ~",
-             "log(df2014[ , SppName] + 1) ~",
-             "log(df2015[ , SppName] + 1) ~", 
-             "log(df2016[ , SppName] + 1) ~" )
+  LH   <- list("log(df2013[ , SppName] + 1) ~",
+               "log(df2014[ , SppName] + 1) ~",
+               "log(df2015[ , SppName] + 1) ~", 
+               "log(df2016[ , SppName] + 1) ~" )
   fmls <- llply(list(Year0 = 1, Year1 = 2, Year2 = 3, Year3 = 4), 
                 function(x) llply(paste(LH[[x]], FullFormula[[x]]), as.formula))
 
-  
-  
 ##############
 ## 1st year ##
 ##############
@@ -160,10 +167,13 @@
   
   # choose only three terms
   comb_exp <- combn(PosAdjR$Year3, 3)
-  expl_fml <-apply(comb_exp, 2, function(x) paste(x, collapse = "+"))
-  fmls_3 <- llply(paste("log(df2016[ , SppName] + 1) ~", expl_fml), as.formula)
-  adjR <- laply(fmls_3, function(x) RsquareAdj(rda(x, data = df2016))$adj.r.squared)
-  rr <- rda(fmls_3[[which(max(adjR, na.rm = TRUE) == adjR)]], df2016)
+  expl_fml <- apply(comb_exp, 2, function(x) paste(x, collapse = "+"))
+  fmls_3   <- llply(paste("log(df2016[ , SppName] + 1) ~", expl_fml), as.formula)
+  adjR     <- laply(fmls_3, 
+                    function(x) {
+                      RsquareAdj(rda(x, data = df2016))$adj.r.squared)
+                    }
+  rr       <- rda(fmls_3[[which(max(adjR, na.rm = TRUE) == adjR)]], df2016)
   vif.cca(rr)
   anova(rr, permutations = allPerms(6))
   # good
@@ -174,47 +184,81 @@
   # summary result
   rda2016 <- list(IniRda = rr, FinRda = rr3)
   
-  
 #############
 ## Summary ##
 #############
-  # R2adj for initial full model
-  RdaLst <- list(Year0 = rda2013, Year1 = rda2014, Year2 = rda2015, Year3 = rda2016)
-  FuladjR_pv <- ldply(RdaLst, function(x){ 
-    data.frame(
-      Full = RsquareAdj(x$IniRda)$adj.r.squared, 
-      Pr = anova(x$IniRda, permutations = allPerms(6))$Pr[1])
-  }, 
-  .id = "year")
-  FuladjR_pv <- dcast(variable ~ year, data = melt(FuladjR_pv, id = "year"))
-  
   # Adjusted R2 for each term
-  AdjTbl <- dcast(variable ~ .id, data = ldply(adjR_singl_Lst), value.var = "V1")
-  AdjTbl <- rbind(AdjTbl, FuladjR_pv)
+  AdjTbl        <- dcast(variable ~ .id, 
+                         data      = ldply(adjR_singl_Lst), 
+                         value.var = "V1")
   AdjTbl[, 2:5] <- round(AdjTbl[, 2:5], 3)
   # replace negative values with <0
   AdjTbl[AdjTbl < 0] <- "<0" 
-  # save
-  write.csv(AdjTbl, file = "output/table/RDA_AdjR_Speices.csv")
+    
+  ## Results of anova for full/parsimonious models ##
+  ## R2adj for initial full model ##
+  RdaLst     <- list(Year0 = rda2013, 
+                     Year1 = rda2014, 
+                     Year2 = rda2015, 
+                     Year3 = rda2016)
   
-  llply(RdaLst, function(x) x$IniRda)
+  # FinRDA in Year1 doesn't have any explanatory variable so remove
+  RdaLst$Year1$FinRda <- NULL
   
-  AnovaRes <- ldply(RdaLst, 
-                    function(x) {
-                      dd <- anova(x$FinRda, permutations = allPerms(6), by = "margin")
-                      nr <- row.names(dd)
-                      data.frame(variable = nr, dd)
-                    }, 
-                    .id = "year")
-  
-  AdjR2 <- llply(RdaLst, function(x) RsquareAdj(x$FinRda)$adj.r.squared)
-  AdjR2 <- laply(RdaLst, function(x) RsquareAdj(x$IniRda)$adj.r.squared)
-  round(AdjR2, 3)
-  llply(RdaLst, function(x) anova(x$IniRda, permutations = allPerms(6)))
-  llply(RdaLst, function(x) anova(x$IniRda, permutations = allPerms(6), by = "term"))
-  llply(RdaLst, function(x) anova(x$FinRda, permutations = allPerms(6)))
-  llply(RdaLst, function(x) anova(x$FinRda, permutations = allPerms(6), by = "margin"))
+  # AdjustedR2 and P values for each model
+  Extract_Adj_P <- function(x) {
+                   data.frame(AdjR = RsquareAdj(x)$adj.r.squared, 
+                              Pr   = anova(x, 
+                                           permutations = allPerms(6))$Pr[1])
+                   }
 
+  FuladjR_pv <- ldply(RdaLst, 
+                      function(x) ldply(x, Extract_Adj_P, .id = "Model"),
+                      .id = "year")
+  
+  FuladjR_pv_tbl <- dcast(variable ~ year + Model, 
+                          data = melt(FuladjR_pv, id = c("year", "Model")))
+  FuladjR_pv_tbl[ , 2:8] <- round(FuladjR_pv_tbl[ , 2:8], 3)
+  
+  # F and P values for each term in parsimonious models
+  rda_anova <- ldply(RdaLst[-2], 
+                     function(x) {
+                     a <- anova(x$FinRda, 
+                                permutations = allPerms(6), 
+                                by           = "margin")
+                     ad <- data.frame(term = row.names(a), 
+                                      a[c(1, 3, 4)])
+                     ad[, 2:4] <- round(ad[, 2:4], 3)
+                     return(ad)
+                     },
+                     .id = "year")
+  rda_anova$term <- factor(rda_anova$term, 
+                           levels = c("TotalC", "moist", "Residual"))
+  rda_anova_tbl <- dcast(term ~ year + variable, 
+                         data = melt(rda_anova, id = c("year", "term")))
+
+  # save
+  wb <- createWorkbook()
+  sheet1 <- createSheet(wb, sheetName = "adjustedR2")
+  addDataFrame(AdjTbl, 
+               sheet1, 
+               showNA      = TRUE, 
+               row.names   = FALSE,
+               characterNA = "NA")
+  sheet2 <- createSheet(wb, sheetName = "summary_models")
+  addDataFrame(FuladjR_pv_tbl, 
+               sheet2, 
+               showNA      = TRUE, 
+               row.names   = FALSE, 
+               characterNA = "NA")
+  sheet3 <- createSheet(wb, sheetName = "F_P_values_parsimonious_model")
+  addDataFrame(rda_anova_tbl, 
+               sheet3, 
+               showNA      = TRUE, 
+               row.names   = FALSE, 
+               characterNA = "NA")
+  saveWorkbook(wb, "output/table/RDA_Restuls_AllSpp.xlsx")
+  
 # #################
 # # CO2 treatment #
 # #################
