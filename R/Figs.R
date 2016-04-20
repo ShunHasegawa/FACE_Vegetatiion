@@ -16,81 +16,150 @@ science_theme <- theme(panel.border = element_rect(color = "black"),
 # Barplot #
 ###########
 
-# number of count per m2 for each plot
-Veg_Plot <- ddply(veg, .(variable, year, ring, plot, co2, form, PFG, origin), 
-                  summarise, value_m2 = sum(value)/4)
-
-# organise labels
-Veg_Plot <- within(Veg_Plot, {
-  OrginalVar <- variable
-  variable <- gsub("[.]", " ", as.character(variable))
-  co2 <- factor(co2, labels = c("Ambient", expression(eCO[2])))
-  PFG <- factor(PFG, labels = c("C[3*'\u005F'*grass]","C[4*'\u005F'*grass]", 
-                                "Legume", "Moss", "Non*-legume", "Wood"))
-  origin <- factor(origin, labels = c("Native", "Naturalised"))
-  })
-
-# Ring mean
-Veg_Ring <- ddply(Veg_Plot, .(variable, OrginalVar, year, ring, co2, form, PFG, origin), 
-                  summarise, value = mean(value_m2), N = sum(!is.na(value_m2)))
-
-# Treatment Mean
-veg_co2 <- ddply(Veg_Ring, .(variable, OrginalVar, year, co2, form, PFG, origin), summarise, 
-                 Mean = mean(value), 
-                 SE = ci(value)[4],
-                 N = sum(!is.na(value)))
+  # number of count per m2 for each plot
+  Veg_Plot <- ddply(veg, .(variable, year, ring, plot, co2, form, PFG, origin), 
+                    summarise, value_m2 = sum(value)/4)
+  
+  # organise labels
+  Veg_Plot <- within(Veg_Plot, {
+    OrginalVar <- variable
+    variable <- gsub("[.]", " ", as.character(variable))
+    co2 <- factor(co2, labels = c("Ambient", expression(eCO[2])))
+    PFG <- factor(PFG, labels = c("C[3*'\u005F'*grass]","C[4*'\u005F'*grass]", 
+                                  "Legume", "Moss", "Non*-legume", "Wood"))
+    origin <- factor(origin, labels = c("Native", "Naturalised"))
+    })
+  
+  # Ring mean
+  Veg_Ring <- ddply(Veg_Plot, .(variable, OrginalVar, year, ring, co2, form, PFG, origin), 
+                    summarise, value = mean(value_m2), N = sum(!is.na(value_m2)))
+  
+  # Treatment Mean
+  veg_co2 <- ddply(Veg_Ring, .(variable, OrginalVar, year, co2, form, PFG, origin), summarise, 
+                   Mean = mean(value), 
+                   SE = ci(value)[4],
+                   N = sum(!is.na(value)))
 
 ###########
 # All Spp #
 ###########
 
-## Ring ##
-p <- ggplot(Veg_Ring, aes(x = variable, y = value, fill = year))
-p2 <- p + 
-  geom_bar(alpha = .4, position = position_dodge(width = .4), stat = "identity") +
-  theme(axis.text.x = element_text(angle = 90, hjust =1, vjust = .5, face = "italic"), 
-        strip.text.x = element_text(size = 6)) +
-  expand_limits(x = 4) +
-  # set minimum size of the graphic areas of each group some of them are too 
-  # small to show labels
-  labs(x = NULL, y = expression(Abundance~(Count~m^'-2'))) + 
-  facet_grid(ring ~ PFG, scale = "free_x", space = "free_x", 
-             labeller = label_parsed)
-p2
-ggsavePP(filename = "output/figs/FACE_vegetation_Ring", plot = p2, 
-         width= 17, height = 11)
+  ## Ring ##
+    p <- ggplot(Veg_Ring, aes(x = variable, y = value, fill = year))
+    p2 <- p + 
+      geom_bar(
+        alpha    = .4, 
+        position = position_dodge(width = .4), 
+        stat     = "identity"
+        ) +
+      theme(
+        axis.text.x  = element_text(
+                          angle = 90,
+                          hjust = 1, 
+                          vjust = .5, 
+                          face  = "italic"
+                          ), 
+        strip.text.x = element_text(
+                          size  = 6
+                          )
+        ) +
+      expand_limits(
+        x = 4
+        ) +
+      # set minimum size of the graphic areas of each group some of them are too 
+      # small to show labels
+      labs(
+        x = NULL, 
+        y = expression(Abundance~(Count~m^'-2'))
+        ) + 
+      facet_grid(
+        ring ~ PFG,
+        scale = "free_x",
+        space = "free_x",
+        labeller = label_parsed
+        )
+    p2
+    ggsavePP(filename = "output/figs/FACE_vegetation_Ring", plot = p2, 
+             width= 17, height = 11)
 
 ## CO2 ##
 posdos <- .6
-p <- ggplot(veg_co2, aes(x = variable, y = log10(Mean + 1), fill = year))
+p <- ggplot(veg_co2, 
+            aes(
+              x = variable, 
+              y = log10(Mean + 1), 
+              fill = year)
+            )
 p2 <- p + 
-  geom_bar(alpha = .5, position = position_dodge(width = posdos), stat = "identity") +
-  geom_errorbar(aes(x = variable, 
-                    ymin = log10(Mean-SE + 1), 
-                    ymax = log10(Mean+SE + 1), col = year), 
-                position = position_dodge(width = posdos), 
-                width = 0, size = .1) +
-  theme(axis.text.x = element_text(angle = 90, hjust =1, vjust = .5, face = "italic"), 
-        strip.text.x = element_text(size = 7),
-        legend.title = element_blank(),
-        legend.position = c(.85, .87)) +
-  expand_limits(x = 4) +
-  labs(x = NULL, y = expression(log[10](Abundance+1~(Count~m^'-2')))) + 
-  facet_grid(co2 ~ PFG, scale = "free_x", space = "free_x", 
-             labeller = label_parsed)
+  geom_bar(
+    alpha    = .5, 
+    position = position_dodge(width = posdos), 
+    stat     = "identity"
+    ) +
+  geom_errorbar(
+    aes(
+      x    = variable, 
+      ymin = log10(Mean-SE + 1), 
+      ymax = log10(Mean+SE + 1),
+      col  = year
+      ),
+    position = position_dodge(width = posdos), 
+    width    = 0, 
+    size     = .1
+    ) +
+  theme(
+    axis.text.x     = element_text(
+                        angle = 90, 
+                        hjust = 1, 
+                        vjust = .5, 
+                        face  = "italic"
+                        ), 
+    strip.text.x    = element_text(size = 7),
+    legend.title    = element_blank(),
+    legend.position = c(.85, .87)
+    ) +
+  expand_limits(
+    x = 4
+    ) +
+  labs(
+    x = NULL, 
+    y = expression(log[10](Abundance+1~(Count~m^'-2')))
+    ) + 
+  facet_grid(
+    co2      ~ PFG, 
+    scale    = "free_x", 
+    space    = "free_x",
+    labeller = label_parsed
+    )
 p2
-ggsavePP(filename = "output/figs/FACE_vegetation_CO2", plot = p2, 
-         width= 9.6, height = 5.5)
+ggsavePP(
+  filename = "output/figs/FACE_vegetation_CO2", 
+  plot     = p2, 
+  width    = 9.6, 
+  height   = 5.5
+  )
 
 # scatter
 posdos <- 1
-levels(veg_co2$PFG)
-veg_co2$PFG <- factor(veg_co2$PFG, 
-                      levels = c("C[3*'_'*grass]", "C[4*'_'*grass]", "Legume", 
-                                 "Non*-legume", "Wood", "Moss"))
-veg_co2$variable2 <- factor(veg_co2$variable, 
-                            levels = rev(unique(veg_co2$variable)))
-p <- ggplot(veg_co2, aes(y = variable2, x = log10(Mean + 1), col = year))
+veg_co2$PFG <- factor(
+                  veg_co2$PFG,
+                  levels = c("C[3*'_'*grass]","C[4*'_'*grass]", 
+                             "Legume","Non*-legume", "Wood","Moss")
+                  )
+veg_co2$variable2 <- factor(
+                        veg_co2$variable, 
+                        levels = rev(unique(veg_co2$variable))
+                        )
+
+p <- ggplot(
+  veg_co2, 
+  aes(
+    y   = variable2, 
+    x   = log10(Mean + 1), 
+    col = year
+    )
+  )
+
 p2 <- p + 
   geom_errorbarh(aes(xmin = log10(Mean-SE + 1), 
                     xmax = log10(Mean+SE + 1), 
@@ -113,8 +182,12 @@ ggsavePP(filename = "output/figs/FACE_vegetation_CO2_Scatter", plot = p2,
          width= 6, height = 9)
 
 # log scale
-RingSummary <- ddply(veg, .(variable, year, ring, co2, PFG), summarise, 
-                     value = sum(value, na.rm = TRUE))
+RingSummary <- ddply(
+  veg, 
+  .(variable, year, ring, co2, PFG), 
+  summarise,
+  value = sum(value, na.rm = TRUE)
+  )
 RingSummary$logValue <- log10(RingSummary$value + 1)
 Co2Summary <- ddply(RingSummary, .(variable, year, co2, PFG), summarise, 
                     Mean = mean(logValue), SE = ci(logValue)[4], N = sum(!is.na(logValue)))
@@ -195,58 +268,99 @@ ggsavePP(filename = "output/figs/FACE_vegetation_YearDif", plot = p2, width= 17,
 ##################
 ## Dominant spp ##
 ##################
-DmSppBar <- subsetD(veg_co2, OrginalVar %in% DmSpp)
-
-# error bar position
-DmSppBar <- ddply(DmSppBar, .(co2, year), transform, 
-                  CumSum = cumsum(Mean),
-                  ystart = cumsum(Mean) - SE, 
-                  yend = cumsum(Mean) + SE)
-
-# create sp labels
-SpLab <- gsub("[.]", " ", levels(DmSppBar$OrginalVar))
-
-p <- ggplot(DmSppBar, aes(x = year, y = Mean, fill = variable))
-p2 <- p + 
-  geom_bar(size = .1, stat = "identity") +
-  geom_segment(aes(xend = year, y = CumSum, yend = yend, col = variable), 
-               arrow = arrow(angle = 90, length = unit(.1, "inches"))) + 
-  # geom_errorbar(aes(ymin = CumSum, ymax = yend, col = variable), width = .3, size = .5) +
-  scale_fill_discrete(name = "Dominant\nSpecies(>70%)", labels = SpLab) + 
-  scale_colour_discrete(name = "Dominant\nSpecies(>70%)", labels = SpLab) + 
-  science_theme + 
-  theme(legend.text = element_text(face = "italic", size = 9),
-        legend.text.align = 0,
-        legend.position = "bottom",
-        legend.title = element_text(size = 9)) +
-  guides(fill = guide_legend(nrow = 2)) +
-  facet_grid(. ~ co2, labeller = label_parsed) +
-  labs(x = NULL, y = expression(Abundance~(Count~m^'-2')))
-StackBar_DomSpp <- p2
-StackBar_DomSpp
-ggsavePP(plot = StackBar_DomSpp, filename = "output/figs/Fig_Thesis/RDA_DomSppBar", 
-         width = 6, height = 4)
+  DmSppBar <- subsetD(veg_co2, OrginalVar %in% DmSpp)
+  
+  # error bar position
+  DmSppBar <- ddply(DmSppBar, 
+                    .(co2, year), 
+                    transform, 
+                    CumSum = cumsum(Mean),
+                    ystart = cumsum(Mean) - SE, 
+                    yend   = cumsum(Mean) + SE
+                    )
+  # create sp labels
+  SpLab <- gsub("[.]", " ", levels(DmSppBar$OrginalVar))
+  
+  p  <- ggplot(DmSppBar, aes(x = co2, y = Mean, fill = variable))
+  p2 <- p + 
+    geom_bar(
+      size = .1, 
+      stat = "identity"
+      ) +
+    geom_segment(
+      aes(
+        xend = co2, 
+        y    = CumSum, 
+        yend = yend, 
+        col  = variable
+        ), 
+      arrow = arrow(
+                angle  = 90, 
+                length = unit(.1, "inches")
+                )
+      ) + 
+    scale_fill_discrete(
+      name   = "Dominant\nSpecies(>70%)", 
+      labels = SpLab
+      ) + 
+    scale_colour_discrete(
+      name   = "Dominant\nSpecies(>70%)", 
+      labels = SpLab
+      ) + 
+    scale_x_discrete(
+      breaks = c("Ambient", "eCO[2]"),
+      labels = c("Ambient", expression(eCO[2]))
+      ) +
+    science_theme + 
+    theme(
+      legend.text       = element_text(
+                            face = "italic", 
+                            size = 9
+                            ),
+      legend.text.align = 0,
+      legend.position   = "bottom",
+      legend.title      = element_text(size = 9)
+      ) +
+    guides(
+      fill = guide_legend(nrow = 2)
+      ) +
+    facet_grid(
+      . ~ year
+      ) +
+    labs(
+      x = NULL, 
+      y = expression(Abundance~(Count~m^'-2'))
+      )
+  
+  StackBar_DomSpp <- p2
+  StackBar_DomSpp
+  ggsavePP(
+    plot     = StackBar_DomSpp, 
+    filename = "output/figs/Fig_Thesis/RDA_DomSppBar", 
+    width    = 6, 
+    height   = 4
+    )
 
 ######################################
 # For each block for FACE manuscript #
 ######################################
-DmSppBar_ring <- subsetD(Veg_Ring, OrginalVar %in% DmSpp & year == "Year0")
-DmSppBar_ring$Block <- recode(DmSppBar_ring$ring, 
+  DmSppBar_ring <- subsetD(Veg_Ring, OrginalVar %in% DmSpp & year == "Year0")
+  DmSppBar_ring$Block <- recode(DmSppBar_ring$ring, 
                               "c(1, 2) = 'Block A'; c(3, 4) = 'Block B'; c(5, 6) = 'Block C'")
-p <- ggplot(DmSppBar_ring, aes(x = ring, y = value, fill = variable))
-p2 <- p + 
-  geom_bar(size = .1, stat = "identity") +
-  scale_fill_discrete(name = "Dominant\nSpecies", labels = SpLab) + 
-  scale_colour_discrete(name = "Dominant\nSpecies", labels = SpLab) + 
-  science_theme + 
-  theme(legend.text = element_text(face = "italic", size = 9),
-        legend.text.align = 0,
-        legend.position = "bottom",
-        legend.title = element_text(size = 9)) +
-  guides(fill = guide_legend(nrow = 2)) +
-  facet_grid(. ~ Block, scales = "free_x", shrink = TRUE) +
-  labs(x = "FACE ring number", y = expression(Abundance~(Count~m^'-2')))
-ggsavePP(plot = p2, filename = "output/figs/FACE_BlockDominantSpecies", 
+  p <- ggplot(DmSppBar_ring, aes(x = ring, y = value, fill = variable))
+  p2 <- p + 
+    geom_bar(size = .1, stat = "identity") +
+    scale_fill_discrete(name = "Dominant\nSpecies", labels = SpLab) + 
+    scale_colour_discrete(name = "Dominant\nSpecies", labels = SpLab) + 
+    science_theme + 
+    theme(legend.text = element_text(face = "italic", size = 9),
+          legend.text.align = 0,
+          legend.position = "bottom",
+          legend.title = element_text(size = 9)) +
+    guides(fill = guide_legend(nrow = 2)) +
+    facet_grid(. ~ Block, scales = "free_x", shrink = TRUE) +
+    labs(x = "FACE ring number", y = expression(Abundance~(Count~m^'-2')))
+  ggsavePP(plot = p2, filename = "output/figs/FACE_BlockDominantSpecies", 
          width = 6, height = 4)
 
 #######
@@ -274,83 +388,182 @@ p2
 ggsavePP(filename = "output/figs/FACE_PFG_Ring", plot = p2, width= 8, height = 6)
 
 ## CO2 ##
-Veg_PFG_co2 <- ddply(Veg_PFG, .(year, co2, PFG), summarise, value =  mean(value))
+Veg_PFG_co2 <- ddply(
+                  Veg_PFG, 
+                  .(year, co2, PFG), 
+                  summarise, 
+                  value = mean(value)
+                  )
 
-p <- ggplot(Veg_PFG_co2, aes(x = PFG, y = value, fill = year))
+p <- ggplot(Veg_PFG_co2, 
+            aes(
+              x = PFG, 
+              y = value, 
+              fill = co2)
+            )
 p2 <- p + 
-  geom_bar(alpha = .4, position = position_dodge(width = .4), stat = "identity") +
-  theme(axis.text.x = element_text(angle = 90, hjust =1, vjust = .5), 
-        strip.text.x = element_text(size = 6)) +
-  scale_x_discrete(labels = c(expression(C[3*'\u005F'*grass]), 
-                              expression(C[4*'\u005F'*grass]), 
-                              "Legume", "Moss", expression(Non*-legume), "Wood")) +
-  labs(x = NULL, y = expression(Abundance~(Count~m^'-2'))) + 
-  facet_grid(co2 ~ .,labeller = label_parsed)
+  geom_bar(
+    alpha    = .4, 
+    position = position_dodge(width = .4), 
+    stat     = "identity"
+    ) +
+  theme(
+    axis.text.x  = element_text(
+                      angle = 90, 
+                      hjust =1, 
+                      vjust = .5
+                      ), 
+    strip.text.x = element_text(
+                      size = 6
+                      )
+    ) +
+  scale_x_discrete(
+    labels = c(expression(C[3*'\u005F'*grass]), 
+               expression(C[4*'\u005F'*grass]), 
+               "Legume", 
+               "Moss", 
+               expression(Non*-legume), 
+               "Wood")
+    ) +
+  labs(
+    x = NULL, 
+    y = expression(Abundance~(Count~m^'-2'))
+    ) + 
+  facet_grid(. ~ year,labeller = label_parsed)
 p2
 ggsavePP(filename = "output/figs/FACE_PFG_CO2", plot = p2, width= 8, height = 6)
 
 ####################
 ## Stack bar plot ##
 ####################
-# Ring sum
-Veg_RingSum <- ddply(veg, .(year, co2, ring, PFG), summarise, value = sum(value))
-head(Veg_RingSum)
-
-# co2 sum
-Veg_CO2Sum <- ddply(veg, .(year, co2, PFG), summarise, value = sum(value))
-
-# approximate SE
-Veg_RingSum_cst <- dcast(year + co2 + ring ~ PFG, data = Veg_RingSum)
-Veg_RingSum_cst$Total <- rowSums(Veg_RingSum_cst[, 4:9])
-
-ratio <- function(d, w) {
-  c3SE          <- sum(d$c3 * w)/sum(d$Total * w)
-  c4SE          <- sum(d$c4 * w)/sum(d$Total * w)
-  legumeSE      <- sum(d$legume * w)/sum(d$Total * w)
-  mossSE        <- sum(d$moss * w)/sum(d$Total * w)
-  Non_legumeSE  <- sum(d$Non_legume * w)/sum(d$Total * w)
-  woodSE        <- sum(d$wood * w)/sum(d$Total * w)
-  c(c3SE, c4SE, legumeSE, mossSE, Non_legumeSE, woodSE)
-}
-
-PFG_Fraction <- ddply(Veg_RingSum_cst, .(year, co2), function(x) {
-  boRes <- summary(boot::boot(x, ratio, R = 999, stype = "w"))
-  boRes$PFG <- unique(Veg_RingSum$PFG)
-  return(boRes)
-})
-
-# Organise DF
-PFG_Fraction <- within(PFG_Fraction, {
-  PFG <- factor(PFG, levels = c("c3", "c4", "legume", "Non_legume", "wood", "moss"))
-  co2 <- factor(co2, labels = c("Ambient", expression(eCO[2])))
-})
-PFG_Fraction <- PFG_Fraction[order(as.numeric(PFG_Fraction$PFG)), ]
-PFG_Fraction <- ddply(PFG_Fraction, .(year, co2), transform, 
-                      CumSum = cumsum(original),
-                      ystart = cumsum(original) - bootSE, 
-                      yend = cumsum(original) + bootSE)
-
-pfgLabs <- c(expression(C[3]~grass), expression(C[4]~grass), "Legume", "Forb", 
-             "Woody plants", "Moss")
-p <- ggplot(PFG_Fraction, aes(x = year, y = original, fill = PFG))
-p2 <- p + 
-  geom_bar(stat = "identity") + 
-  geom_segment(aes(xend = year, y = CumSum, yend = yend, col = PFG), 
-               arrow = arrow(angle = 90, length = unit(.1, "inches")),
-               size = .4) + 
-  scale_fill_discrete(name = "PFG", labels = pfgLabs) +
-  scale_color_discrete(name = "PFG", labels = pfgLabs) +
-  science_theme +
-  theme(legend.position = "bottom", 
-        legend.key.size = unit(.6, "line"),
-        legend.title = element_text()) +
-  facet_grid(. ~ co2, labeller = label_parsed) +
-  labs(x = NULL, y = "Proportion")
-p2
-StackBar_PFG <- p2
-StackBar_PFG
-ggsavePP(plot = StackBar_PFG, filename = "output/figs/Fig_Thesis/StackBar_PFG", 
-         width = 6, height = 3.5)
+  # Ring sum
+  Veg_RingSum <- ddply(veg, 
+                       .(year, co2, ring, PFG), 
+                       summarise, 
+                       value = sum(value)
+                       )
+  head(Veg_RingSum)
+  
+  # co2 sum
+  Veg_CO2Sum <- ddply(veg, 
+                      .(year, co2, PFG), 
+                      summarise, 
+                      value = sum(value)
+                      )
+  
+  # approximate SE
+  Veg_RingSum_cst <- dcast(year + co2 + ring ~ PFG, 
+                           data = Veg_RingSum
+                           )
+  Veg_RingSum_cst$Total <- rowSums(Veg_RingSum_cst[, 4:9])
+  
+  ratio <- function(d, w) {
+    c3SE          <- sum(d$c3 * w)/sum(d$Total * w)
+    c4SE          <- sum(d$c4 * w)/sum(d$Total * w)
+    legumeSE      <- sum(d$legume * w)/sum(d$Total * w)
+    mossSE        <- sum(d$moss * w)/sum(d$Total * w)
+    Non_legumeSE  <- sum(d$Non_legume * w)/sum(d$Total * w)
+    woodSE        <- sum(d$wood * w)/sum(d$Total * w)
+    
+    c(c3SE, c4SE, legumeSE, mossSE, Non_legumeSE, woodSE)
+  }
+  
+  PFG_Fraction <- ddply(Veg_RingSum_cst, 
+                        .(year, co2), 
+                        function(x) {
+                          boRes     <- summary(
+                                          boot::boot(x,
+                                                     ratio,
+                                                     R     = 999, 
+                                                     stype = "w")
+                                          )
+                          boRes$PFG <- unique(Veg_RingSum$PFG)
+                          return(boRes)
+                          }
+                        )
+  
+  # Organise DF
+  PFG_Fraction <- within(
+                    PFG_Fraction, {
+                      PFG <- factor(PFG, 
+                                    levels = c("c3", "c4", "legume", 
+                                               "Non_legume", "wood", "moss")
+                                    )
+                      co2 <- factor(co2, 
+                                    labels = c("Ambient", expression(eCO[2]))
+                                    )
+                      }
+                    )
+  PFG_Fraction <- PFG_Fraction[order(as.numeric(PFG_Fraction$PFG)), ]
+  PFG_Fraction <- ddply(PFG_Fraction, 
+                        .(year, co2), 
+                        transform, 
+                        CumSum = cumsum(original),
+                        ystart = cumsum(original) - bootSE, 
+                        yend   = cumsum(original) + bootSE
+                        )
+  
+  pfgLabs <- c(expression(C[3]~grass), expression(C[4]~grass), "Legume", "Forb", 
+               "Woody plants", "Moss")
+  
+  p <- ggplot(PFG_Fraction,
+              aes(
+                  x = co2, 
+                  y = original, 
+                  fill = PFG
+                  )
+              )
+  
+  p2 <- p + 
+    geom_bar(
+      stat = "identity"
+      ) + 
+    geom_segment(
+      aes(
+        xend = co2, 
+        y    = CumSum, 
+        yend = yend, 
+        col  = PFG
+        ), 
+      arrow = arrow(
+                angle = 90, 
+                length = unit(.1, "inches")
+                ),
+      size  = .4
+      ) + 
+    scale_fill_discrete(
+      name   = "PFG", 
+      labels = pfgLabs
+      ) +
+    scale_color_discrete(
+      name   = "PFG", 
+      labels = pfgLabs
+      ) +
+    scale_x_discrete(
+      labels = c("Ambient", expression(eCO[2]))
+      ) +
+    science_theme +
+    theme(
+      legend.position = "bottom",
+      legend.key.size = unit(.6, "line"),
+      legend.title    = element_text()
+      ) +
+    facet_grid(. ~ year, 
+               labeller = label_parsed
+               ) +
+    labs(
+      x = NULL, 
+      y = "Proportion"
+      )
+  p2
+  StackBar_PFG <- p2
+  StackBar_PFG
+  ggsavePP(
+    plot     = StackBar_PFG, 
+    filename = "output/figs/Fig_Thesis/StackBar_PFG", 
+    width    = 6, 
+    height   = 3.5
+    )
 
 # ########################
 # # Native or introduced #
