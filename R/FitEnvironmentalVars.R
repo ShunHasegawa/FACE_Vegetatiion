@@ -54,6 +54,9 @@
   ## RDA ##
   #########
   
+  # possible explanatory variables
+  expl <- c("co2",  "TotalC", "moist", "Drysoil_ph", "Depth_HL", "FloorPAR", "temp")
+  
   # All species
   source("R/Stats_RDA_AllSpp.R")
   
