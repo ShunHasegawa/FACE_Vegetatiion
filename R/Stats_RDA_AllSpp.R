@@ -408,16 +408,14 @@
   seDF$year <- factor(seDF$year, labels = paste0("Year", 0:3))
   sitedd <- data.frame(RdaAllRes$site, seDF)
   
-  centdd <- data.frame(RdaAllRes$centroids, co2 = "amb", year = "Year0", 
-                       variable = row.names(RdaAllRes$centroids))
-  centdd$variable <- factor(centdd$variable, labels = paste0("Year", 0:3))
-  
   bipldd <- data.frame(RdaAllRes$biplot, co2 = "amb", year = "Year0", 
                        variable = row.names(RdaAllRes$biplot))
-  bipldd <- subsetD(bipldd, variable %in% c("TotalC", "moist"))
-  bipldd$variable <- factor(bipldd$variable, labels = c("Moist", "Total C"))
+  bipldd <- subsetD(bipldd, variable %in% c("TotalC", "moist", "as.numeric(year)"))
+  bipldd$variable <- factor(bipldd$variable,
+                            levels = c("TotalC", "moist", "as.numeric(year)"),
+                            labels = c("Moist", "Total C", "Year"))
   
-  VarProp <- RdaAllRes$cont$importance["Eigenvalue",]/RdaAllRes$tot.chi
+  VarProp <- RdaAllRes$cont$importance["Eigenvalue",] / RdaAllRes$tot.chi
   axislabs <- paste0(c("RDA1", "RDA2"), "(", round(VarProp[c(1, 2)] * 100, 2), "%)")
   
   # make a plot
@@ -425,7 +423,6 @@
   p2 <- p + 
     geom_path(aes(group = ring), col = "black") +
     geom_point(aes(fill = co2), size = 4) + 
-    #   geom_text(aes(x = RDA1 + 0.1,label = ring)) +
     scale_fill_manual(values = c("black", "white"), 
                       labels = c("Ambient", expression(eCO[2])),
                       guide = guide_legend(override.aes = list(shape = 21))) +
@@ -438,17 +435,8 @@
                  color = "red") +
     geom_text(data = bipldd, 
               aes(x = RDA1 * 2.3 , y = RDA2 * 2.3, label = variable), 
-              alpha = .6, lineheight = .7, 
+              lineheight = .7, 
               color = "red", size = 4, 
-              fontface = "bold") +
-    geom_segment(data = centdd,
-                 aes(x = 0, y = 0, xend = RDA1 * 2, yend = RDA2 * 2), 
-                 arrow = arrow(length = unit(.2, "cm")), 
-                 color = "blue") +
-    geom_text(data = centdd, 
-              aes(x = RDA1 * 2.3 , y = RDA2 * 2.3, label = variable), 
-              alpha = .6, lineheight = .7, 
-              color = "blue", size = 4, 
               fontface = "bold") +
     geom_hline(yintercept = 0, linetype = "dashed") +
     geom_vline(xintercept = 0, linetype = "dashed") +
@@ -459,4 +447,7 @@
     labs(x = axislabs[1], y = axislabs[2])
   RDA_Plot_AllSpp <- p2
   RDA_Plot_AllSpp
-  ggsavePP(plot = RDA_Plot_AllSpp, filename = "output/figs/Fig_Thesis/RDA_3yr_AllSpp", width = 6, height = 4)
+  ggsavePP(plot     = RDA_Plot_AllSpp, 
+           filename = "output/figs/Fig_Thesis/RDA_3yr_AllSpp", 
+           width    = 6, 
+           height   = 4)

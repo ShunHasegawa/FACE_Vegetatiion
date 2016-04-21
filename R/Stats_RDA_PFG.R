@@ -127,7 +127,6 @@ peDF <- merge(RingSumPFGMatrix, EnvDF_3df, by = c("year", "ring", "block", "co2"
   # summary result
   rda2016 <- list(IniRda = rr, FinRda = rr3)
   
-    
 #############
 ## Summary ##
 #############
@@ -199,10 +198,6 @@ peDF <- merge(RingSumPFGMatrix, EnvDF_3df, by = c("year", "ring", "block", "co2"
                characterNA = "NA")
   saveWorkbook(wb, "output/table/RDA_Restuls_PFG.xlsx")
   
-
-
-
-
 # #########
 # ## CO2 ##
 # #########
@@ -329,7 +324,7 @@ peDF <- merge(RingSumPFGMatrix, EnvDF_3df, by = c("year", "ring", "block", "co2"
 #####################
 
   # From the above analysis, Dry_soilph is determied to be imporatnt driver
-  rda_pfg_all <- rda(log(peDF[, PFGName] + 1) ~ Drysoil_ph + year, peDF)
+  rda_pfg_all <- rda(log(peDF[, PFGName] + 1) ~ Drysoil_ph + as.numeric(year), peDF)
 
   # plot
   p <- TriPlot(MultValRes = rda_pfg_all, env = peDF, yaxis = "RDA axis", axispos = c(1, 2, 3), 
@@ -340,7 +335,6 @@ peDF <- merge(RingSumPFGMatrix, EnvDF_3df, by = c("year", "ring", "block", "co2"
   # Fig for thesis #
   ##################
     RdaAllRes <- summary(rda_pfg_all)
-    peDF$year <- factor(peDF$year, labels = paste0("Year", 0:3))
     sitedd    <- data.frame(RdaAllRes$site, peDF)
     
     # Sp. score
@@ -356,20 +350,14 @@ peDF <- merge(RingSumPFGMatrix, EnvDF_3df, by = c("year", "ring", "block", "co2"
                                    "Forb", 
                                    "Woody~plants"))
     
-    # Year
-    centdd          <- data.frame(RdaAllRes$centroids, 
-                                   co2      = "amb", 
-                                   year     = "Year0", 
-                                   variable = row.names(RdaAllRes$centroids))
-    centdd$variable <- factor(centdd$variable, labels = paste0("Year", 0:3))
-    
-    # soil pH
+    # biplot
     bipldd          <- data.frame(RdaAllRes$biplot, 
                                    co2      = "amb", 
                                    year     = "Year0", 
                                    variable = row.names(RdaAllRes$biplot))
-    bipldd          <- subsetD(bipldd, variable == "Drysoil_ph")
-    bipldd$variable <- factor(bipldd$variable, labels = c("Soil pH"))
+    bipldd$variable <- factor(bipldd$variable,
+                              levels = c("as.numeric(year)", "Drysoil_ph"),
+                              labels = c("Year", "Soil pH"))
     VarProp         <- RdaAllRes$cont$importance["Eigenvalue", ] / 
                           RdaAllRes$tot.chi
     axislabs        <- paste0(c("RDA1", "RDA2"), 
@@ -381,20 +369,15 @@ peDF <- merge(RingSumPFGMatrix, EnvDF_3df, by = c("year", "ring", "block", "co2"
     sppdd2 <- within(sppdd, {
       type     <- "spp"
       variable <- PFG
-      RDA1     <- RDA1 + c(-.3, .15,  0, .07,   0, -.25)
-      RDA2     <- RDA2 + c(.2 , .2, .2, .15, -.2, -.2)
+      RDA1     <- RDA1 + c(.1, -.15,   0,  0, -.05, .05)
+      RDA2     <- RDA2 + c(.3, .05, -.2,  .15, -.1, -.2)
     })
     bipldd2 <- within(bipldd, {
       type     <- "bipl"
-      RDA1     <- RDA1 -.1  
-      RDA2     <- RDA2 + -.15
+      RDA1     <- RDA1 + c(0 , .05)  
+      RDA2     <- RDA2 + c(.15, -.1)
     })
-    centdd2 <- within(centdd, {
-      type <- "cent"
-      RDA1 <- RDA1 + c(0,   .05,  0,  0)
-      RDA2 <- RDA2 + c(.1, -.15, .1, -0.1)
-    })
-    textdd <- rbind.fill(list(sppdd2, bipldd2, centdd2))
+    textdd <- rbind.fill(list(sppdd2, bipldd2))
     
     # Make a plot
     p <- ggplot(data = sitedd, aes(x = RDA1, y = RDA2, shape = year))
@@ -413,16 +396,15 @@ peDF <- merge(RingSumPFGMatrix, EnvDF_3df, by = c("year", "ring", "block", "co2"
       geom_segment(data  = sppdd,
                    aes(x = 0, 
                        y = 0, 
-                       xend = RDA1, 
-                       yend = RDA2), 
+                       xend = RDA1 * 1.6, 
+                       yend = RDA2 * 1.6), 
                    arrow = arrow(length = unit(.2, "cm")), 
                    color = "darkgreen") +
       geom_text(data       = textdd,
                 subset     = .(type == "spp"),
-                aes(x     = RDA1, 
-                    y     = RDA2, 
+                aes(x     = RDA1 * 1.6, 
+                    y     = RDA2 * 1.6, 
                     label = variable), 
-                alpha      = .6, 
                 lineheight = .7, 
                 color      = "darkgreen", 
                 size       = 4, 
@@ -438,30 +420,11 @@ peDF <- merge(RingSumPFGMatrix, EnvDF_3df, by = c("year", "ring", "block", "co2"
                    color = "red") +
       geom_text(data       = textdd, 
                 subset     = .(type == "bipl"),
-                aes(x     = RDA1 * 1.6 , 
-                    y     = RDA2 * 3, 
+                aes(x     = RDA1 * 1.8 , 
+                    y     = RDA2 * 1.8, 
                     label = variable), 
-                alpha      = .6, 
                 lineheight = .7, 
                 color      = "red", 
-                size       = 4, 
-                fontface   = "bold") +
-      # year
-      geom_segment(data  = centdd,
-                   aes(x    = 0, 
-                       y    = 0, 
-                       xend = RDA1 * 2.6, 
-                       yend = RDA2 * 2.6), 
-                   arrow = arrow(length = unit(.2, "cm")), 
-                   color = "blue") +
-      geom_text(data       = textdd,
-                subset     = .(type == "cent"),
-                aes(x     = RDA1 * 2.6, 
-                    y     = RDA2 * 2.6, 
-                    label = variable), 
-                alpha      = .6, 
-                lineheight = .7, 
-                color      = "blue", 
                 size       = 4, 
                 fontface   = "bold") +
       geom_hline(yintercept = 0, 
@@ -478,5 +441,8 @@ peDF <- merge(RingSumPFGMatrix, EnvDF_3df, by = c("year", "ring", "block", "co2"
            y = axislabs[2])
     RDA_Plot_PFG <- p2
     RDA_Plot_PFG
-    ggsavePP(plot = RDA_Plot_PFG, filename = "output/figs/Fig_Thesis/RDA_3yr_PFG", width = 6, height = 4)
+    ggsavePP(plot     = RDA_Plot_PFG, 
+             filename = "output/figs/Fig_Thesis/RDA_3yr_PFG", 
+             width    = 6, 
+             height   = 4)
     
