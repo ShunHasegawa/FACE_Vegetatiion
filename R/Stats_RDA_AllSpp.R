@@ -9,11 +9,6 @@
   # combine environment and spp df
   seDF <- merge(RingSumVeg, EnvDF_3df, by = c("year", "ring", "block", "co2"))
   
-  # possible explanatory variables
-  expl <- c("co2",  "TotalC", "moist", "Drysoil_ph", "Depth_HL", "FloorPAR", "temp")
-
-  
-  
 ###############
 # Single term #
 ###############
@@ -395,6 +390,7 @@
   # driver
   
   rda_all <- rda(log(seDF[, SppName] + 1) ~ TotalC + moist + year, seDF)
+  rda_all <- rda(log(seDF[, SppName] + 1) ~ TotalC + moist + as.numeric(year), seDF)
   
   # can't run anova as it is. cause different perumutation units need to be
   # defined for year and co2. so anyway create a triplot and see the pattern.
