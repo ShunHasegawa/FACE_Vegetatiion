@@ -101,7 +101,7 @@ DivAnvF <- ldply(Anv_lst, function(x) {
   return(x)}, .id = "Reponse")
 names(DivAnvF)[5] <- "Pr"
 DivAnvF <- within(DivAnvF, {
-  F <- round(F, 2)
+  F  <- round(F, 2)
   Pr <- round(Pr, 3)
 })
 write.csv(DivAnvF, "output/table/SummaryResultDiversity.csv", row.names = FALSE)

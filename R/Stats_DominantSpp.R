@@ -30,10 +30,10 @@ RatioSE <- ddply(RingSumSpp_cst, .(variable, year), function(x) {
 
 # plot
 tdf <- within(RatioSE, {co2R = original
-                        variable = gsub("[.]", "\n", as.character(variable)) 
-                        year = factor(year, labels = paste0("Year", 1:3))})
+                        variable = gsub("[.]", "\n", as.character(variable))
+                        })
 tdf2 <- within(RingSumSpp_cst, {variable = gsub("[.]", "\n", as.character(variable))
-                                year = factor(year, labels = paste0("Year", 1:3))})
+                                })
 
 theme_set(theme_bw())
 p <- ggplot(tdf, aes(x = year, y = co2R))
@@ -65,6 +65,11 @@ write.csv(RatioSE_domspp_cst, file = "output/table/CO2ResponseRatio_DominantSpp.
 DmSpp[[1]]
 msDF <- subset(SppPlotSum, variable == "Microlaena.stipoides")
 bxplts(value = "value", xval = "co2", data = msDF)
+bxplts(value = "value", xval = "ring", data = msDF)
+par(mfrow = c(1, 2))
+boxplot(value ~ year:ring, data = msDF, main = "raw")
+boxplot(logit(value) ~ year:ring, data = msDF, main = "logit")
+
 
 m1 <- glmer(value ~ year * co2 + (1|block) + (1|ring)  + (1|id), 
             family = poisson, data = msDF)
@@ -86,9 +91,13 @@ CompAIC_ms
 
 # LMM
 m2lmr <- lmer(sqrt(value + 1) ~ year * co2 + (1|block) + (1|ring)  + (1|id), data = msDF)
+m3lmr <- lmer(logit(value) ~ year * co2 + (1|block) + (1|ring)  + (1|id), data = msDF)
 plot(m2lmr)
+plot(m3lmr)
 qqnorm(resid(m2lmr))
 qqline(resid(m2lmr))
+qqnorm(resid(m3lmr))
+qqline(resid(m3lmr))
 AnvF_ms <- Anova(m2lmr, test.statistic = "F")
 AnvF_ms
 
@@ -123,14 +132,14 @@ qqline(resid(m5))
 # compare AIC
 CompAIC_pp <- CompAIC(m5)
 CompAIC_pp
-  # year shouldn't be removed. co2 don't seemt to be imporatant as no change in
-  # Conditiaonl R2
 
-# tiny indication of co2 and year effect
+# indication of co2 and year effect
 m5lm <- lmer(sqrt(value + 1) ~ year * co2 + (1|block) + (1|ring)  + (1|id), data = ppDF)
 AnvF_pp <- Anova(m5lm, test.statistic = "F")
-AnvF_pp
-# probably year but not co2
+AnvF_pp # probably year but not co2
+plot(m5lm)
+qqnorm(resid(m5lm))
+qqline(resid(m5lm))
 
 #Cynodon.dactylon----
 DmSpp[[3]]
@@ -157,15 +166,14 @@ qqline(resid(m2))
 CompAIC_cd <- CompAIC(m2)
 CompAIC_cd
 
-# small indication of year
-m2lmr <- lmer(value ~ year * co2 + (1|block) + (1|ring)  + (1|id), data = cdDF)
+# co2 x time interaction
+m2lmr <- lmer(sqrt(value + 1) ~ year * co2 + (1|block) + (1|ring)  + (1|id), data = cdDF)
 plot(m2lmr)
 qqnorm(resid(m2lmr))
 qqline(resid(m2lmr))
 
 AnvF_cd <- Anova(m2lmr, test.statistic = "F")
 AnvF_cd
-# maybe not..
 
 #Commelina.cyanea----
 DmSpp[4]
@@ -240,6 +248,46 @@ qqline(resid(m5lmr))
 AnvF_hp <- Anova(m5lmr, test.statistic = "F")
 AnvF_hp
 
+#HGlycine.sp----
+DmSpp[6]
+gsDF <- subsetD(SppPlotSum, variable == "Glycine.sp")
+bxplts(value = "value", xval = "co2", ofst = 1, data = gsDF)
+bxplts(value = "value", xval = "ring", ofst = 1, data = gsDF)
+
+m1 <- glmer(value ~ year * co2 + (1|block) + (1|ring)  + (1|id), 
+            family = poisson, data = gsDF)
+m2 <- glmer(value ~ year * co2 + (1|block) + (1|ring)  + (1|id), 
+            family = poisson(link = sqrt), data = gsDF)
+m3 <- glmer(value ~ year * co2 + (1|block) + (1|ring)  + (1|id) + (1|obs), 
+            family = poisson(link = power(1/3)), data = gsDF)
+# convergent problem in m1 and m3
+l_ply(list(m1, m2, m3), overdisp.glmer)
+
+# slightly overdespersed. m3 is probably not reliable
+m4 <- glmer(value ~ year * co2 + (1|block) + (1|ring)  + (1|id) + (1|obs), 
+            family = poisson, data = gsDF)
+m5 <- glmer(value ~ year * co2 + (1|block) + (1|ring)  + (1|id) + (1|obs), 
+            family = poisson(link = sqrt), data = gsDF)
+m6 <- glmer(value ~ year * co2 + (1|block) + (1|ring)  + (1|id) + (1|obs), 
+            family = poisson(link = power(1/3)), data = gsDF)
+l_ply(list(m4, m5, m6), overdisp.glmer)
+# use m5
+Anova(m5)
+plot(m5)
+qqnorm(resid(m5))
+qqline(resid(m5))
+# compare AIC
+CompAIC_gs <- CompAIC(m5)
+CompAIC_gs
+
+# LMM
+m1gs <- lmer(sqrt(value + 1) ~ year * co2 + (1|block) + (1|ring)  + (1|id), data = gsDF)
+plot(m1gs)
+qqnorm(resid(m1gs))
+qqline(resid(m1gs))
+AnvF_gs <- Anova(m1gs, test.statistic = "F")
+AnvF_gs
+
 ###########
 # Summary #
 ###########
@@ -247,7 +295,9 @@ AnvF_hp
 # Combine Species names and object names of the results
 a <- llply(strsplit(as.character(DmSpp), split = "[.]"))
 names(a) <- DmSpp
-AbrSpp <- ldply(a, function(x) paste(tolower(substring(x, 1, 1)), collapse = ""), .id = "variable")
+AbrSpp <- ldply(a, 
+                function(x) paste(tolower(substring(x, 1, 1)), collapse = ""), 
+                .id = "variable")
 AbrSpp$AmvF <- as.character(paste0("AnvF_", AbrSpp$V1)) # Anova results
 AbrSpp$CmpAic <- as.character(paste0("CompAIC_", AbrSpp$V1)) # AIC results
 
@@ -257,25 +307,28 @@ AbrSpp$CmpAic <- as.character(paste0("CompAIC_", AbrSpp$V1)) # AIC results
 DomSppAnvF <- ddply(AbrSpp, .(variable), function(x) {
   d <- get(x$AmvF)
   d <- within(d, {
-    F = round(F, 3)
-    Df.res = round(Df.res, 0)
-    Pr = round(d$Pr, 3)
-    'Pr(>F)' = NULL
-    terms = row.names(d)
-  })
+          F = round(F, 3)
+          Df.res = round(Df.res, 0)
+          Pr = round(d$Pr, 3)
+          'Pr(>F)' = NULL
+          terms = row.names(d)
+        })
   return(d)
   })
 
 # Coimpare AIC
 DomSppCompAic <- ddply(AbrSpp, .(variable), function(x) {
-  d <- get(x$CmpAic)
+  d       <- get(x$CmpAic)
   d$terms <- row.names(d)
   return(d)
 })
 
 # merge and organise
-DomSppSummary <- merge(DomSppAnvF, DomSppCompAic, by = c("variable", "terms"), all = TRUE)
-DomSppSummary$terms <- factor(DomSppSummary$terms, levels = c("Full", "co2", "year", "year:co2"))
-DomSppSummary <- DomSppSummary[order(DomSppSummary$variable, DomSppSummary$terms), ]
+DomSppSummary       <- merge(DomSppAnvF, 
+                             DomSppCompAic, 
+                             by = c("variable", "terms"), 
+                             all = TRUE)
+DomSppSummary$terms <- factor(DomSppSummary$terms, 
+                              levels = c("Full", "co2", "year", "year:co2"))
+DomSppSummary       <- DomSppSummary[order(DomSppSummary$variable, DomSppSummary$terms), ]
 write.csv(DomSppSummary, file = "output/table/DominantSpp_Stats.csv", row.names = FALSE)
-

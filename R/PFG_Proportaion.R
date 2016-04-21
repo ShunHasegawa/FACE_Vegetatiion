@@ -7,17 +7,20 @@ head(veg)
 summary(veg)
 # get C3, grass, forb etc. abundance fo each plot
 PfgAbundDF <- ddply(veg, .(year, co2, block, ring), function(x){
-  Total     = sum(x$value)
-  C3    = sum(x$value[!x$PFG %in% c("c4", "moss")])
-  C4grass   = sum(x$value[x$PFG == "c4"])
-  Forb  = sum(x$value[x$form == "Forb"])
-  Grass = sum(x$value[x$form == "Grass"])
-  Wood  = sum(x$value[x$form == "Wood"])
-  Moss  = sum(x$value[x$form == "Moss"])
+  Total   = sum(x$value)
+  C3      = sum(x$value[!x$PFG %in% c("c4", "moss")])
+  C4grass = sum(x$value[x$PFG  == "c4"])
+  Forb    = sum(x$value[x$form == "Forb"])
+  Grass   = sum(x$value[x$form == "Grass"])
+  Wood    = sum(x$value[x$form == "Wood"])
+  Moss    = sum(x$value[x$form == "Moss"])
   data.frame(Total, C3, C4grass, Forb, Grass, Wood, Moss)
 })
-PfgAbundDF_mlt <- melt(PfgAbundDF, id = c("year", "co2", "block", "ring", "Total"))
-PfgAbundDF_mlt_II <- melt(PfgAbundDF_mlt, id = c("year", "co2", "block", "ring", "variable"), 
+PfgAbundDF_mlt <- melt(PfgAbundDF, 
+                       id = c("year", "co2", "block", "ring", "Total"))
+PfgAbundDF_mlt_II <- melt(PfgAbundDF_mlt, 
+                          id            = c("year", "co2", "block", "ring", 
+                                            "variable"), 
                           variable_name = "count")
 
 # cast to pair each block
@@ -48,7 +51,7 @@ blockMean <- ddply(PfgAbundDF_mlt, .(year, variable, block),
 
 p <- ggplot(RatioSE, aes(x = year, y = co2R))
 p2 <- p + 
-  geom_point(aes(x = year, y = co2R), size = 4)+
+  geom_point(aes(x = year, y = co2R), size = 4) +
   geom_errorbar(aes(x = year, ymin = co2R - bootSE, ymax = co2R + bootSE), width = 0) + 
   geom_point(data = blockMean, size = 2, col = "red", alpha = .7) +
   geom_hline(yintercept = 0, linetype = "dashed") +
@@ -61,8 +64,12 @@ ggsavePP(plot = p2, filename = "output/figs/FACE_CO2ResponseRatio_PFGfraction", 
 # organise it to export as a table
 RatioSE$co2R_se <- with(RatioSE, paste0(round(co2R, 2), "(", round(bootSE, 2), ")"))
 
-RatioSE_cst <- dcast(RatioSE[c("variable", "year", "co2R_se")], variable ~ year, value.var = "co2R_se")
-write.csv(RatioSE_cst, file = "output/table/CO2ResponseRatio_PFGfraction.csv", row.names = FALSE)
+RatioSE_cst <- dcast(RatioSE[c("variable", "year", "co2R_se")], 
+                     variable  ~ year, 
+                     value.var = "co2R_se")
+write.csv(RatioSE_cst, 
+          file      = "output/table/CO2ResponseRatio_PFGfraction.csv", 
+          row.names = FALSE)
 
 ############
 # Analysis #
@@ -119,45 +126,23 @@ summary(rm1)
 Anova(rm1)
 Anova(rm1, test.statistic = "F")
 plot(rm1)
-# slightly wedged pattern
 qqnorm(resid(rm1))
 qqline(resid(rm1))
+ # not too bad
 
-# one complete outlier, so remove them
-rmv <- which(qqnorm(resid(rm1))$y %in% min(qqnorm(resid(rm1))$y))
-rm2 <- update(rm1, subset = -rmv)
-Anova(rm2)
-qqnorm(resid(rm2))
-qqline(resid(rm2))
-
-# improved a lot
-AnvF_PropC3_total <- Anova(rm2, test.statistic = "F")
+AnvF_PropC3_total <- Anova(rm1, test.statistic = "F")
 AnvF_PropC3_total
 
 # contrast
-# contrast doesn't work with lmer. so use lme
-tdf <- PropDF[-rmv, ]
-lmeMod <- lme(logit(C3prop) ~ year * co2, random = ~1|block/ring/id, data = tdf)
-cntrst<- contrast(lmeMod, 
-                  a = list(year = levels(tdf$year), co2 = "amb"),
-                  b = list(year = levels(tdf$year), co2 = "elev"))
-PropC3_Total_CntrstRes <- cntrstTbl(cntrst, data = tdf, variable = "C3Prop")
-PropC3_Total_CntrstRes
-# no significant difference between treatment for each year
-
-# improve the outlier and try glmm again
-m3 <- update(m1, subset = -rmv)
-overdisp.glmer(m3)
-m4 <- update(m3, ~. + (1|obs))
-overdisp.glmer(m4)
-Anova(m4)
-# compare AIC
-c3PropComAIC <- CompAIC(m4)
-c3PropComAIC
-plot(m4)
-qqnorm(resid(m4))
-qqline(resid(m4))
-summary(m4)
+  # contrast doesn't work with lmer. so use lme
+  tdf <- PropDF
+  lmeMod <- lme(logit(C3prop) ~ year * co2, random = ~1|block/ring/id, data = tdf)
+  cntrst<- contrast(lmeMod, 
+                    a = list(year = levels(tdf$year), co2 = "amb"),
+                    b = list(year = levels(tdf$year), co2 = "elev"))
+  PropC3_Total_CntrstRes <- cntrstTbl(cntrst, data = tdf, variable = "C3Prop")
+  PropC3_Total_CntrstRes
+  # no significant difference between treatment for each year
 
 ############
 # C4 grass #
@@ -189,29 +174,8 @@ Anova(m2Lmer, test.statistic = "F")
 plot(m2Lmer)
 qqnorm(resid(m2Lmer))
 qqline(resid(m2Lmer))
-# one obvious outlier
-rmv <- which(qqnorm(resid(m2Lmer))$y == max(qqnorm(resid(m2Lmer))$y))
-m2Lmer2 <- update(m2Lmer, subset = -rmv)
-plot(m2Lmer2)
-qqnorm(resid(m2Lmer2))
-qqline(resid(m2Lmer2))
 AnvF_C4grass <- Anova(m2Lmer2, test.statistic = "F")
 AnvF_C4grass
-
-# update glm, remove the outlier
-m3 <- update(m1, subset = -rmv)
-Anova(m3)
-summary(m3)
-overdisp.glmer(m3)
-# overdispersed
-# add obs
-m4 <- update(m3, ~. + (1|obs))
-overdisp.glmer(m4)
-plot(m4)
-qqnorm(resid(m4))
-qqline(resid(m4))
-C4grassCompAic <- CompAIC(m4)
-C4grassCompAic
 
 ########################
 # Grass + Sedge + rush #
@@ -244,8 +208,16 @@ plot(gm1)
 qqnorm(resid(gm1))
 qqline(resid(gm1))
 
-Anova(gm1)
-AnvF_Grass <- Anova(gm1, test.statistic = "F")
+ # remove one outlier
+rmv <- which(qqnorm(resid(gm1), plot.it = FALSE)$y == 
+               max(qqnorm(resid(gm1), plot.it = FALSE)$y))
+
+gm2 <- update(gm1, subset = -rmv)
+Anova(gm2)
+plot(gm2)
+qqnorm(resid(gm2))
+qqline(resid(gm2))
+AnvF_Grass <- Anova(gm2, test.statistic = "F")
 AnvF_Grass
 
 ########
@@ -290,43 +262,60 @@ qqline(resid(fm1))
 # Model comparison from GLMM
 SummaryCompAIC <- ldply(list(C3total = c3PropComAIC, 
                              C4grass = C4grassCompAic, 
-                             Grass = GrassPropCompAIC, 
-                             Forb = ForbPropCompAIC), 
-                        function(x)data.frame(x, terms = row.names(x)),
+                             Grass   = GrassPropCompAIC, 
+                             Forb    = ForbPropCompAIC),
+                        function(x) data.frame(x, terms = row.names(x)),
                         .id = "variable")
 SummaryCompAIC
 
 # F from LMM
-SummaryAnvF_PFG <- ldply(list(Forb = AnvF_forb,
-                              Grass = AnvF_Grass, 
+SummaryAnvF_PFG <- ldply(list(Forb    = AnvF_forb,
+                              Grass   = AnvF_Grass, 
                               C3total = AnvF_PropC3_total, 
                               C4grass = AnvF_C4grass), 
-                         function(x) data.frame(x, terms = row.names(x)), .id = "variable")
+                         function(x) data.frame(x, terms = row.names(x)), 
+                         .id = "variable")
 
 # summary of anova
 PFGResAnvF <- SummaryAnvF_PFG
 names(PFGResAnvF)[5] <- "Pr"
 PFGResAnvF <- within(PFGResAnvF, {
-  F <- round(F, 2)
-  Df.res <- round(Df.res, 0)
-  Pr <- round(Pr, 3)
-})
+              F      <- round(F, 2)
+              Df.res <- round(Df.res, 0)
+              Pr     <- round(Pr, 3)
+            })
+PFGResAnvF$terms <- factor(PFGResAnvF$terms, 
+                           levels = c("co2", "year", "year:co2"))
+PFGResAnvF <- PFGResAnvF[order(PFGResAnvF$variable, PFGResAnvF$terms), ]
 write.csv(PFGResAnvF, "output/table/FACE_PFG_AnvF.csv", row.names = FALSE)
 
 format(SummaryAnvF_PFG, digit = 2, nsmall = 0)
 
 
-
-
-SumamryStat <- merge(SummaryCompAIC, SummaryAnvF_PFG, by = c("variable", "terms"), all = TRUE)
-SumamryStat$terms <- factor(SumamryStat$terms, levels = c("Full", "co2", "year", "year:co2"))
-SumamryStat <- SumamryStat[order(SumamryStat$variable, SumamryStat$terms), ]
-SumamryStat$Pr <- round(SumamryStat$Pr..F., 3)
-SumamryStat_PvalAic <- subset(SumamryStat, terms != "Full", select = c("variable", "terms", "dAIC", "Pr"))
-SumamryStat_PvalAic_mlt <- melt(SumamryStat_PvalAic, id = c("variable", "terms"), variable_name = "stats")
-SumamryStat_PvalAic_mlt$stats <- factor(SumamryStat_PvalAic_mlt$stats, levels = c("Pr", "dAIC"))
-PFG_Sumamry <- dcast(SumamryStat_PvalAic_mlt, variable ~ terms + stats)
-write.csv(PFG_Sumamry, file = "output/table/FACE_PFG_Prop_LMMGlmm.csv", row.names = FALSE)
+SumamryStat                   <- merge(SummaryCompAIC, 
+                                       SummaryAnvF_PFG, 
+                                       by  = c("variable", "terms"), 
+                                       all = TRUE)
+SumamryStat$terms             <- factor(SumamryStat$terms, 
+                                        levels = c("Full", "co2", "year", 
+                                                   "year:co2"))
+SumamryStat                   <- SumamryStat[order(SumamryStat$variable, 
+                                                   SumamryStat$terms), ]
+SumamryStat$Pr                <- round(SumamryStat$Pr..F., 3)
+SumamryStat_PvalAic           <- subset(SumamryStat, 
+                                        terms  != "Full", 
+                                        select = c("variable", "terms", "dAIC", 
+                                                   "Pr"))
+SumamryStat_PvalAic_mlt       <- melt(SumamryStat_PvalAic, 
+                                      id            = c("variable", "terms"), 
+                                      variable_name = "stats")
+SumamryStat_PvalAic_mlt$stats <- factor(SumamryStat_PvalAic_mlt$stats, 
+                                        levels = c("Pr", "dAIC"))
+PFG_Sumamry                   <- dcast(SumamryStat_PvalAic_mlt, 
+                                       variable ~ terms + stats)
+write.csv(PFG_Sumamry, 
+          file      = "output/table/FACE_PFG_Prop_LMMGlmm.csv", 
+          row.names = FALSE)
 
 ## ---- Stats_C3_TotalPropSmmry
 # The model
