@@ -1,6 +1,6 @@
 # restore required packages
-library(checkpoint)
-checkpoint("2015-09-30")
+# library(checkpoint)
+# checkpoint("2015-09-30")
 # checkpoint("2016-03-15")
 
 library(XLConnect)
@@ -32,7 +32,7 @@ library(pbkrtest)
 library(corrplot)
 
 # HIEv
-.libPaths("/Library/Frameworks/R.framework/Versions/3.2/Resources/library")
+# .libPaths("/Library/Frameworks/R.framework/Versions/3.2/Resources/library")
 library(HIEv)
 
 # checkpoint doesn't support library(BiodiversityR)
