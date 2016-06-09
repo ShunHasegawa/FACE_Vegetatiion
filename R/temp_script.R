@@ -193,37 +193,3 @@ Anova(m1, test.statistic = "F")
 visreg(m1, xvar = "yearN", by = "co2", overlay = TRUE)
 
 
-# data frame for woody species --------------------------------------------
-
-
-head(veg)
-levels(veg$form)
-woody_dd <- subsetD(veg, form == "Wood")
-woody_dd <- within(woody_dd, {
-  cell  <- as.numeric(as.character(woody_dd$cell))
-  block <- NULL
-  id    <- NULL
-  co2   <- NULL 
-  })
-levels(woody_dd$PFG)[2] <- "wood"
-woody_dd <- with(woody_dd, woody_dd[order(year, ring, plot, position, cell, variable), ])
-write.csv(woody_dd, 
-          file      = "output/table/EucFACE_WoodySpecies_2013-2016.csv", 
-          row.names = FALSE)
-
-WoodySpecies_MD <- data.frame(Column      = names(woody_dd),
-                              Description = c("species", 
-                                              "Year0: September and December 2012; Year1: January 2013; Year2: January 2014; Year3: January 2015; Year4: February 2016",
-                                              "",
-                                              "2m x 2m vegetation plot: 4 per ring",
-                                              "Each plot is devided into 4 of 1m x 1m subplot",
-                                              "Each subplot (position) is composed of 25 of 20cm x 20cm cell",
-                                              "presence (1) or absence (0) of the species in the cell",
-                                              "",
-                                              "Plant functional group. Bossiaea prostrata is subshrub but also legume",
-                                              "life time of species",
-                                              "origin of species"))
-write.csv(WoodySpecies_MD, 
-          file      = "output/table/EucFACE_WoodySpecies_metadata.csv", 
-          row.names = FALSE)
-
