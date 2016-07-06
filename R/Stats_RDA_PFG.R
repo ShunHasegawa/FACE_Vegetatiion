@@ -163,7 +163,7 @@ peDF <- merge(RingSumPFGMatrix, EnvDF_3df, by = c("year", "ring", "block", "co2"
   FuladjR_pv_tbl[ , 2:7] <- round(FuladjR_pv_tbl[ , 2:7], 3)
   
   # F and P values for each term in parsimonious models
-  rda_anova <- ldply(RdaLst[c(-3, -4)], 
+  rda_anova <- ldply(RdaLst_pfg[c(-3, -4)], 
                      function(x) {
                        a         <- anova(x$FinRda, 
                                           permutations = allPerms(6), 
