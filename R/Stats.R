@@ -11,16 +11,21 @@
 # RDA #
 #######
 # source("R/RDA.analysis.R")
+source("R/FitEnvironmentalVars.R")
 
 ########
 # CAP  #
 ########
-source("R/CAP.analysis.R")
+# source("R/CAP.analysis.R")
 
 #######
 # GLM #
 #######
-# source("R/mvabund.analysis.R")
+
+####################
+# Dominent species #
+####################
+source("R/Stats_DominantSpp.R")
 
 #########
 # C3:C4 #
