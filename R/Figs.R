@@ -564,6 +564,41 @@ ggsavePP(filename = "output/figs/FACE_PFG_CO2", plot = p2, width= 8, height = 6)
     width    = 6, 
     height   = 3.5
     )
+  
+  # Scatter plot
+  p <- ggplot(PFG_Fraction, aes(
+    x     = as.numeric(year), 
+    y     = original, 
+    fill  = co2,
+    group = co2
+  )
+  )
+  p2 <- p + 
+    geom_errorbar(aes(x    = as.numeric(year), 
+                      ymin = original -bootSE, 
+                      ymax = original + bootSE),
+                  position = position_dodge(width = 0.3), 
+                  width    = 0) +
+    geom_line(position = position_dodge(width = 0.3)) +
+    geom_point(
+      position = position_dodge(width = 0.3), 
+      shape    = 21) +
+    scale_fill_manual(
+      values = c("white", "black"),
+      labels = c("Ambient", expression(eCO[2]))) +
+    scale_x_continuous(labels = 0:3) +
+    labs(x = "Year", y = "Proportion") +
+    theme(legend.title = element_blank(), 
+          legend.position = c(0.9, 0.8)) +
+    facet_grid(. ~ PFG)
+  p2
+  
+  ggsavePP(
+    plot     = p2, 
+    filename = "output/figs/PFG_prop_scatter", 
+    width    = 6, 
+    height   = 3.5
+  )
 
 # ########################
 # # Native or introduced #
