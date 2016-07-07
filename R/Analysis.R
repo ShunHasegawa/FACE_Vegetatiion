@@ -102,10 +102,11 @@ SppSum <- SppSum[order(SppSum$value, decreasing = TRUE),]
 SppSum <- within(SppSum, {
   Cov <- round(value * 100/sum(value), 3)
   CumSum <- cumsum(value)
-  Dominant <- CumSum <= .7 * sum(value)
+  Dominant <- Cov >= 5 # species with >5 % coverage
 })
 DmSpp <- droplevels(SppSum$variable[SppSum$Dominant])
 DmSpp
+sum(SppSum$value[SppSum$Dominant])/sum(SppSum$value)
 
 ## ---- CreateFigs
 ########

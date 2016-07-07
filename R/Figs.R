@@ -300,11 +300,11 @@ ggsavePP(filename = "output/figs/FACE_vegetation_YearDif", plot = p2, width= 17,
                 )
       ) + 
     scale_fill_discrete(
-      name   = "Dominant\nSpecies(>70%)", 
+      name   = "Dominant\nSpecies(>5%)", 
       labels = SpLab
       ) + 
     scale_colour_discrete(
-      name   = "Dominant\nSpecies(>70%)", 
+      name   = "Dominant\nSpecies(>5%)", 
       labels = SpLab
       ) + 
     scale_x_discrete(
