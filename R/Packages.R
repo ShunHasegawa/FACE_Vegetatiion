@@ -30,6 +30,7 @@ library(corrplot)
 library(RVAideMemoire)
 library(pbkrtest)
 library(corrplot)
+library(gridExtra)
 
 # HIEv
 # .libPaths("/Library/Frameworks/R.framework/Versions/3.2/Resources/library")
