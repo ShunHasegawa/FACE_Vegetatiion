@@ -564,19 +564,26 @@ ggsavePP(filename = "output/figs/FACE_PFG_CO2", plot = p2, width= 8, height = 6)
     width    = 6, 
     height   = 3.5
     )
+
+##################################    
+# Scatter plot for PFG abundance #
+##################################  
+  head(Veg_RingSum)
+  pfg_co2_mean <- ddply(Veg_RingSum, .(year, co2, PFG), summarise,
+                        Mean = mean(value / 4, na.rm = TRUE), 
+                        SE   = ci(value / 4, na.rm = TRUE)[4], 
+                        N    = sum(!is.na(value)))
   
-  # Scatter plot
-  p <- ggplot(PFG_Fraction, aes(
+  p <- ggplot(pfg_co2_mean, aes(
     x     = as.numeric(year), 
-    y     = original, 
+    y     = Mean, 
     fill  = co2,
     group = co2
-  )
-  )
+  ))
   p2 <- p + 
     geom_errorbar(aes(x    = as.numeric(year), 
-                      ymin = original -bootSE, 
-                      ymax = original + bootSE),
+                      ymin = Mean - SE, 
+                      ymax = Mean + SE),
                   position = position_dodge(width = 0.3), 
                   width    = 0) +
     geom_line(position = position_dodge(width = 0.3)) +
@@ -587,15 +594,16 @@ ggsavePP(filename = "output/figs/FACE_PFG_CO2", plot = p2, width= 8, height = 6)
       values = c("white", "black"),
       labels = c("Ambient", expression(eCO[2]))) +
     scale_x_continuous(labels = 0:3) +
-    labs(x = "Year", y = "Proportion") +
+    labs(x = "Year", y = expression(Abundance~(Count~m^'-2'))) +
+    science_theme +
     theme(legend.title = element_blank(), 
-          legend.position = c(0.9, 0.8)) +
+          legend.position = c(0.1, 0.8)) +
     facet_grid(. ~ PFG)
   p2
   
   ggsavePP(
     plot     = p2, 
-    filename = "output/figs/PFG_prop_scatter", 
+    filename = "output/figs/PFG_abundance_scatter", 
     width    = 6, 
     height   = 3.5
   )
