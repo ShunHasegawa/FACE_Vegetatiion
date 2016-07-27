@@ -4,9 +4,8 @@ rm(list=ls(all=TRUE))
 source("R/Packages.R")
 source("R/functions.R")
 
-################
-# Process Data #
-################
+# Process Data ------------------------------------------------------------
+
 # source("R/CombineYearlyData.R")
 
 # Raw data for multi variate analysis
@@ -24,7 +23,7 @@ veg <- within(VegRes16, {
   co2   <- factor(ifelse(ring %in% c(1, 4, 5), "elev", "amb"))
   id    <- ring:plot
   form  <- factor(ifelse(form %in% c("Tree", "Shrub"), "Wood",
-                        ifelse(form %in% c("Grass", "Sedge", "rush"), "Grass",
+                        ifelse(form %in% c("Grass", "Sedge", "Rush"), "Grass",
                                as.character(form)
                                )
                         )
@@ -44,11 +43,11 @@ veg <- subsetD(veg, PFG != "c3_4")
 # remove lichen
 veg <- subsetD(veg, form != "Lichen")
 
-#######################
-# organise data frame #
-#######################
+# organise data frame -----------------------------------------------------
 
-# all spp----
+
+# > all species -----------------------------------------------------------
+
 FullVdf$Euc.seedling <- NULL
 FullVdf$Aristida.warburgii <- NULL
 
@@ -66,7 +65,8 @@ PlotSumVeg <- ddply(veg.face, .(year, ring, plot, block, co2, id), function(x) c
 # ring sum
 RingSumVeg <- ddply(PlotSumVeg, .(year, ring, block, co2), function(x) colSums(x[, SppName]))
 
-# PFG matrix----
+
+# > PFG -------------------------------------------------------------------
 
 # plot
 PlotSumPFGMatrix <- dcast(year + block + co2 + ring + plot ~ PFG, 
@@ -86,7 +86,9 @@ RingSumPFGMatrix <- ddply(PlotSumPFGMatrix, .(year, block, ring, co2, yco),
                           function(x) colSums(x[, PFGName]))
   
 
-# Diversity & eveness----
+# diversity indices -------------------------------------------------------
+
+# Diversity & eveness
 vegDF <- PlotSumVeg[, SppName]
 siteDF <- PlotSumVeg[, !names(PlotSumVeg) %in% SppName]
 
@@ -96,7 +98,7 @@ DivDF <- within(siteDF,{
   J <- H/log(S)  # Pielou's evenness
 })
 
-# Identify dominant spp----
+# Identify dominant spp
 SppSum <- ddply(veg, .(variable), summarise, value = sum(value))
 SppSum <- SppSum[order(SppSum$value, decreasing = TRUE),]
 SppSum <- within(SppSum, {
@@ -108,16 +110,19 @@ DmSpp <- droplevels(SppSum$variable[SppSum$Dominant])
 DmSpp
 sum(SppSum$value[SppSum$Dominant])/sum(SppSum$value)
 
-## ---- CreateFigs
-########
-# Figs #
-########
+
+# figs --------------------------------------------------------------------
 source("R//Figs.R")
 
-#########
-# Stats #
-#########
+
+# stats -------------------------------------------------------------------
 source("R/Stats.R")
 
-# save all objects. This will be used when creating a summary document
+# save all objects. This will be used when creating a summary document all
+# objects. This will be used when creating a summary document
+sink("output/session_info.txt", append = TRUE)
+paste0("/n/n/n",now(), "/n")
+sessionInfo()
+sink()
+
 save.image(file = "output//Data/AllObj.RData")
