@@ -6,7 +6,6 @@
 library(XLConnect)
 library(xlsx)
 library(plyr)
-# library(scales)
 library(ggplot2)
 library(reshape)
 library(reshape2)
@@ -32,9 +31,4 @@ library(pbkrtest)
 library(corrplot)
 library(gridExtra)
 
-# HIEv
-# .libPaths("/Library/Frameworks/R.framework/Versions/3.2/Resources/library")
 library(HIEv)
-
-# checkpoint doesn't support library(BiodiversityR)
-# library(BiodiversityR) is not supported by the current verison of R (3.2.3)
