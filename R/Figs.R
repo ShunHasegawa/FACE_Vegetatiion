@@ -20,15 +20,18 @@ science_theme <- theme(panel.border = element_rect(color = "black"),
   Veg_Plot <- ddply(veg, .(variable, year, ring, plot, co2, form, PFG, origin), 
                     summarise, value_m2 = sum(value)/4)
   
-  # organise labels
-  Veg_Plot <- within(Veg_Plot, {
-    OrginalVar <- variable
-    variable <- gsub("[.]", " ", as.character(variable))
-    co2 <- factor(co2, labels = c("Ambient", expression(eCO[2])))
-    PFG <- factor(PFG, labels = c("C[3*'\u005F'*grass]","C[4*'\u005F'*grass]", 
-                                  "Legume", "Moss", "Non*-legume", "Wood"))
-    origin <- factor(origin, labels = c("Native", "Naturalised"))
-    })
+  # combien fern and moss
+  Veg_Plot$PFG <- factor(ifelse(Veg_Plot$PFG %in% c("fern", "moss"), "Moss/Fern", 
+                                as.character(Veg_Plot$PFG)))
+  
+  Veg_Plot <- mutate(Veg_Plot, 
+                     OrginalVar = variable,
+                     variable = gsub("[.]", " ", as.character(variable)),
+                     co2 = factor(co2, labels = c("Ambient", expression(eCO[2]))),
+                     PFG = factor(PFG, 
+                                  levels = c("c3", "c4", "legume", "Non_legume", "wood", "Moss/Fern"),
+                                  labels = c("C[3*'\u005F'*grass]","C[4*'\u005F'*grass]",
+                                                  "Legume", "Non*-legume", "Wood", "Moss/Fern")))
   
   # Ring mean
   Veg_Ring <- ddply(Veg_Plot, .(variable, OrginalVar, year, ring, co2, form, PFG, origin), 
@@ -144,7 +147,7 @@ posdos <- 1
 veg_co2$PFG <- factor(
                   veg_co2$PFG,
                   levels = c("C[3*'_'*grass]","C[4*'_'*grass]", 
-                             "Legume","Non*-legume", "Wood","Moss")
+                             "Legume","Non*-legume", "Wood","Moss/Fern")
                   )
 veg_co2$variable2 <- factor(
                         veg_co2$variable, 
@@ -167,9 +170,11 @@ p2 <- p +
                 height = 0, size = .5, alpha = .6) +
   geom_point(alpha = .8) +
   theme(axis.text.y = element_text(face = "italic", size = 7), 
-        strip.text.y = element_text(size = 7),
+        strip.text.y = element_text(size = 7, angle = 0),
         legend.title = element_blank(),
-        legend.position = c(.88, .67), 
+        legend.position = c(1.05, .57), 
+        legend.key = element_blank(),
+        legend.background = element_rect(colour = "black"),
         panel.grid.major = element_line(colour = "grey90", size = .2),
         panel.grid.major.x = element_blank(),
         panel.margin = unit(0, "lines")) +
