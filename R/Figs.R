@@ -393,50 +393,43 @@ p2
 ggsavePP(filename = "output/figs/FACE_PFG_Ring", plot = p2, width= 8, height = 6)
 
 ## CO2 ##
-Veg_PFG_co2 <- ddply(
-                  Veg_PFG, 
-                  .(year, co2, PFG), 
-                  summarise, 
-                  value = mean(value)
-                  )
+Veg_PFG_co2 <- ddply(Veg_PFG, .(year, co2, PFG), summarise, value = mean(value))
 
 p <- ggplot(Veg_PFG_co2, 
             aes(
               x = PFG, 
               y = value, 
               fill = co2)
-            )
+)
 p2 <- p + 
   geom_bar(
     alpha    = .4, 
     position = position_dodge(width = .4), 
     stat     = "identity"
-    ) +
+  ) +
   theme(
     axis.text.x  = element_text(
-                      angle = 90, 
-                      hjust =1, 
-                      vjust = .5
-                      ), 
+      angle = 90, 
+      hjust =1, 
+      vjust = .5
+    ), 
     strip.text.x = element_text(
-                      size = 6
-                      )
-    ) +
+      size = 6
+    )
+  ) +
   scale_x_discrete(
     labels = c(expression(C[3*'\u005F'*grass]), 
                expression(C[4*'\u005F'*grass]), 
                "Legume", 
-               "Moss", 
                expression(Non*-legume), 
-               "Wood")
-    ) +
-  labs(
-    x = NULL, 
-    y = expression(Abundance~(Count~m^'-2'))
-    ) + 
+               "Wood",
+               expression(Moss/Fern))) +
+  labs(x = NULL, y = expression(Abundance~(Count~m^'-2'))) +
   facet_grid(. ~ year,labeller = label_parsed)
 p2
 ggsavePP(filename = "output/figs/FACE_PFG_CO2", plot = p2, width= 8, height = 6)
+
+
 
 ####################
 ## Stack bar plot ##
