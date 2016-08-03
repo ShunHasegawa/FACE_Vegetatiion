@@ -1,77 +1,80 @@
-###########
-# Eveness #
-###########
-bxplts(value = "J", xval = "co2", data = DivDF)
-bxplts(value = "J", xval = "ring", data = DivDF)
+# Move Year0 value to a new column to be used as covariate for the analysis
+DivDF_mlt <- melt(DivDF, id = c("year", "ring", "plot", "block", "co2", "id"))
 
-Eml1 <- lmer(J ~ co2 * year + (1|block) + (1|ring) + (1|id), data = DivDF)
-Anova(Eml1)
+# year0
+year0_dd <- DivDF_mlt %>%
+  filter(year == "Year0") %>%
+  select(id, value, variable) %>%
+  rename(value0 = value)
+
+# subseqent years
+subyear_dd <- filter(DivDF_mlt, year != "Year0")
+
+# merge
+DivDF_year0 <- merge(subyear_dd, year0_dd, by = c("id", "variable")) 
+
+par(mfrow = c(1, 3), mar = c(5, 4, 2, 1))
+d_ply(DivDF_year0, .(variable),  function(x) 
+  plot(value ~ value0, pch = 19, col = year, data = x, main = unique(x$variable)))
+
+
+# Evenness ----------------------------------------------------------------
+
+############
+# Evenness #
+############
+j_dd <- filter(DivDF_year0, variable == "J")
+plot(value ~ value0, pch = 19, col = year, data = j_dd)
+
+Eml1 <- lmer(value ~ co2 * year + value0 + (1|block) + (1|ring) + (1|id), data = j_dd)
+
 AnvF_Eml <- Anova(Eml1, test.statistic = "F")
 AnvF_Eml
-summary(Eml1)
 plot(Eml1)
 qqnorm(resid(Eml1))
 qqline(resid(Eml1))
 
+
+# Diversity ---------------------------------------------------------------
+
 #############
 # Diversity #
 #############
-bxplts(value = "H", xval = "co2", data = DivDF)
-bxplts(value = "H", xval = "ring", data = DivDF)
+h_dd <- filter(DivDF_year0, variable == "H")
+plot(value ~ value0, pch = 19, col = year, data = h_dd)
 
-Dml1 <- lmer(H ~ co2 * year + (1|block) + (1|ring) + (1|id), data = DivDF)
-Anova(Dml1)
-AnvF_Dml <- Anova(Dml1, test.statistic = "F")
+Dml1 <- lmer(value ~ co2 * year + value0 + (1|block) + (1|ring) + (1|id), 
+             data = h_dd)
+
 AnvF_Dml
 plot(Dml1)
 qqnorm(resid(Dml1))
 qqline(resid(Dml1))
-plot(allEffects(Dml1))
- # Diversity decreased in eCO2
 
-# contrast----
-# contrast doesn't work with lmer so rewrite the model with lme
-Dml_lme <- lme(H ~ co2 * year, random = ~1|block/ring/id, data = DivDF)
 
-cntrst <- contrast(Dml_lme,
-                   a = list(year = levels(DivDF$year), co2 = "amb"),
-                   b = list(year = levels(DivDF$year), co2 = "elev"))
-H_CntrstRes <- cntrstTbl(cntrst, data = DivDF, variable = "H", digit = 2)
-H_CntrstRes
+# Species richness --------------------------------------------------------
 
 ####################
 # Species richness #
 ####################
-bxplts(value = "S", xval = "co2", data = DivDF)
-bxplts(value = "S", xval = "ring", data = DivDF)
+s_dd <- filter(DivDF_year0, variable == "S")
+plot(value ~ value0, pch = 19, col = year, data = s_dd)
+plot(log(value) ~ value0, pch = 19, col = year, data = s_dd)
 
-Sml1 <- glmer(S ~ co2 * year + (1|block) + (1|ring) + (1|id), 
-              data = DivDF, family = poisson)
-Sml2 <- glmer(S ~ co2 * year + (1|block) + (1|ring) + (1|id), 
-              data = DivDF, family = poisson(link = sqrt))
-Sml3 <- glmer(S ~ co2 * year + (1|block) + (1|ring) + (1|id), 
-              data = DivDF, family = poisson(link = power(1/3)))
-l_ply(list(Sml1, Sml2, Sml3), overdisp.glmer)
-# use Sml1
-summary(Sml1)
-plot(Sml1)
-qqnorm(resid(Sml1))
-qqline(resid(Sml1))
-Anova(Sml1)
-S_CompAic <- CompAIC(Sml1)
-S_CompAic
-# AIC decrease when co2:year removed but
+SmlLmm1 <- lmer(value ~ co2 * year + value0 + (1|block) + (1|ring) + (1|id), 
+                data = s_dd)
+SmlLmm2 <- lmer(log(value) ~ co2 * year + value0 + (1|block) + (1|ring) + (1|id), 
+                data = s_dd)
+ldply(list(SmlLmm1, SmlLmm2), r.squared)
 
-# LMM
-SmlLmm <- lmer(log(S) ~ co2 * year + (1|block) + (1|ring) + (1|id), data = DivDF)
-summary(SmlLmm)
-plot(SmlLmm)
-qqnorm(resid(SmlLmm))
-qqline(resid(SmlLmm))
-AnvF_Sml <- Anova(SmlLmm, test.statistic = "F")
+plot(SmlLmm1)
+qqnorm(resid(SmlLmm1))
+qqline(resid(SmlLmm1))
+AnvF_Sml <- Anova(SmlLmm1, test.statistic = "F")
 AnvF_Sml
 
-# number of species
+# . number of species -----------------------------------------------------
+
 totalSum <- ddply(veg, .(variable), summarise, value = sum(value, na.rm = TRUE))
 summary(totalSum)
 length(unique(totalSum$variable))
@@ -89,6 +92,9 @@ sapply(vs, length)
 intersect(vs[[1]], vs[[2]])
 
 
+# Summary -----------------------------------------------------------------
+
+
 ###########
 # Summary #
 ###########
@@ -97,17 +103,22 @@ Anv_lst <- list('Species richness' = AnvF_Sml,
                 'Evenness' = AnvF_Eml)
 
 DivAnvF <- ldply(Anv_lst, function(x) {
-  x$tems <- row.names(x)
-  return(x)}, .id = "Reponse")
+  x$terms <- factor(row.names(x), levels = c("value0", "co2", "year", "co2:year"))
+  return(x)}, .id = "Response")
 names(DivAnvF)[5] <- "Pr"
+
 DivAnvF <- within(DivAnvF, {
   F  <- round(F, 2)
+  Df.res <- round(Df.res, 2)
   Pr <- round(Pr, 3)
-})
+  })
+DivAnvF <- arrange(DivAnvF, Response, terms)
+
 write.csv(DivAnvF, "output/table/SummaryResultDiversity.csv", row.names = FALSE)
 
 Anv_df <- ldply(Anv_lst, function(x) {
-  predictors = factor(row.names(x), levels = c("co2", "year", "co2:year"))
+  predictors = factor(row.names(x), 
+                      levels = c("value0", "co2", "year", "co2:year"))
   pval = x$Pr
   stat = as.character(cut(pval, breaks = c(0, 0.001, 0.01, 0.05, 0.1, 1), 
                           labels = c("***", "**", "*", ".", "ns")))
@@ -117,10 +128,12 @@ Anv_df <- ldply(Anv_lst, function(x) {
 Anv_cst <- dcast(variable ~ predictors, data = Anv_df, value.var = "stat")
 write.csv(Anv_cst, file = "output/table/FACE_Diversity_StatSummary.csv")
 
+
+# CO2 response ratio ------------------------------------------------------
+
 ######################
-# Co2 response ratio #
+# CO2 response ratio #
 ######################
-DivDF_mlt <- melt(DivDF, id = c("year", "block", "co2", "ring", "plot", "id"))
 DivDF_RingMean <- ddply(DivDF_mlt, .(year, block, co2, ring, variable), 
                         summarise, value = mean(value))
 DivDF_RingMean_cst <- dcast(DivDF_RingMean, year + block + variable ~ co2)
