@@ -19,40 +19,57 @@ NativeR <- within(subsetD(veg, !is.na(origin)), {
 dfList <- list(C3grassC4 = C3grassC4, C3totalC4 = C3totalC4, legumeR = legumeR, NativeR = NativeR)
 
 # compute ratios and total number
-PfgRDF <- llply(dfList, function(x) ddply(x,
-                                          .(year, co2, block, ring, plot, id), function(x){ 
-                                          Total <- sum(x$value)
-                                          ratios <- sum(x$value[x$yval == "p"]/Total)
-                                          data.frame(Total, ratios)}))
-# add obs and chose variabel to be used as response for the later analysis
-PfgRDF <- llply(PfgRDF, function(x) within(x, (obs = 1:nrow(x))))
+PfgRDF <- llply(dfList, function(x){
+  x %>% 
+    group_by(year, co2, block, ring, plot, id) %>%
+    summarise(Total = sum(value),
+              ratios = sum(value[yval == "p"]/Total)) %>%
+    ungroup() # grouping informaiton is not required later
+  })
+
+# Move Year0 value to a new column to be used as covariate in the analyssis
+# below
+PfgRDF_year0 <- llply(PfgRDF, function(x) {
+  
+  year0_dd <-x %>%                   # Year0
+    filter(year == "Year0") %>%
+    select(id, ratios) %>%
+    rename(ratios0 = ratios)
+
+  subyear_dd <- filter(x, year != "Year0") # subsequent years
+
+  newyear_dd <- merge(subyear_dd, year0_dd, by = "id") # merge
+  
+  newyear_dd$obs <- 1:nrow(newyear_dd) # add id
+  return(newyear_dd)
+})
+
+length(PfgRDF_year0)
+par(mfrow = c(2, 2), mar = c(5, 4, 2, 1))
+l_ply(1:4, function(x) {
+  d <- PfgRDF_year0[[x]]
+  plot(ratios ~ ratios0, pch = 19, col = year, data = d, main = names(PfgRDF_year0)[x])})
 
 
-#########################
-# C3:C4 (grass + sedge) #
-#########################
-c3gc4DF <- PfgRDF[[1]]
+# C3:C4 (grass + sedge) ---------------------------------------------------
+
+c3gc4DF <- PfgRDF_year0[[1]]
 head(c3gc4DF)
-par(mfrow = c(1, 2))
+par(mfrow = c(1, 3))
 boxplot(logit(ratios) ~ year:co2, data = c3gc4DF, main = "logit")
 boxplot(logit(ratios) ~ year:ring, data = c3gc4DF, main = "logit")
+plot(logit(ratios) ~ ratios0, data = c3gc4DF)
 
-m1 <- glmer(ratios ~ year*co2 + (1|block) + (1|ring)  + (1|id), 
+
+# . GLM --------------------------------------------------------------------
+
+m1 <- glmer(ratios ~ year*co2 + ratios0 + (1|block) + (1|ring)  + (1|id), 
             family = "binomial", weights = Total, data = c3gc4DF)
-overdisp.glmer(m1)
-# overdispersed
-m2 <- update(m1, ~ . + (1|obs))
-overdisp.glmer(m2)
-Anova(m2)
-plot(m2)
-qqnorm(resid(m2))
-qqline(resid(m2))
-c3gc4_CompAic <- CompAIC(m2)
-c3gc4_CompAic
+# model failed to converge
 
-# indication of co2*year interaction
-# lmm
-m3 <- lmer(logit(ratios) ~ year*co2 + (1|block) + (1|ring)  + (1|id), data = c3gc4DF)
+# . LMM -------------------------------------------------------------------
+
+m3 <- lmer(logit(ratios) ~ year*co2 + ratios0 + (1|block) + (1|ring)  + (1|id), data = c3gc4DF)
 plot(m3)
 qqnorm(resid(m3))
 qqline(resid(m3))
@@ -60,88 +77,71 @@ qqline(resid(m3))
 AnvF_c3gc4 <- Anova(m3, test.statistic = "F")
 AnvF_c3gc4
 
-# one outlier. what if I remove
-rmv <- which(qqnorm(resid(m3))$y == min(qqnorm(resid(m3))$y))
-m4 <- update(m3, subset = -rmv)
-plot(m4)
-qqnorm(resid(m4))
-qqline(resid(m4))
-  # improved a lot
-AnvF_c3gc4 <- Anova(m4, test.statistic = "F")
+# . post-hoc test ---------------------------------------------------------
+plot(lmerTest::lsmeans(m3))
+lsmeans::lsmeans(m3, pairwise ~ co2 | year)
 
-# update glm
-m5 <- update(m1, subset = -rmv)
-overdisp.glmer(m5)
-# overdispersed
-m6 <- update(m5, ~ . + (1|obs))
-overdisp.glmer(m6)
-Anova(m6)
-plot(m6)
-qqnorm(resid(m6))
-qqline(resid(m6))
-c3gc4_CompAic <- CompAIC(m6)
-c3gc4_CompAic
 
-# contrast----
-
-# contrast doesn't work with lmer. so use lme
-# tdf <- c3gc4DF[-rmv, ]
-# lmeMod <- lme(logit(ratios) ~ year * co2, random = ~1|block/ring/id, data = tdf)
-# cntrst<- contrast(lmeMod, 
-#                   a = list(year = levels(tdf$year), co2 = "amb"),
-#                   b = list(year = levels(tdf$year), co2 = "elev"))
-# PropC3_CntrstRes <- cntrstTbl(cntrst, data = tdf, variable = "C3Prop")
-# PropC3_CntrstRes
-# no significant differece between treatments, but still c3 proportion decreased
-# at amb
+# C3 total:C4 -------------------------------------------------------------
 
 ###############
 # C3 total:C4 #
 ###############
-names(PfgRDF)[2]
-c3totalc4DF <- PfgRDF[[2]]
-m1 <- glmer(ratios ~ year*co2 + (1|block) + (1|ring)  + (1|id), 
+
+names(PfgRDF_year0)[2]
+c3totalc4DF <- PfgRDF_year0[[2]]
+
+
+# . GLM -------------------------------------------------------------------
+
+m1 <- glmer(ratios ~ year*co2 + ratios0 + (1|block) + (1|ring)  + (1|id), 
             family = "binomial", weights = Total, data = c3totalc4DF)
 overdisp.glmer(m1)
 
 # overdispersed
 m2 <- update(m1, ~ . + (1|obs))
-overdisp.glmer(m2)
-Anova(m2)
-plot(m2)
-qqnorm(resid(m2))
-qqline(resid(m2))
-c3totalc4_CompAic <- CompAIC(m2)
-c3totalc4_CompAic
-# indication of co2*year interaction
+  # model railed to converge
 
-# LMM
+# . LMM -------------------------------------------------------------------
+par(mfrow = c(2, 2))
 boxplot(logit(ratios) ~ year:co2, data = c3totalc4DF, main = "logit")
 boxplot(logit(ratios) ~ year:ring, data = c3totalc4DF, main = "logit")
-m3 <- lmer(logit(ratios) ~ year*co2 + (1|block) + (1|ring)  + (1|id), data = c3totalc4DF)
+plot(logit(ratios) ~ ratios0, data = c3totalc4DF, col = year, pch = 19)
+
+m3 <- lmer(logit(ratios) ~ year * co2 + ratios0 + (1|block) + (1|ring)  + (1|id), 
+           data = c3totalc4DF)
 plot(m3)
 qqnorm(resid(m3))
 qqline(resid(m3))
 AnvF_c3totalc4 <- Anova(m3, test.statistic = "F")
 AnvF_c3totalc4
 
+
+# Legume:nonlegume --------------------------------------------------------
+
 ####################
 # Legume:nonlegume #
 ####################
-names(PfgRDF)[3]
-legumeRDF <- PfgRDF[[3]]
-m1 <- glmer(ratios ~ year*co2 + (1|block) + (1|ring)  + (1|id), 
+names(PfgRDF_year0)[3]
+legumeRDF <- PfgRDF_year0[[3]]
+
+
+# . GLM -------------------------------------------------------------------
+
+m1 <- glmer(ratios ~ year*co2 + ratios0 + (1|block) + (1|ring)  + (1|id), 
             family = "binomial", weights = Total, data = legumeRDF)
+summary(m1)
+overdisp.glmer(m1)
+# overdispersed
+m2 <- update(m1, ~ . + (1|obs))
+
 # convergence error. so try different optimizer
-m1.1 <- glmer(ratios ~ year*co2 + (1|block) + (1|ring)  + (1|id), 
+m1.1 <- glmer(ratios ~ year*co2 + ratios0 + (1|block) + (1|ring)  + (1|id), 
               family = "binomial", weights = Total, data = legumeRDF, 
               control = glmerControl(optimizer = "bobyqa"))
-summary(m1)
-summary(m1.1)
 overdisp.glmer(m1.1)
 # overdispersed
 m2 <- update(m1.1, ~ . + (1|obs))
-overdisp.glmer(m2)
 Anova(m2)
 plot(m2)
 qqnorm(resid(m2))
@@ -149,21 +149,34 @@ qqline(resid(m2))
 legumeR_CompAic <- CompAIC(m2)
 legumeR_CompAic
 
-# LMM
+
+# . LMM -------------------------------------------------------------------
+
+par(mfrow = c(2, 2))
 boxplot(logit(ratios) ~ year:co2, data = legumeRDF, main = "logit")
 boxplot(logit(ratios) ~ year:ring, data = legumeRDF, main = "logit")
-m3 <- lmer(logit(ratios) ~ year*co2 + (1|block) + (1|ring)  + (1|id), data = legumeRDF)
+plot(logit(ratios) ~ ratios0, data = legumeRDF, pch = 19, col = year)
+
+m3 <- lmer(logit(ratios) ~ year*co2 + ratios0 + (1|block) + (1|ring)  + (1|id), 
+           data = legumeRDF)
 plot(m3)
 qqnorm(resid(m3))
 qqline(resid(m3))
 AnvF_legumeR <- Anova(m3, test.statistic = "F")
 AnvF_legumeR
 
+
+# Native:introduced -------------------------------------------------------
+
 #####################
 # Native:introduced #
 #####################
-names(PfgRDF)[4]
-NativeRDF <- PfgRDF[[4]]
+names(PfgRDF_year0)[4]
+NativeRDF <- PfgRDF_year0[[4]]
+
+
+# . GLM -------------------------------------------------------------------
+
 m1 <- glmer(ratios ~ year*co2 + (1|block) + (1|ring) + (1|id), 
             family = "binomial", weights = Total, data = NativeRDF)
 overdisp.glmer(m1)
@@ -178,15 +191,31 @@ NativeR_CompAic <- CompAIC(m2)
 NativeR_CompAic
 # indication of year effect
 
-# LMM
+
+# . LMM -------------------------------------------------------------------
+
+par(mfrow = c(2, 2))
 boxplot(logit(ratios) ~ year:co2, data = NativeRDF, main = "logit")
 boxplot(logit(ratios) ~ year:ring, data = NativeRDF, main = "logit")
-m3 <- lmer(logit(ratios) ~ year*co2 + (1|block) + (1|ring) + (1|id), data = NativeRDF)
+plot(logit(ratios) ~ ratios0, pch = 19, col = year, data = NativeRDF)
+
+
+m3 <- lmer(logit(ratios) ~ year * co2 + ratios0 + (1|block) + (1|ring) + (1|id), 
+           data = NativeRDF)
 plot(m3)
 qqnorm(resid(m3))
 qqline(resid(m3))
 AnvF_NativeR <- Anova(m3, test.statistic = "F")
 AnvF_NativeR
+
+
+# . post-hoc test ---------------------------------------------------------
+
+plot(lmerTest::lsmeans(m3))
+lsmeans::lsmeans(m3, pairwise ~ co2 | year)
+
+
+# Summary -----------------------------------------------------------------
 
 ###########
 # Summary #
@@ -194,11 +223,11 @@ AnvF_NativeR
 
 # F from LMM
 SummaryAnvF_PFG <- ldply(list(c3gc4     = AnvF_c3gc4, 
-                             c3totalc4 = AnvF_c3totalc4,
-                             legumeR   = AnvF_legumeR,
-                             NativeR   = AnvF_NativeR ), 
-                        function(x)data.frame(x, terms = row.names(x)),
-                        .id = "variable")
+                              c3totalc4 = AnvF_c3totalc4,
+                              legumeR   = AnvF_legumeR,
+                              NativeR   = AnvF_NativeR ), 
+                         function(x)data.frame(x, terms = row.names(x)),
+                         .id = "variable")
 summary(SummaryAnvF_PFG)
 
 SummaryAnvF_PFG <- within(SummaryAnvF_PFG, {
@@ -207,22 +236,9 @@ SummaryAnvF_PFG <- within(SummaryAnvF_PFG, {
   Pr..F. = NULL})
 write.csv(SummaryAnvF_PFG, file = "output/table/FACE_EachPFG_Prop_AnvovaF.csv", 
           row.names = FALSE)
-# Model comparison from GLMM
-SummaryCompAIC <- ldply(list(c3gc4 = c3gc4_CompAic, 
-                             c3totalc4 = c3totalc4_CompAic,
-                             legumeR = legumeR_CompAic,
-                             NativeR = NativeR_CompAic),
-                        function(x)data.frame(x, terms = row.names(x)),
-                        .id = "variable")
 
-SumamryStat <- merge(SummaryCompAIC, SummaryAnvF_PFG, by = c("variable", "terms"), all = TRUE)
-SumamryStat$terms <- factor(SumamryStat$terms, levels = c("Full", "co2", "year", "year:co2"))
-SumamryStat <- SumamryStat[order(SumamryStat$variable, SumamryStat$terms), ]
-SumamryStat_PvalAic <- subset(SumamryStat, terms != "Full", select = c("variable", "terms", "dAIC", "Pr"))
-SumamryStat_PvalAic_mlt <- melt(SumamryStat_PvalAic, id = c("variable", "terms"), variable_name = "stats")
-SumamryStat_PvalAic_mlt$stats <- factor(SumamryStat_PvalAic_mlt$stats, levels = c("Pr", "dAIC"))
-PFG_Sumamry <- dcast(SumamryStat_PvalAic_mlt, variable ~ terms + stats)
-write.csv(PFG_Sumamry, file = "output/table/FACE_EachPFG_Prop_LMMGlmm.csv", row.names = FALSE)
+
+# CO2 response ratios -----------------------------------------------------
 
 #######################
 # CO2 response ratios #
