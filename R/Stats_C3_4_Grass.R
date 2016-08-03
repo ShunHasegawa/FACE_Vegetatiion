@@ -231,9 +231,13 @@ SummaryAnvF_PFG <- ldply(list(c3gc4     = AnvF_c3gc4,
 summary(SummaryAnvF_PFG)
 
 SummaryAnvF_PFG <- within(SummaryAnvF_PFG, {
+  F = round(F, 2)
   Df.res = round(Df.res, 0)
   Pr = round(SummaryAnvF_PFG$Pr, 3)
   Pr..F. = NULL})
+SummaryAnvF_PFG$terms <- factor(SummaryAnvF_PFG$terms, 
+                                levels = c("ratios0","co2", "year", "year:co2"))
+
 write.csv(SummaryAnvF_PFG, file = "output/table/FACE_EachPFG_Prop_AnvovaF.csv", 
           row.names = FALSE)
 
