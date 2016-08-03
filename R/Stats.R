@@ -16,6 +16,7 @@ source("R/Stats_DominantSpp.R")
 ##################
 # PFG proportion #
 ##################
+source("R/PFG_Proportaion.R")
 source("R/Stats_C3_4_Grass.R")
 
 ################### 
