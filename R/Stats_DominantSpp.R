@@ -222,7 +222,9 @@ DomSppAnvF <- ddply(AbrSpp, .(variable), function(x) {
           Df.res = round(Df.res, 0)
           Pr = round(d$Pr, 3)
           'Pr(>F)' = NULL
-          terms = row.names(d)
+          terms = factor(row.names(d), 
+                         levels = c("sqrt_value0", "value0", "co2", "year", 
+                                    "year:co2"))
         })
   return(d)
   })
