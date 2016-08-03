@@ -1,5 +1,8 @@
 head(veg)
 
+
+# co2 effect (% change) ---------------------------------------------------
+
 #########################
 # co2 effect (% change) #
 #########################
@@ -8,7 +11,7 @@ summary(veg)
 # get C3, grass, forb etc. abundance fo each plot
 PfgAbundDF <- ddply(veg, .(year, co2, block, ring), function(x){
   Total   = sum(x$value)
-  C3      = sum(x$value[!x$PFG %in% c("c4", "moss")])
+  C3      = sum(x$value[!x$PFG %in% c("c4", "moss", "fern")])
   C4grass = sum(x$value[x$PFG  == "c4"])
   Forb    = sum(x$value[x$form == "Forb"])
   Grass   = sum(x$value[x$form == "Grass"])
@@ -71,14 +74,17 @@ write.csv(RatioSE_cst,
           file      = "output/table/CO2ResponseRatio_PFGfraction.csv", 
           row.names = FALSE)
 
+
+# Analysis ----------------------------------------------------------------
+
 ############
 # Analysis #
 ############
 
-# get C3, grass, forb etc. proportion fo each plot
+# get C3, grass, forb etc. proportion for each plot
 PropDF <- ddply(veg, .(year, co2, block, ring, plot, id), function(x){
   Total     = sum(x$value)
-  C3prop    = 1-sum(x$value[x$PFG %in% c("c4", "moss")])/Total
+  C3prop    = 1-sum(x$value[x$PFG %in% c("c4", "moss", "fern")])/Total
   C4grass   = sum(x$value[x$PFG == "c4"])/Total
   Forbprop  = sum(x$value[x$form == "Forb"])/Total
   Grassprop = sum(x$value[x$form %in% c("Grass", "Sedge")])/Total
@@ -86,187 +92,161 @@ PropDF <- ddply(veg, .(year, co2, block, ring, plot, id), function(x){
   Mossprop  = sum(x$value[x$form == "Moss"])/Total
   data.frame(Total, C3prop, C4grass, Forbprop, Grassprop, Woodprop, Mossprop)
   })
-PropDF$obs <- 1:nrow(PropDF)
+
+# Move Year0 value to a new column to be used as covariate in the analyssis
+# below
+
+  PropDF_mlt <- melt(PropDF, id = c("year", "co2", "block", "ring", "plot", "id", "Total"))
+  
+  # Year0
+  year0_dd <- PropDF_mlt %>%                   
+    filter(year == "Year0") %>%
+    select(variable, id, value) %>%
+    rename(value0 = value)
+  
+  # subsequent years
+  subyear_dd <- filter(PropDF_mlt, year != "Year0") 
+  
+  # merge
+  PropDF_year0 <- merge(subyear_dd, year0_dd, by = c("id", "variable")) 
+  PropDF_year0$obs <- 1:nrow(PropDF_year0) 
+
+  unique(PropDF_year0$variable)
+  par(mfrow = c(2, 3), mar = c(5, 4, 2, 1))
+  d_ply(PropDF_year0, .(variable), function(x) {
+    plot(logit(value) ~ value0, pch = 19, col = year, data = x, main = unique(x$variable))
+    })
+
+
+# C3 proportion in the whole community ------------------------------------
 
 ########################################
 # C3 proportion in the whole community #
 ########################################
-boxplot(logit(C3prop) ~ year:ring, data = PropDF, main = "logit")
 
-# glm
-m1 <- glmer(C3prop ~ year * co2 +  (1|block) +(1|ring) + (1|id), 
-            family = "binomial", data = PropDF, weight = Total)
-overdisp.glmer(m1)
-# overdispersed
-# add obs
-m2 <- update(m1, ~. + (1|obs))
-overdisp.glmer(m2)
-Anova(m2)
-plot(m2)
-
-# highly wedged..
-qqnorm(resid(m2))
-qqline(resid(m2))
-# compare AIC
-c3PropComAIC <- CompAIC(m2)
-c3PropComAIC
-
-# LMM
-bxplts(value = "C3prop", xval = "co2", data = PropDF)
-bxplts(value = "C3prop", xval = "ring", data = PropDF)
-
+c3prop_dd <- filter(PropDF_year0, variable == "C3prop")
 par(mfrow = c(1, 3))
-boxplot(C3prop ~ year:ring, data = PropDF, main = "raw")
-boxplot(asin(C3prop) ~ year:ring, data = PropDF, main = "arcsin")
-boxplot(logit(C3prop) ~ year:ring, data = PropDF, main = "logit")
+plot(value ~ value0, data = c3prop_dd, pch = 19, col = year)
+plot(asin(value) ~ value0, data = c3prop_dd, pch = 19, col = year)
+plot(logit(value) ~ value0, data = c3prop_dd, pch = 19, col = year)
 
-# try logit
-rm1 <- lmer(logit(C3prop) ~ year * co2 + (1|block) +  (1|ring) + (1|id), data = PropDF)
-summary(rm1)
-Anova(rm1)
+rm1 <- lmer(value ~ year * co2 + value0 + (1|block) +  (1|ring) + (1|id),
+            data = c3prop_dd)
+rm2 <- lmer(asin(value) ~ year * co2 + value0 + (1|block) +  (1|ring) + (1|id),
+            data = c3prop_dd)
+rm3 <- lmer(logit(value) ~ year * co2 + value0 + (1|block) +  (1|ring) + (1|id),
+            data = c3prop_dd)
+
+ldply(list(rm1, rm2, rm3), r.squared)
+
 Anova(rm1, test.statistic = "F")
 plot(rm1)
 qqnorm(resid(rm1))
 qqline(resid(rm1))
- # not too bad
 
 AnvF_PropC3_total <- Anova(rm1, test.statistic = "F")
 AnvF_PropC3_total
 
-# contrast
-  # contrast doesn't work with lmer. so use lme
-  tdf <- PropDF
-  lmeMod <- lme(logit(C3prop) ~ year * co2, random = ~1|block/ring/id, data = tdf)
-  cntrst<- contrast(lmeMod, 
-                    a = list(year = levels(tdf$year), co2 = "amb"),
-                    b = list(year = levels(tdf$year), co2 = "elev"))
-  PropC3_Total_CntrstRes <- cntrstTbl(cntrst, data = tdf, variable = "C3Prop")
-  PropC3_Total_CntrstRes
-  # no significant difference between treatment for each year
+
+# C4 grass ----------------------------------------------------------------
 
 ############
 # C4 grass #
 ############
-# glm
-m1 <- glmer(C4grass ~ year * co2 +  (1|block) +(1|ring) + (1|id), 
-            family = "binomial", data = PropDF, weight = Total)
-overdisp.glmer(m1)
-# overdispersed
-# add obs
-summary(m1)
-m2 <- update(m1, ~. + (1|obs))
-overdisp.glmer(m2)
-Anova(m2)
-plot(m2)
-qqnorm(resid(m2))
-qqline(resid(m2))
-# Compare AIC
-C4grassCompAic <- CompAIC(m2)
-C4grassCompAic
+c4gprop_dd <- filter(PropDF_year0, variable == "C4grass")
 
-# indication of co2xyear interaction
+par(mfrow = c(2, 2))
+boxplot(logit(value) ~ year:ring, data = c4gprop_dd, main = "logit")
+plot(logit(value) ~ value0, data = c4gprop_dd, pch = 19, col = year)
+plot(value ~ value0, data = c4gprop_dd, pch = 19, col = year)
 
-# LMM
-boxplot(logit(C4grass) ~ year:ring, data = PropDF, main = "logit")
-m2Lmer <- lmer(logit(C4grass) ~ year * co2 +  (1|block) +(1|ring) + (1|id), data = PropDF)
-Anova(m2Lmer, test.statistic = "F")
+m2Lmer <- lmer(logit(value) ~ year * co2 + value0 + 
+                 (1|block) +(1|ring) + (1|id), data = c4gprop_dd)
+m3Lmer <- lmer(value ~ year * co2 + value0 + 
+                 (1|block) +(1|ring) + (1|id), data = c4gprop_dd)
+ldply(list(m2Lmer, m3Lmer), r.squared)
 
-plot(m2Lmer)
-qqnorm(resid(m2Lmer))
-qqline(resid(m2Lmer))
-AnvF_C4grass <- Anova(m2Lmer2, test.statistic = "F")
+plot(m3Lmer)
+qqnorm(resid(m3Lmer))
+qqline(resid(m3Lmer))
+AnvF_C4grass <- Anova(m3Lmer, test.statistic = "F")
 AnvF_C4grass
+
+
+# . post-hoc test ---------------------------------------------------------
+plot(lmerTest::lsmeans(m3Lmer))
+lsmeans::lsmeans(m3Lmer, pairwise ~ co2 | year)
+
+
+# Grass + Sedge + rush ----------------------------------------------------
 
 ########################
 # Grass + Sedge + rush #
 ########################
-m1 <- glmer(Grassprop ~ year * co2 +  (1|block) +(1|ring) + (1|id), 
-            family = "binomial", data = PropDF, weight = Total)
-overdisp.glmer(m1)
-# overdispersed
-# add obs
-m2 <- update(m1, ~. + (1|obs))
-overdisp.glmer(m2)
-Anova(m2)
-plot(m2)
-qqnorm(resid(m2))
-qqline(resid(m2))
+gProp_dd <- filter(PropDF_year0, variable == "Grassprop")
 
-# compare AIC
-GrassPropCompAIC <- CompAIC(m2)
-GrassPropCompAIC
-
-# LMM
 par(mfrow = c(1, 3))
-boxplot(Grassprop ~ year:ring, data = PropDF, main = "raw")
-boxplot(asin(Grassprop) ~ year:ring, data = PropDF, main = "arcsin")
-boxplot(logit(Grassprop) ~ year:ring, data = PropDF, main = "logit")
+plot(value ~ value0, pch = 19, col = year,  data = gProp_dd)
+plot(asin(value) ~ value0, pch = 19, col = year, data = gProp_dd)
+plot(logit(value) ~ value0, pch = 19, col = year, data = gProp_dd)
 
-# try logit
-gm1 <- lmer(logit(Grassprop) ~ year * co2 + (1|block) +  (1|ring) + (1|id), data = PropDF)
-plot(gm1)
-qqnorm(resid(gm1))
-qqline(resid(gm1))
+gm1 <- lmer(value ~ year * co2 + value0 + (1|block) +  (1|ring) + (1|id), 
+            data = gProp_dd)
+gm2 <- lmer(logit(value) ~ year * co2 + value0 + (1|block) +  (1|ring) + (1|id), 
+            data = gProp_dd)
+gm3 <- lmer(asin(value) ~ year * co2 + value0 + (1|block) +  (1|ring) + (1|id), 
+            data = gProp_dd)
+ldply(list(gm1, gm2, gm3), r.squared)
 
- # remove one outlier
-rmv <- which(qqnorm(resid(gm1), plot.it = FALSE)$y == 
-               max(qqnorm(resid(gm1), plot.it = FALSE)$y))
-
-gm2 <- update(gm1, subset = -rmv)
-Anova(gm2)
 plot(gm2)
 qqnorm(resid(gm2))
 qqline(resid(gm2))
 AnvF_Grass <- Anova(gm2, test.statistic = "F")
 AnvF_Grass
 
+# . post-hoc test ---------------------------------------------------------
+
+plot(lmerTest::lsmeans(gm2))
+lsmeans::lsmeans(gm2, pairwise ~ co2 | year)
+
+
+# Forb --------------------------------------------------------------------
+
+
 ########
 # Forb #
 ########
-m1 <- glmer(Forbprop ~ year * co2 +  (1|block) +(1|ring) + (1|id), 
-            family = "binomial", data = PropDF, weight = Total)
-overdisp.glmer(m1)
-# overdispersed
-# add obs
-m2 <- update(m1, ~. + (1|obs))
-overdisp.glmer(m2)
-Anova(m2)
-# compare AIC
-ForbPropCompAIC <- CompAIC(m2)
-ForbPropCompAIC
-# year looks important
 
-# LMM
-bxplts(value = "Forbprop", xval = "co2", data = PropDF)
-bxplts(value = "Forbprop", xval = "ring", data = PropDF)
+forbProp_dd <- filter(PropDF_year0, variable == "Forbprop")
 
 par(mfrow = c(1, 3))
-boxplot(Forbprop ~ year:ring, data = PropDF, main = "raw")
-boxplot(asin(Forbprop) ~ year:ring, data = PropDF, main = "arcsin")
-boxplot(logit(Forbprop) ~ year:ring, data = PropDF, main = "logit")
-# try logit
-fm1 <- lmer(logit(Forbprop) ~ year * co2 + (1|block) +  (1|ring) + (1|id), data = PropDF)
-Anova(fm1)
-AnvF_forb <- Anova(fm1, test.statistic = "F")
+plot(value ~ value0, pch = 19, col = year, data = forbProp_dd)
+plot(asin(value) ~ value0,  pch = 19, col = year, data = forbProp_dd)
+plot(logit(value) ~ value0, pch = 19, col = year, data = forbProp_dd)
+
+fm1 <- lmer(value ~ year * co2 + value0 + (1|block) +  (1|ring) + (1|id), 
+            data = forbProp_dd)
+fm2 <- lmer(logit(value) ~ year * co2 + value0 + (1|block) +  (1|ring) + (1|id), 
+            data = forbProp_dd)
+fm3 <- lmer(asin(value) ~ year * co2 + value0 + (1|block) +  (1|ring) + (1|id), 
+            data = forbProp_dd)
+ldply(list(fm1, fm2, fm3), r.squared)
+
+Anova(fm2)
+AnvF_forb <- Anova(fm2, test.statistic = "F")
 AnvF_forb
 
 # model diagnosis
-plot(fm1)
-qqnorm(resid(fm1))
-qqline(resid(fm1))
+plot(fm2)
+qqnorm(resid(fm2))
+qqline(resid(fm2))
+
+
+# Summary -----------------------------------------------------------------
 
 ###########
 # Summary #
 ###########
-
-# Model comparison from GLMM
-SummaryCompAIC <- ldply(list(C3total = c3PropComAIC, 
-                             C4grass = C4grassCompAic, 
-                             Grass   = GrassPropCompAIC, 
-                             Forb    = ForbPropCompAIC),
-                        function(x) data.frame(x, terms = row.names(x)),
-                        .id = "variable")
-SummaryCompAIC
 
 # F from LMM
 SummaryAnvF_PFG <- ldply(list(Forb    = AnvF_forb,
@@ -285,37 +265,9 @@ PFGResAnvF <- within(PFGResAnvF, {
               Pr     <- round(Pr, 3)
             })
 PFGResAnvF$terms <- factor(PFGResAnvF$terms, 
-                           levels = c("co2", "year", "year:co2"))
+                           levels = c("value0", "co2", "year", "year:co2"))
 PFGResAnvF <- PFGResAnvF[order(PFGResAnvF$variable, PFGResAnvF$terms), ]
 write.csv(PFGResAnvF, "output/table/FACE_PFG_AnvF.csv", row.names = FALSE)
-
-format(SummaryAnvF_PFG, digit = 2, nsmall = 0)
-
-
-SumamryStat                   <- merge(SummaryCompAIC, 
-                                       SummaryAnvF_PFG, 
-                                       by  = c("variable", "terms"), 
-                                       all = TRUE)
-SumamryStat$terms             <- factor(SumamryStat$terms, 
-                                        levels = c("Full", "co2", "year", 
-                                                   "year:co2"))
-SumamryStat                   <- SumamryStat[order(SumamryStat$variable, 
-                                                   SumamryStat$terms), ]
-SumamryStat$Pr                <- round(SumamryStat$Pr..F., 3)
-SumamryStat_PvalAic           <- subset(SumamryStat, 
-                                        terms  != "Full", 
-                                        select = c("variable", "terms", "dAIC", 
-                                                   "Pr"))
-SumamryStat_PvalAic_mlt       <- melt(SumamryStat_PvalAic, 
-                                      id            = c("variable", "terms"), 
-                                      variable_name = "stats")
-SumamryStat_PvalAic_mlt$stats <- factor(SumamryStat_PvalAic_mlt$stats, 
-                                        levels = c("Pr", "dAIC"))
-PFG_Sumamry                   <- dcast(SumamryStat_PvalAic_mlt, 
-                                       variable ~ terms + stats)
-write.csv(PFG_Sumamry, 
-          file      = "output/table/FACE_PFG_Prop_LMMGlmm.csv", 
-          row.names = FALSE)
 
 ## ---- Stats_C3_TotalPropSmmry
 # The model
@@ -334,5 +286,3 @@ PropC3_Total_CntrstRes
 plot(rm2)
 qqnorm(resid(rm2))
 qqline(resid(rm2))
-
-
