@@ -23,13 +23,13 @@ veg <- within(VegRes16, {
   co2   <- factor(ifelse(ring %in% c(1, 4, 5), "elev", "amb"))
   id    <- ring:plot
   form  <- factor(ifelse(form %in% c("Tree", "Shrub"), "Wood",
-                        ifelse(form %in% c("Grass", "Sedge", "Rush"), "Grass",
-                               as.character(form)
-                               )
-                        )
-                  )
-  }
+                         ifelse(form %in% c("Grass", "Sedge", "Rush"), "Grass",
+                                as.character(form)
+                         )
   )
+  )
+}
+)
 
 # remove Euc seedlings as it's not reliable
 veg <- subsetD(veg, variable != "Euc.seedling")
