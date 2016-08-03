@@ -4,7 +4,7 @@ head(veg)
 C3grassC4 <- within(subsetD(veg, form %in% c("Sedge", "Grass") & PFG %in% c("c3", "c4")), {
   yval <- factor(ifelse(PFG == "c3", "p", "q"))  
 })
-C3totalC4 <- within(subsetD(veg, form != "moss"), {
+C3totalC4 <- within(subsetD(veg, !form %in% c("Moss", "Fern")), {
   yval <- factor(ifelse(PFG == "c3", "p", "q"))  
 })
 
