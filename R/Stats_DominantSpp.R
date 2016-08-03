@@ -9,9 +9,32 @@ SppPlotSum <- ddply(subset(veg, variable %in% DmSpp),
                     summarise, value = sum(value))
 SppPlotSum$obs <- with(SppPlotSum, year:id)
 
+# Move Year0 value to a new column to be used as covariate for the analysis
+
+  # year0
+  year0_dd <-SppPlotSum %>%
+    filter(year == "Year0") %>%
+    select(id, value, variable) %>%
+    rename(value0 = value)
+  
+  # subseqent years
+  subyear_dd <- filter(SppPlotSum, year != "Year0")
+  
+  # merge
+  SppPlotSum_year0 <- merge(subyear_dd, year0_dd, by = c("id", "variable")) 
+  
+  unique(SppPlotSum_year0$variable)
+  par(mfrow = c(2, 2), mar = c(5, 4, 2, 1))
+  d_ply(SppPlotSum_year0, .(variable),  function(x) 
+    plot(value ~ value0, pch = 19, col = year, data = x, 
+         main = unique(x$variable)))
+  
+# co2 effect (% change) ---------------------------------------------------
+
 #########################
 # co2 effect (% change) #
 #########################
+
 RingSumSpp <- ddply(veg, .(year, block, co2, variable), summarise, value = sum(value))
 RingSumSpp
 # there're lots of 0s which cause trboule with calculating ratios so add 1
@@ -57,236 +80,125 @@ RatioSE_domspp <- RatioSE_domspp[order(as.numeric(RatioSE_domspp$variable)), ]
 RatioSE_domspp_cst <- dcast(RatioSE_domspp, variable ~ year, value.var = "co2R")
 write.csv(RatioSE_domspp_cst, file = "output/table/CO2ResponseRatio_DominantSpp.csv", row.names = FALSE)
 
-#######
-# GLM #
-#######
 
-# Microlaena.stipoides----
+# Microlaena.stipoides ----------------------------------------------------
+
 DmSpp[[1]]
-msDF <- subset(SppPlotSum, variable == "Microlaena.stipoides")
+msDF <- subset(SppPlotSum_year0, variable == "Microlaena.stipoides")
 bxplts(value = "value", xval = "co2", data = msDF)
 bxplts(value = "value", xval = "ring", data = msDF)
 par(mfrow = c(1, 2))
 boxplot(value ~ year:ring, data = msDF, main = "raw")
 boxplot(logit(value) ~ year:ring, data = msDF, main = "logit")
+plot(value ~ value0, data = msDF, pch = 19, col = year)
+plot(sqrt(value) ~ value0, data = msDF, pch = 19, col = year)
+plot(sqrt(value) ~ sqrt(value0), data = msDF, pch = 19, col = year)
 
+msDF$sqrt_value0 <- sqrt(msDF$value0)
+m2lmr <- lmer(value ~ year * co2 + value0 + 
+                (1|block) + (1|ring)  + (1|id), data = msDF)
+m3lmr <- lmer(sqrt(value) ~ year * co2 + value0 + 
+                (1|block) + (1|ring)  + (1|id), data = msDF)
+m4lmr <- lmer(sqrt(value) ~ year * co2 + sqrt_value0 + 
+                (1|block) + (1|ring)  + (1|id), data = msDF)
+ldply(list(m2lmr, m3lmr, m4lmr), r.squared)
+AICc(m2lmr, m3lmr, m4lmr)
 
-m1 <- glmer(value ~ year * co2 + (1|block) + (1|ring)  + (1|id), 
-            family = poisson, data = msDF)
-m2 <- glmer(value ~ year * co2 + (1|block) + (1|ring)  + (1|id), 
-            family = poisson(link = sqrt), data = msDF)
-m3 <- glmer(value ~ year * co2 + (1|block) + (1|ring)  + (1|id), 
-            family = poisson(link = power(1/3)), data = msDF)
-l_ply(list(m1, m2, m3), overdisp.glmer)
-
-# m2
-Anova(m2)
-plot(m2)
-qqnorm(resid(m2))
-qqline(resid(m2))
-
-# compare AIC
-CompAIC_ms <- CompAIC(m2)
-CompAIC_ms
-
-# LMM
-m2lmr <- lmer(sqrt(value + 1) ~ year * co2 + (1|block) + (1|ring)  + (1|id), data = msDF)
-m3lmr <- lmer(logit(value) ~ year * co2 + (1|block) + (1|ring)  + (1|id), data = msDF)
-plot(m2lmr)
-plot(m3lmr)
-qqnorm(resid(m2lmr))
-qqline(resid(m2lmr))
-qqnorm(resid(m3lmr))
-qqline(resid(m3lmr))
-AnvF_ms <- Anova(m2lmr, test.statistic = "F")
+plot(m4lmr)
+qqnorm(resid(m4lmr))
+qqline(resid(m4lmr))
+AnvF_ms <- Anova(m4lmr, test.statistic = "F")
 AnvF_ms
 
-# Pratia.purpurascens----
+
+# Pratia.purpurascens -----------------------------------------------------
+
 DmSpp[[2]]
-ppDF <- subset(SppPlotSum, variable == "Pratia.purpurascens")
+ppDF <- subset(SppPlotSum_year0, variable == "Pratia.purpurascens")
 bxplts(value = "value", xval = "co2", ofst = 1, data = ppDF)
+par(mfrow = c(2, 2))
+plot(value ~ value0, pch = 19, col = year, data = ppDF)
+plot(sqrt(value) ~ value0, pch = 19, col = year, data = ppDF)
+plot(sqrt(value) ~ sqrt(value0), pch = 19, col = year, data = ppDF)
 
-m1 <- glmer(value ~ year * co2 + (1|block) + (1|ring)  + (1|id), 
-            family = poisson, data = ppDF)
-m2 <- glmer(value ~ year * co2 + (1|block) + (1|ring)  + (1|id), 
-            family = poisson(link = sqrt), data = ppDF)
-m3 <- glmer(value ~ year * co2 + (1|block) + (1|ring)  + (1|id), 
-            family = poisson(link = power(1/3)), data = ppDF)
-l_ply(list(m1, m2, m3), overdisp.glmer)
-# overdispersed, include obs
+ppDF$sqrt_value0 <- sqrt(ppDF$value0)
 
-m4 <- glmer(value ~ year * co2 + (1|block) + (1|ring)  + (1|id) + (1|obs), 
-            family = poisson, data = ppDF)
-m5 <- glmer(value ~ year * co2 + (1|block) + (1|ring)  + (1|id)+ (1|obs), 
-            family = poisson(link = sqrt), data = ppDF)
-m6 <- glmer(value ~ year * co2 + (1|block) + (1|ring)  + (1|id)+ (1|obs), 
-            family = poisson(link = power(1/3)), data = ppDF)
-l_ply(list(m4, m5, m6), overdisp.glmer)
-# use m5
+m5lm <- lmer(value ~ year * co2 + value0 + (1|block) + (1|ring)  + (1|id), 
+             data = ppDF)
+m6lm <- lmer(sqrt(value) ~ year * co2 + value0 + (1|block) + (1|ring)  + (1|id), 
+             data = ppDF)
+m7lm <- lmer(sqrt(value) ~ year * co2 + sqrt_value0 + (1|block) + (1|ring)  + (1|id), 
+             data = ppDF)
+ldply(list(m5lm, m6lm, m7lm), r.squared)
+AICc(m5lm, m6lm, m7lm)
 
-Anova(m5)
-plot(m5)
-qqnorm(resid(m5))
-qqline(resid(m5))
+AnvF_pp <- Anova(m7lm, test.statistic = "F")
+AnvF_pp 
+plot(m7lm)
+qqnorm(resid(m7lm))
+qqline(resid(m7lm))
 
-# compare AIC
-CompAIC_pp <- CompAIC(m5)
-CompAIC_pp
 
-# indication of co2 and year effect
-m5lm <- lmer(sqrt(value + 1) ~ year * co2 + (1|block) + (1|ring)  + (1|id), data = ppDF)
-AnvF_pp <- Anova(m5lm, test.statistic = "F")
-AnvF_pp # probably year but not co2
-plot(m5lm)
-qqnorm(resid(m5lm))
-qqline(resid(m5lm))
+# Cynodon.dactylon --------------------------------------------------------
 
-#Cynodon.dactylon----
 DmSpp[[3]]
-cdDF <- subsetD(SppPlotSum, variable == "Cynodon.dactylon")
+cdDF <- subsetD(SppPlotSum_year0, variable == "Cynodon.dactylon")
 bxplts(value = "value", xval = "co2", ofst = 1, data = cdDF)
+par(mfrow = c(2, 2))
+plot(value ~ value0, pch = 19, col = year, data = cdDF)
+plot(sqrt(value) ~ value0, pch = 19, col = year, data = cdDF)
+plot(sqrt(value) ~ sqrt(value0), pch = 19, col = year, data = cdDF)
 
-m1 <- glmer(value ~ year * co2 + (1|block) + (1|ring)  + (1|id), 
-            family = poisson, data = cdDF)
-m2 <- glmer(value ~ year * co2 + (1|block) + (1|ring)  + (1|id), 
-            family = poisson(link = sqrt), data = cdDF)
-m3 <- glmer(value ~ year * co2 + (1|block) + (1|ring)  + (1|id), 
-            family = poisson(link = power(1/3)), data = cdDF)
-l_ply(list(m1, m2, m3), overdisp.glmer)
-# overdispersed
-mls <- llply(list(m1, m2, m3), function(x) update(x, ~ . + (1|obs)))
-l_ply(mls, overdisp.glmer)
-# use the 2nd one
-m2 <- mls[[2]]
-Anova(m2)
-plot(m2)
-qqnorm(resid(m2))
-qqline(resid(m2))
-# compare AIC
-CompAIC_cd <- CompAIC(m2)
-CompAIC_cd
+cdDF$sqrt_valu0 <- sqrt(cdDF$value0)
+m2lmr <- lmer(value ~ year * co2 + value0 + 
+                (1|block) + (1|ring)  + (1|id), data = cdDF)
+m3lmr <- lmer(sqrt(value) ~ year * co2 + value0 + 
+                (1|block) + (1|ring)  + (1|id), data = cdDF)
+m4lmr <- lmer(sqrt(value) ~ year * co2 + sqrt_valu0 + 
+                (1|block) + (1|ring)  + (1|id), data = cdDF)
+ldply(list(m2lmr, m3lmr, m4lmr), r.squared)
+AICc(m2lmr, m3lmr, m4lmr)
 
-# co2 x time interaction
-m2lmr <- lmer(sqrt(value + 1) ~ year * co2 + (1|block) + (1|ring)  + (1|id), data = cdDF)
-plot(m2lmr)
-qqnorm(resid(m2lmr))
-qqline(resid(m2lmr))
+plot(m4lmr)
+qqnorm(resid(m4lmr))
+qqline(resid(m4lmr))
 
-AnvF_cd <- Anova(m2lmr, test.statistic = "F")
+AnvF_cd <- Anova(m3lmr, test.statistic = "F")
 AnvF_cd
 
-#Commelina.cyanea----
+# . post-hoc test ---------------------------------------------------------
+
+plot(lmerTest::lsmeans(m4lmr))
+lsmeans::lsmeans(m4lmr, pairwise ~ co2 | year)
+
+
+# Commelina.cyanea --------------------------------------------------------
 DmSpp[4]
-ccDF <- subsetD(SppPlotSum, variable == "Commelina.cyanea")
+ccDF <- subsetD(SppPlotSum_year0, variable == "Commelina.cyanea")
 bxplts(value = "value", xval = "co2", ofst = 1, data = ccDF)
+par(mfrow = c(2, 2))
+plot(value ~ value0, pch = 19, col = year, data = ccDF)
+plot(sqrt(value) ~ value0, pch = 19, col = year, data = ccDF)
+plot(sqrt(value) ~ sqrt(value0), pch = 19, col = year, data = ccDF)
 
-m1 <- glmer(value ~ year * co2 + (1|block) + (1|ring)  + (1|id), 
-            family = poisson, data = ccDF)
-m2 <- glmer(value ~ year * co2 + (1|block) + (1|ring)  + (1|id), 
-            family = poisson(link = sqrt), data = ccDF)
-m3 <- glmer(value ~ year * co2 + (1|block) + (1|ring)  + (1|id), 
-            family = poisson(link = power(1/3)), data = ccDF)
-l_ply(list(m1, m2), overdisp.glmer)
-# log is better, but overdispersed
-mls <- llply(list(m1, m2), function(x) update(x, ~. + (1|obs), 
-                                              control = glmerControl(optimizer = "bobyqa")))
-l_ply(mls, overdisp.glmer)
-# use the 2nd model
-m4 <- mls[[2]]
-Anova(m4)
-plot(m4)
-qqnorm(resid(m4))
-qqline(resid(m4))
-# compare AIC
-CompAIC_cc <- CompAIC(m4)
-CompAIC_cc
+ccDF$sqrt_value0 <- sqrt(ccDF$value0)
+m5lmer <- lmer(value ~ year * co2 + value0 + 
+                 (1|block) + (1|ring)  + (1|id), data = ccDF)
+m6lmer <- lmer(sqrt(value) ~ year * co2 + value0 + 
+                 (1|block) + (1|ring)  + (1|id), data = ccDF)
+m7lmer <- lmer(sqrt(value) ~ year * co2 + sqrt_value0 + 
+                 (1|block) + (1|ring)  + (1|id), data = ccDF)
+ldply(list(m5lmer, m6lmer, m7lmer), r.squared)
+AICc(m5lmer, m6lmer, m7lmer)
 
-# indication of massive year effect
-m4lmer <- lmer(sqrt(value + 1) ~ year * co2 + (1|block) + (1|ring)  + (1|id), data = ccDF)
-plot(m4lmer)
-qqnorm(resid(m4lmer))
-qqline(resid(m4lmer))
-AnvF_cc <- Anova(m4lmer, test.statistic = "F")
+plot(m7lmer)
+qqnorm(resid(m7lmer))
+qqline(resid(m7lmer))
+AnvF_cc <- Anova(m7lmer, test.statistic = "F")
 AnvF_cc
 
-#Hydrocotyle.peduncularis----
-DmSpp[5]
-hpDF <- subsetD(SppPlotSum, variable == "Hydrocotyle.peduncularis")
-bxplts(value = "value", xval = "co2", ofst = 1, data = hpDF)
 
-m1 <- glmer(value ~ year * co2 + (1|block) + (1|ring)  + (1|id), 
-            family = poisson, data = hpDF)
-m2 <- glmer(value ~ year * co2 + (1|block) + (1|ring)  + (1|id), 
-            family = poisson(link = sqrt), data = hpDF)
-m3 <- glmer(value ~ year * co2 + (1|block) + (1|ring)  + (1|id) + (1|obs), 
-            family = poisson(link = power(1/3)), data = hpDF)
-# convergent problem in m1 and m3
-l_ply(list(m1, m2, m3), overdisp.glmer)
-
-# slightly overdespersed. m3 is probably not reliable
-m4 <- glmer(value ~ year * co2 + (1|block) + (1|ring)  + (1|id) + (1|obs), 
-            family = poisson, data = hpDF)
-m5 <- glmer(value ~ year * co2 + (1|block) + (1|ring)  + (1|id) + (1|obs), 
-            family = poisson(link = sqrt), data = hpDF)
-m6 <- glmer(value ~ year * co2 + (1|block) + (1|ring)  + (1|id) + (1|obs), 
-            family = poisson(link = power(1/3)), data = hpDF)
-l_ply(list(m4, m5, m6), overdisp.glmer)
-# use m5
-Anova(m5)
-plot(m5)
-qqnorm(resid(m5))
-qqline(resid(m5))
-# compare AIC
-CompAIC_hp <- CompAIC(m5)
-CompAIC_hp
-
-# LMM
-m5lmr <- lmer(sqrt(value + 1) ~ year * co2 + (1|block) + (1|ring)  + (1|id), data = hpDF)
-plot(m5lmr)
-qqnorm(resid(m5lmr))
-qqline(resid(m5lmr))
-AnvF_hp <- Anova(m5lmr, test.statistic = "F")
-AnvF_hp
-
-#HGlycine.sp----
-DmSpp[6]
-gsDF <- subsetD(SppPlotSum, variable == "Glycine.sp")
-bxplts(value = "value", xval = "co2", ofst = 1, data = gsDF)
-bxplts(value = "value", xval = "ring", ofst = 1, data = gsDF)
-
-m1 <- glmer(value ~ year * co2 + (1|block) + (1|ring)  + (1|id), 
-            family = poisson, data = gsDF)
-m2 <- glmer(value ~ year * co2 + (1|block) + (1|ring)  + (1|id), 
-            family = poisson(link = sqrt), data = gsDF)
-m3 <- glmer(value ~ year * co2 + (1|block) + (1|ring)  + (1|id) + (1|obs), 
-            family = poisson(link = power(1/3)), data = gsDF)
-# convergent problem in m1 and m3
-l_ply(list(m1, m2, m3), overdisp.glmer)
-
-# slightly overdespersed. m3 is probably not reliable
-m4 <- glmer(value ~ year * co2 + (1|block) + (1|ring)  + (1|id) + (1|obs), 
-            family = poisson, data = gsDF)
-m5 <- glmer(value ~ year * co2 + (1|block) + (1|ring)  + (1|id) + (1|obs), 
-            family = poisson(link = sqrt), data = gsDF)
-m6 <- glmer(value ~ year * co2 + (1|block) + (1|ring)  + (1|id) + (1|obs), 
-            family = poisson(link = power(1/3)), data = gsDF)
-l_ply(list(m4, m5, m6), overdisp.glmer)
-# use m5
-Anova(m5)
-plot(m5)
-qqnorm(resid(m5))
-qqline(resid(m5))
-# compare AIC
-CompAIC_gs <- CompAIC(m5)
-CompAIC_gs
-
-# LMM
-m1gs <- lmer(sqrt(value + 1) ~ year * co2 + (1|block) + (1|ring)  + (1|id), data = gsDF)
-plot(m1gs)
-qqnorm(resid(m1gs))
-qqline(resid(m1gs))
-AnvF_gs <- Anova(m1gs, test.statistic = "F")
-AnvF_gs
+# Summary -----------------------------------------------------------------
 
 ###########
 # Summary #
@@ -299,7 +211,6 @@ AbrSpp <- ldply(a,
                 function(x) paste(tolower(substring(x, 1, 1)), collapse = ""), 
                 .id = "variable")
 AbrSpp$AmvF <- as.character(paste0("AnvF_", AbrSpp$V1)) # Anova results
-AbrSpp$CmpAic <- as.character(paste0("CompAIC_", AbrSpp$V1)) # AIC results
 
 # combine all results
 
@@ -316,19 +227,6 @@ DomSppAnvF <- ddply(AbrSpp, .(variable), function(x) {
   return(d)
   })
 
-# Coimpare AIC
-DomSppCompAic <- ddply(AbrSpp, .(variable), function(x) {
-  d       <- get(x$CmpAic)
-  d$terms <- row.names(d)
-  return(d)
-})
-
-# merge and organise
-DomSppSummary       <- merge(DomSppAnvF, 
-                             DomSppCompAic, 
-                             by = c("variable", "terms"), 
-                             all = TRUE)
-DomSppSummary$terms <- factor(DomSppSummary$terms, 
-                              levels = c("Full", "co2", "year", "year:co2"))
-DomSppSummary       <- DomSppSummary[order(DomSppSummary$variable, DomSppSummary$terms), ]
-write.csv(DomSppSummary, file = "output/table/DominantSpp_Stats.csv", row.names = FALSE)
+# organise
+DomSppAnvF <- arrange(DomSppAnvF, variable, terms) 
+write.csv(DomSppAnvF, file = "output/table/DominantSpp_Stats.csv", row.names = FALSE)
