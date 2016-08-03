@@ -69,17 +69,17 @@ m1 <- glmer(ratios ~ year*co2 + ratios0 + (1|block) + (1|ring)  + (1|id),
 
 # . LMM -------------------------------------------------------------------
 
-m3 <- lmer(logit(ratios) ~ year*co2 + ratios0 + (1|block) + (1|ring)  + (1|id), data = c3gc4DF)
-plot(m3)
-qqnorm(resid(m3))
-qqline(resid(m3))
+gc34m1 <- lmer(logit(ratios) ~ year*co2 + ratios0 + (1|block) + (1|ring)  + (1|id), data = c3gc4DF)
+plot(gc34m1)
+qqnorm(resid(gc34m1))
+qqline(resid(gc34m1))
 
-AnvF_c3gc4 <- Anova(m3, test.statistic = "F")
+AnvF_c3gc4 <- Anova(gc34m1, test.statistic = "F")
 AnvF_c3gc4
 
 # . post-hoc test ---------------------------------------------------------
-plot(lmerTest::lsmeans(m3))
-lsmeans::lsmeans(m3, pairwise ~ co2 | year)
+plot(lmerTest::lsmeans(gc34m1))
+lsmeans::lsmeans(gc34m1, pairwise ~ co2 | year)
 
 
 # C3 total:C4 -------------------------------------------------------------
@@ -125,31 +125,6 @@ AnvF_c3totalc4
 names(PfgRDF_year0)[3]
 legumeRDF <- PfgRDF_year0[[3]]
 
-
-# . GLM -------------------------------------------------------------------
-
-m1 <- glmer(ratios ~ year*co2 + ratios0 + (1|block) + (1|ring)  + (1|id), 
-            family = "binomial", weights = Total, data = legumeRDF)
-summary(m1)
-overdisp.glmer(m1)
-# overdispersed
-m2 <- update(m1, ~ . + (1|obs))
-
-# convergence error. so try different optimizer
-m1.1 <- glmer(ratios ~ year*co2 + ratios0 + (1|block) + (1|ring)  + (1|id), 
-              family = "binomial", weights = Total, data = legumeRDF, 
-              control = glmerControl(optimizer = "bobyqa"))
-overdisp.glmer(m1.1)
-# overdispersed
-m2 <- update(m1.1, ~ . + (1|obs))
-Anova(m2)
-plot(m2)
-qqnorm(resid(m2))
-qqline(resid(m2))
-legumeR_CompAic <- CompAIC(m2)
-legumeR_CompAic
-
-
 # . LMM -------------------------------------------------------------------
 
 par(mfrow = c(2, 2))
@@ -157,14 +132,19 @@ boxplot(logit(ratios) ~ year:co2, data = legumeRDF, main = "logit")
 boxplot(logit(ratios) ~ year:ring, data = legumeRDF, main = "logit")
 plot(logit(ratios) ~ ratios0, data = legumeRDF, pch = 19, col = year)
 
-m3 <- lmer(logit(ratios) ~ year*co2 + ratios0 + (1|block) + (1|ring)  + (1|id), 
-           data = legumeRDF)
-plot(m3)
-qqnorm(resid(m3))
-qqline(resid(m3))
-AnvF_legumeR <- Anova(m3, test.statistic = "F")
-AnvF_legumeR
+leg_nleg_m1 <- lmer(ratios ~ year*co2 + ratios0 + (1|block) + (1|ring)  + (1|id), 
+                    data = legumeRDF)
+leg_nleg_m2 <- lmer(logit(ratios) ~ year*co2 + ratios0 + (1|block) + (1|ring)  + (1|id), 
+                    data = legumeRDF)
+leg_nleg_m3 <- lmer(asin(ratios) ~ year*co2 + ratios0 + (1|block) + (1|ring)  + (1|id), 
+                    data = legumeRDF)
+ldply(list(leg_nleg_m1, leg_nleg_m2, leg_nleg_m3), r.squared)
 
+plot(leg_nleg_m2)
+qqnorm(resid(leg_nleg_m2))
+qqline(resid(leg_nleg_m2))
+AnvF_legumeR <- Anova(leg_nleg_m2, test.statistic = "F")
+AnvF_legumeR
 
 # Native:introduced -------------------------------------------------------
 
@@ -221,6 +201,9 @@ lsmeans::lsmeans(m3, pairwise ~ co2 | year)
 # Summary #
 ###########
 
+
+# . Anova results ---------------------------------------------------------
+
 # F from LMM
 SummaryAnvF_PFG <- ldply(list(c3gc4     = AnvF_c3gc4, 
                               c3totalc4 = AnvF_c3totalc4,
@@ -240,6 +223,34 @@ SummaryAnvF_PFG$terms <- factor(SummaryAnvF_PFG$terms,
 
 write.csv(SummaryAnvF_PFG, file = "output/table/FACE_EachPFG_Prop_AnvovaF.csv", 
           row.names = FALSE)
+
+
+# . summary fig -----------------------------------------------------------
+pop_models <- list(C3_vs_C4 = gc34m1, 
+                   Legume_vs_Non_legume  = leg_nleg_m2)
+
+CI_dd <- ldply(pop_models, function(x) 
+  summary(lsmeans::lsmeans(x, pairwise ~ co2 | year, type = "response")$lsmeans),
+  .id = "variable")
+
+p <- ggplot(CI_dd, aes(x = as.numeric(year), y = response, 
+                       col = co2, group = co2))
+p2 <- p +
+  geom_point(position = position_dodge(.3)) +
+  geom_errorbar(aes(ymin = lower.CL, ymax = upper.CL), width = 0, 
+                position = position_dodge(.3)) +
+  geom_line(position = position_dodge(.3)) + 
+  scale_color_manual(values = c("blue", "red")) +
+  science_theme +
+  theme(legend.position = c(.9, .9)) +
+  scale_x_continuous(breaks = 1:3, labels = 1:3) +
+  labs(x = "Year", y = "Proportion (adjusted by Year0 value)") +
+  facet_wrap(~ variable)
+p2
+ggsavePP(filename = "output/figs/Specific_PFG_proportion_95CI",
+         width = 4, height = 3,
+         plot = p2)
+
 
 
 # CO2 response ratios -----------------------------------------------------

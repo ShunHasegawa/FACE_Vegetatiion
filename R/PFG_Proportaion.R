@@ -85,13 +85,17 @@ write.csv(RatioSE_cst,
 PropDF <- ddply(veg, .(year, co2, block, ring, plot, id), function(x){
   Total     = sum(x$value)
   C3prop    = 1-sum(x$value[x$PFG %in% c("c4", "moss", "fern")])/Total
+  C3grass   = sum(x$value[x$form == "Grass" & x$PFG == "c3"])/Total
   C4grass   = sum(x$value[x$PFG == "c4"])/Total
   Forbprop  = sum(x$value[x$form == "Forb"])/Total
+  Legume    = sum(x$value[x$PFG == "legume"])/Total
+  Non_leg   = sum(x$value[x$PFG == "Non_legume"])/Total
   Grassprop = sum(x$value[x$form %in% c("Grass", "Sedge")])/Total
   Woodprop  = sum(x$value[x$form %in% "Wood"])/Total
   Mossprop  = sum(x$value[x$form == "Moss"])/Total
-  data.frame(Total, C3prop, C4grass, Forbprop, Grassprop, Woodprop, Mossprop)
-  })
+  data.frame(Total, C3prop, C3grass, C4grass, Forbprop, Legume, Non_leg, 
+             Grassprop, Woodprop, Mossprop)
+})
 
 # Move Year0 value to a new column to be used as covariate in the analyssis
 # below
@@ -112,13 +116,14 @@ PropDF <- ddply(veg, .(year, co2, block, ring, plot, id), function(x){
   PropDF_year0$obs <- 1:nrow(PropDF_year0) 
 
   unique(PropDF_year0$variable)
-  par(mfrow = c(2, 3), mar = c(5, 4, 2, 1))
+  par(mfrow = c(3, 3), mar = c(2, 4, 2, 0.5), cex = .5)
   d_ply(PropDF_year0, .(variable), function(x) {
-    plot(logit(value) ~ value0, pch = 19, col = year, data = x, main = unique(x$variable))
+    plot(value ~ value0, pch = 19, col = year, data = x, 
+         main = unique(x$variable))
     })
 
 
-# C3 proportion in the whole community ------------------------------------
+# C3 proportion -------------------------------------------------------
 
 ########################################
 # C3 proportion in the whole community #
@@ -147,12 +152,38 @@ qqline(resid(rm1))
 AnvF_PropC3_total <- Anova(rm1, test.statistic = "F")
 AnvF_PropC3_total
 
+# C3 grass proportion -----------------------------------------------------
+#######################
+# C3 grass proportion #
+#######################
 
-# C4 grass ----------------------------------------------------------------
+c3gprop_dd <- filter(PropDF_year0, variable == "C3grass")
+par(mfrow = c(1, 3))
+plot(value ~ value0, data = c3gprop_dd, pch = 19, col = year)
+plot(asin(value) ~ value0, data = c3gprop_dd, pch = 19, col = year)
+plot(logit(value) ~ value0, data = c3gprop_dd, pch = 19, col = year)
 
-############
-# C4 grass #
-############
+c3gm1 <- lmer(value ~ year * co2 + value0 + 
+                (1|block) +(1|ring) + (1|id), data = c3gprop_dd)
+c3gm2 <- lmer(logit(value) ~ year * co2 + value0 + 
+                (1|block) +(1|ring) + (1|id), data = c3gprop_dd)
+c3gm3 <- lmer(asin(value) ~ year * co2 + value0 + 
+                (1|block) +(1|ring) + (1|id), data = c3gprop_dd)
+ldply(list(c3gm1, c3gm2, c3gm3), r.squared)
+
+plot(c3gm3)
+qqnorm(resid(c3gm3))
+qqline(resid(c3gm3))
+
+AnvF_C3grass <- Anova(c3gm3, test.statistic = "F")
+AnvF_C3grass
+
+# C4 grass proportion ----------------------------------------------------------
+
+#################
+# C4 proportion #
+#################
+
 c4gprop_dd <- filter(PropDF_year0, variable == "C4grass")
 
 par(mfrow = c(2, 2))
@@ -178,11 +209,12 @@ plot(lmerTest::lsmeans(m3Lmer))
 lsmeans::lsmeans(m3Lmer, pairwise ~ co2 | year)
 
 
-# Grass + Sedge + rush ----------------------------------------------------
+# Grass proportion -------------------------------------------------------
 
 ########################
 # Grass + Sedge + rush #
 ########################
+
 gProp_dd <- filter(PropDF_year0, variable == "Grassprop")
 
 par(mfrow = c(1, 3))
@@ -209,9 +241,7 @@ AnvF_Grass
 plot(lmerTest::lsmeans(gm2))
 lsmeans::lsmeans(gm2, pairwise ~ co2 | year)
 
-
 # Forb --------------------------------------------------------------------
-
 
 ########
 # Forb #
@@ -242,6 +272,53 @@ qqnorm(resid(fm2))
 qqline(resid(fm2))
 
 
+# . Legume proportion -----------------------------------------------------
+legProp_dd <- filter(PropDF_year0, variable == "Legume")
+
+par(mfrow = c(1, 3), cex = .8)
+plot(value ~ value0, pch = 19, col = year, data = legProp_dd)
+plot(asin(value) ~ value0,  pch = 19, col = year, data = legProp_dd)
+plot(logit(value) ~ value0, pch = 19, col = year, data = legProp_dd)
+
+lpm1 <-  lmer(value ~ year * co2 + value0 + (1|block) +  (1|ring) + (1|id), 
+              data = legProp_dd)
+lpm2 <-  lmer(logit(value) ~ year * co2 + value0 + (1|block) +  (1|ring) + (1|id), 
+              data = legProp_dd)
+lpm3 <-  lmer(asin(value) ~ year * co2 + value0 + (1|block) +  (1|ring) + (1|id), 
+              data = legProp_dd)
+ldply(list(lpm1, lpm2, lpm3), r.squared)
+
+plot(lpm2)
+qqnorm(resid(lpm2))
+qqline(resid(lpm2))
+
+AnvF_legume <- Anova(lpm2, test.statistic = "F")
+AnvF_legume
+
+# . Non_legume proportion -----------------------------------------------------
+nonlegProp_dd <- filter(PropDF_year0, variable == "Non_leg")
+
+par(mfrow = c(1, 3), cex = .8, mar = c(4, 4, 1, .5))
+plot(value ~ value0, pch = 19, col = year, data = nonlegProp_dd)
+plot(asin(value) ~ value0,  pch = 19, col = year, data = nonlegProp_dd)
+plot(logit(value) ~ value0, pch = 19, col = year, data = nonlegProp_dd)
+
+nlpm1 <-  lmer(value ~ year * co2 + value0 + (1|block) +  (1|ring) + (1|id), 
+               data = nonlegProp_dd)
+nlpm2 <-  lmer(logit(value) ~ year * co2 + value0 + (1|block) +  (1|ring) + (1|id), 
+               data = nonlegProp_dd)
+nlpm3 <-  lmer(asin(value) ~ year * co2 + value0 + (1|block) +  (1|ring) + (1|id), 
+               data = nonlegProp_dd)
+ldply(list(nlpm1, nlpm2, nlpm3), r.squared)
+
+plot(nlpm1)
+qqnorm(resid(nlpm1))
+qqline(resid(nlpm1))
+
+AnvF_nonlegume <- Anova(nlpm1, test.statistic = "F")
+AnvF_nonlegume
+
+
 # Summary -----------------------------------------------------------------
 
 ###########
@@ -249,10 +326,13 @@ qqline(resid(fm2))
 ###########
 
 # F from LMM
-SummaryAnvF_PFG <- ldply(list(Forb    = AnvF_forb,
-                              Grass   = AnvF_Grass, 
-                              C3total = AnvF_PropC3_total, 
-                              C4grass = AnvF_C4grass), 
+SummaryAnvF_PFG <- ldply(list(Forb       = AnvF_forb,
+                              Legume     = AnvF_legume,
+                              Non_legume = AnvF_nonlegume,
+                              Grass      = AnvF_Grass, 
+                              C3total    = AnvF_PropC3_total, 
+                              C3grass    = AnvF_C3grass, 
+                              C4grass    = AnvF_C4grass), 
                          function(x) data.frame(x, terms = row.names(x)), 
                          .id = "variable")
 
@@ -269,20 +349,38 @@ PFGResAnvF$terms <- factor(PFGResAnvF$terms,
 PFGResAnvF <- PFGResAnvF[order(PFGResAnvF$variable, PFGResAnvF$terms), ]
 write.csv(PFGResAnvF, "output/table/FACE_PFG_AnvF.csv", row.names = FALSE)
 
-## ---- Stats_C3_TotalPropSmmry
-# The model
-rm2@call
+# summary fig with 95% CI
+models <- list(Forb = fm2, 
+               Legume = lpm2,
+               Non_legume = nlpm1,
+               Grass = gm2,
+               C3_grass = c3gm3,
+               C4_grass = m3Lmer)
 
-# Chisq
-Anova(rm2)
+sapply(models, function(x) x@call$data)
 
-# F test
-AnvF_PropC3_total
+CI_dd <- ldply(models, function(x) 
+  summary(lsmeans::lsmeans(x, pairwise ~ co2 | year, type = "response")$lsmeans),
+  .id = "variable")
 
-# Contrast
-PropC3_Total_CntrstRes
+CI_dd <- CI_dd %>% 
+  mutate(value = ifelse(is.na(response), lsmean, response)) %>% 
+  select(-response, -lsmean)
 
-# Model diagnosis
-plot(rm2)
-qqnorm(resid(rm2))
-qqline(resid(rm2))
+
+p <- ggplot(CI_dd, aes(x = as.numeric(year), y = value, col = co2, group = co2))
+p2 <- p +
+  geom_point(position = position_dodge(.3)) +
+  geom_errorbar(aes(ymin = lower.CL, ymax = upper.CL), width = 0, 
+                position = position_dodge(.3)) +
+  geom_line(position = position_dodge(.3)) + 
+  scale_color_manual(values = c("blue", "red")) +
+  science_theme +
+  theme(legend.position = c(.55, .9)) +
+  scale_x_continuous(breaks = 1:3, labels = 1:3) +
+  labs(x = "Year", y = "Proportion (adjusted by Year0 value)") +
+  facet_wrap(~ variable)
+p2
+ggsavePP(filename = "output/figs/PFG_proportion_95CI",
+         width = 6, height = 4,
+         plot = p2)
