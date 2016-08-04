@@ -180,12 +180,12 @@ boxplot(logit(ratios) ~ year:ring, data = NativeRDF, main = "logit")
 plot(logit(ratios) ~ ratios0, pch = 19, col = year, data = NativeRDF)
 
 
-m3 <- lmer(logit(ratios) ~ year * co2 + ratios0 + (1|block) + (1|ring) + (1|id), 
-           data = NativeRDF)
-plot(m3)
-qqnorm(resid(m3))
-qqline(resid(m3))
-AnvF_NativeR <- Anova(m3, test.statistic = "F")
+nat_m1 <- lmer(logit(ratios) ~ year * co2 + ratios0 + (1|block) + (1|ring) + (1|id), 
+               data = NativeRDF)
+plot(nat_m1)
+qqnorm(resid(nat_m1))
+qqline(resid(nat_m1))
+AnvF_NativeR <- Anova(nat_m1, test.statistic = "F")
 AnvF_NativeR
 
 
@@ -227,7 +227,8 @@ write.csv(SummaryAnvF_PFG, file = "output/table/FACE_EachPFG_Prop_AnvovaF.csv",
 
 # . summary fig -----------------------------------------------------------
 pop_models <- list(C3_vs_C4 = gc34m1, 
-                   Legume_vs_Non_legume  = leg_nleg_m2)
+                   Legume_vs_Non_legume  = leg_nleg_m2,
+                   Native_vs_Introduced = nat_m1)
 
 CI_dd <- ldply(pop_models, function(x) 
   summary(lsmeans::lsmeans(x, pairwise ~ co2 | year, type = "response")$lsmeans),
@@ -242,13 +243,13 @@ p2 <- p +
   geom_line(position = position_dodge(.3)) + 
   scale_color_manual(values = c("blue", "red")) +
   science_theme +
-  theme(legend.position = c(.9, .9)) +
+  theme(legend.position = c(.9, .1)) +
   scale_x_continuous(breaks = 1:3, labels = 1:3) +
   labs(x = "Year", y = "Proportion (adjusted by Year0 value)") +
   facet_wrap(~ variable)
 p2
 ggsavePP(filename = "output/figs/Specific_PFG_proportion_95CI",
-         width = 4, height = 3,
+         width = 6, height = 3,
          plot = p2)
 
 

@@ -367,20 +367,70 @@ CI_dd <- CI_dd %>%
   mutate(value = ifelse(is.na(response), lsmean, response)) %>% 
   select(-response, -lsmean)
 
+CI_grass <- filter(CI_dd, variable %in% c("Grass", "C3_grass", "C4_grass"))
+CI_forb <- filter(CI_dd, !variable %in% c("Grass", "C3_grass", "C4_grass"))
 
-p <- ggplot(CI_dd, aes(x = as.numeric(year), y = value, col = co2, group = co2))
+p <- ggplot(CI_grass, aes(x = as.numeric(year), y = value, fill = co2, 
+                          shape = variable, group = co2:variable, 
+                          linetype = co2))
+
 p2 <- p +
-  geom_point(position = position_dodge(.3)) +
   geom_errorbar(aes(ymin = lower.CL, ymax = upper.CL), width = 0, 
-                position = position_dodge(.3)) +
-  geom_line(position = position_dodge(.3)) + 
-  scale_color_manual(values = c("blue", "red")) +
+                position = position_dodge(.1), linetype = "solid") +
+  geom_line(position = position_dodge(.1)) + 
+  geom_point(position = position_dodge(.1)) +
+  scale_shape_manual(values = c(21:23)) +
+  scale_linetype_manual(values = c("solid", "dashed"),
+                        labels = c("Ambient", expression(eCO[2]))) +
+  scale_fill_manual(values = c("black", "white"), 
+                    labels = c("Ambient", expression(eCO[2])),
+                    guide = guide_legend(override.aes = list(shape = 21))) +
   science_theme +
-  theme(legend.position = c(.55, .9)) +
+  theme(legend.position = c(.5, .9), 
+        legend.key.height = unit(.7, "line"),
+        legend.box = "horizontal", 
+        legend.box.just = "top") +
   scale_x_continuous(breaks = 1:3, labels = 1:3) +
   labs(x = "Year", y = "Proportion (adjusted by Year0 value)") +
-  facet_wrap(~ variable)
+  scale_y_continuous(limits = c(0, .65))
 p2
-ggsavePP(filename = "output/figs/PFG_proportion_95CI",
-         width = 6, height = 4,
-         plot = p2)
+
+p3 <- ggplot(CI_forb, aes(x = as.numeric(year), y = value, fill = co2, 
+                          shape = variable, group = co2:variable, 
+                          linetype = co2))
+
+p4 <- p3 +
+  geom_errorbar(aes(ymin = lower.CL, ymax = upper.CL), width = 0, 
+                position = position_dodge(.1), linetype = "solid") +
+  geom_line(position = position_dodge(.1)) + 
+  geom_point(position = position_dodge(.1)) +
+  scale_shape_manual(values = c(21:23)) +
+  scale_linetype_manual(values = c("solid", "dashed"),
+                        labels = c("Ambient", expression(eCO[2]))) +
+  scale_fill_manual(values = c("black", "white"), 
+                    labels = c("Ambient", expression(eCO[2])),
+                    guide = guide_legend(override.aes = list(shape = 21))) +
+  science_theme +
+  theme(legend.position = c(.4, .9), 
+        legend.key.height = unit(.7, "line"),
+        legend.box = "horizontal", 
+        legend.box.just = "top") +
+  scale_x_continuous(breaks = 1:3, labels = 1:3) +
+  labs(x = "Year", y = NULL) +
+  scale_y_continuous(limits = c(0, .65))
+p4
+
+# combine two plots
+grid.arrange(p2, p4, ncol = 2)
+p <- recordPlot() # save
+
+pdf(file = "output/figs/PFG_proportion_95CI.pdf", width = 6, height = 3)
+replayPlot(p)
+dev.off()
+
+save_png600(filename = "output/figs/PFG_proportion_95CI.png", width = 6, height = 3)
+replayPlot(p)
+dev.off()
+
+ggsavePP(filename = "output/figs/PFG_proportion_95CI_grass", 
+         width = 3, height = 3, plot = p2)
