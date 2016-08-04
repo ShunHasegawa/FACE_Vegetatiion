@@ -2,16 +2,15 @@
 # All species #
 ###############
 
-########################
-# Each year separately #
-########################
+
+# Each year separately ----------------------------------------------------
 
   # combine environment and spp df
   seDF <- merge(RingSumVeg, EnvDF_3df, by = c("year", "ring", "block", "co2"))
   
-###############
-# Single term #
-###############
+  
+# . Single term -----------------------------------------------------------
+
   # R2adj for each single term
   
   adjR_singl_Lst <- list()
@@ -56,9 +55,9 @@
   fmls <- llply(list(Year0 = 1, Year1 = 2, Year2 = 3, Year3 = 4), 
                 function(x) llply(paste(LH[[x]], FullFormula[[x]]), as.formula))
 
-##############
-## 1st year ##
-##############
+
+# . 1st year --------------------------------------------------------------
+
   df2013 <- subsetD(seDF, year == "Year0")
   
   # There are too many environmental variables to fit. so choose four which showed
@@ -79,9 +78,9 @@
   # summary result
   rda2013 <- list(IniRda = rr, FinRda = rr3)
 
-##############
-## 2nd year ##
-##############
+  
+# . 2nd year --------------------------------------------------------------
+
   df2014 <- subsetD(seDF, year == "Year1")
   
   # adjusted R2
@@ -111,9 +110,9 @@
   # summary result
   rda2014 <- list(IniRda = rr, FinRda = rr3)
 
-##############
-## 3rd year ##
-##############
+
+# . 3rd year --------------------------------------------------------------
+
   df2015 <- subsetD(seDF, year == "Year2")
   
   # adjusted R2
@@ -144,9 +143,10 @@
   # summary result
   rda2015 <- list(IniRda = rr, FinRda = rr3)
 
-##############
-## 4th year ##
-##############
+  
+
+# . 4th year --------------------------------------------------------------
+
   df2016 <- subsetD(seDF, year == "Year3")
   
   # adjusted R2
@@ -164,10 +164,8 @@
   comb_exp <- combn(PosAdjR$Year3, 3)
   expl_fml <- apply(comb_exp, 2, function(x) paste(x, collapse = "+"))
   fmls_3   <- llply(paste("log(df2016[ , SppName] + 1) ~", expl_fml), as.formula)
-  adjR     <- laply(fmls_3, 
-                    function(x) {
+  adjR     <- laply(fmls_3, function(x)
                       RsquareAdj(rda(x, data = df2016))$adj.r.squared)
-                    }
   rr       <- rda(fmls_3[[which(max(adjR, na.rm = TRUE) == adjR)]], df2016)
   vif.cca(rr)
   anova(rr, permutations = allPerms(6))
@@ -179,9 +177,9 @@
   # summary result
   rda2016 <- list(IniRda = rr, FinRda = rr3)
   
-#############
-## Summary ##
-#############
+
+# Summary ---------------------------------------------------------------
+
   # Adjusted R2 for each term
   AdjTbl        <- dcast(variable ~ .id, 
                          data      = ldply(adjR_singl_Lst), 
@@ -207,13 +205,15 @@
                                            permutations = allPerms(6))$Pr[1])
                    }
 
+
+
   FuladjR_pv <- ldply(RdaLst, 
                       function(x) ldply(x, Extract_Adj_P, .id = "Model"),
                       .id = "year")
   
   FuladjR_pv_tbl <- dcast(variable ~ year + Model, 
                           data = melt(FuladjR_pv, id = c("year", "Model")))
-  FuladjR_pv_tbl[ , 2:8] <- round(FuladjR_pv_tbl[ , 2:8], 3)
+  FuladjR_pv_tbl[ , 2:8] <- round(FuladjR_pv_tbl[ , 2:8], 4)
   
   # F and P values for each term in parsimonious models
   rda_anova <- ldply(RdaLst[-2], 
@@ -254,137 +254,9 @@
                characterNA = "NA")
   saveWorkbook(wb, "output/table/RDA_Restuls_AllSpp.xlsx")
   
-# #################
-# # CO2 treatment #
-# #################
-# 
-#   #############
-#   ## Ambient ##
-#   #############
-#   ambDF <- subsetD(seDF, co2 == "amb")
-#   
-#   # permutaiton Possible number of permutation is (3!)^3 = 216. it's small so need
-#   # to use exact permutation test
-#   
-#   allPerms(9, 
-#            how(within = Within(type = "free"), plot = Plots(strata = ambDF$ring)))
-#   # Null hypothesis is no difference between years. Ring is no exchangeable but 
-#   # subplots are. NOTE # First three colmuns of the above indices are for the 1st 
-#   # factor of ring, and four to six are for the 2nd and seven to nine are for 3rd.
-#   # So that data frame needs to be reordered to match this. 
-#   
-#   # reorder by ring
-#   ambDF <- ambDF[order(ambDF$ring), ]
-#   
-#   # Run RDA
-#   rda_amb <- rda(log(ambDF[, SppName] + 1) ~ year + Condition(ring) , ambDF)
-#   
-#   hh <- allPerms(9, how(within = Within(type = "free"), plot = Plots(strata = ambDF$ring)))
-#   
-#   anova(rda_amb, permutations = hh)
-#   # significant year effect
-#   
-#   # Axis
-#   anova(rda_amb, permutations = hh, by = "axis")
-#   # RDA1 is significant
-#   
-#   summary(rda_amb)
-#   
-#   #########
-#   ## co2 ##
-#   #########
-#   
-#   elvDF <- subsetD(seDF, co2 == "elev")
-#   # reorder by ring
-#   elvDF <- elvDF[order(elvDF$ring), ]
-#   
-#   # Run RDA
-#   rda_elev <- rda(log(elvDF[, SppName] + 1) ~ year + Condition(ring) , elvDF)
-#   
-#   hh <- allPerms(9, how(within = Within(type = "free"), plot = Plots(strata = elvDF$ring)))
-#   
-#   anova(rda_elev, permutations = hh)
-#   # significant year effect
-#   anova(rda_elev, permutations = hh, by = "axis")
-#   # only RDA1 is significant
-#   
-#   ############
-#   # Summary  #
-#   ############
-#   RdaResLst <- list(amb = rda_amb, elev = rda_elev)
-#   
-#   # Driving spp
-#   SpScores <- ldply(RdaResLst, function(x) {
-#     sp <- vegan::scores(x)$species
-#     data.frame(sp, species = row.names(sp))
-#   }, .id = "co2")
-#   
-#   drvSpp <- unique(SpScores$specie[abs(SpScores$RDA1) > .4])
-#   drvSppDF <- subset(SpScores, species %in% drvSpp)
-#   
-#   # add covrage column and PFG
-#   drvSppDF <- Reduce(function(x, y) {
-#     merge(x, y, by.x = "species", by.y = "variable", all.x = TRUE)},
-#     list(drvSppDF, SppSum[, c("variable", "Cov")], unique(veg[, c("variable", "PFG")])))
-#     
-#   drvSppDF$species <- with(drvSppDF, 
-#                            paste0(gsub("[.]", " ", as.character(species)), 
-#                                   "(", format(Cov, digit = 1, nsmall = 1), ")"))
-#   drvSppDF_cst <- dcast(species + PFG ~ co2, value.var = "RDA1", data = drvSppDF)
-#   drvSppDF_cst <- drvSppDF_cst[order(drvSppDF_cst$amb, decreasing = TRUE), ]
-#   drvSppDF_cst <- within(drvSppDF_cst, {
-#     amb <- format(amb, digit = 2, nsmall = 2)
-#     elev <- format(elev, digit = 2, nsmall = 2)
-#   })
-#   write.csv(drvSppDF_cst, file = "output/table/RDA_AllSpp_SpScore.csv", row.names = FALSE)
-#   
-#   ########
-#   # Plot #
-#   ########
-#   p2 <- PlotRDA_Year(rdaResLst = list(rda_amb, rda_elev), env = list(ambDF, elvDF), 
-#                      spscore = .4)
-#   ggsavePP(filename = "output/figs/FACE_RDAvsYearbyCO2", plot = p2, 
-#            width = 6.65, height = 4)
-#   
-#   ## Plot for thesis ##
-#   RdaResLst
-#   envDFLst <- list(amb = ambDF, elev = elvDF)
-#   
-#   SummaryRda <- llply(RdaResLst, summary)
-#   
-#   # Site score
-#   siteDD <- ldply(c("amb", "elev"), function(x) data.frame(SummaryRda[[x]]$site, envDFLst[[x]]))
-#   siteDD$year <- factor(siteDD$year, labels = paste0("Year", 0:2))
-#   
-#   # create a plot
-#   p <- ggplot(siteDD, aes(x = year, y = RDA1))
-#   SiteScorePlot <- p + 
-#     geom_point(size = 3) +
-#     geom_hline(yintercept = 0, linetype = "dashed") +
-#     facet_wrap(~co2, scale = "free_y") +
-#     labs(x = NULL, y = "RDA1") +
-#     science_theme
-#   SiteScorePlot
-#   # change facet_label
-#   
-#   # % variance for RDA1
-#   Rda1Prop <- laply(SummaryRda, function(x) 
-#     format(x$cont$importance["Proportion Explained", "RDA1"] * 100, 
-#            digits = 2, nsmall = 2)
-#   )
-#   
-#   labs <- c(paste0("Ambient (", Rda1Prop[1], "%)"), 
-#             parse(text = paste("eCO[2]~(", Rda1Prop[2], "*'%')")))
-#   Rda_Year_AllSp <- facet_wrap_labeller(SiteScorePlot, labels = labs)
-#   
-#   ggsavePP(Rda_Year_AllSp, filename = "output/figs/Fig_Thesis/RDAvsYearbyCO2_AllSpp", 
-#            width = 4.5, height = 2.5)
 
 
-
-#####################
-## 3-year data set ## 
-#####################
+# 4-year data set ---------------------------------------------------------
 
   # From the above analysis, moist and TotalC are determied to be imporatnt
   # driver
@@ -400,9 +272,8 @@
   p <- TriPlot(MultValRes = rda_all, env = seDF, yaxis = "RDA axis", axispos = c(1, 2, 3), centcons = 2)
   ggsavePP(filename = "output//figs/FACE_RDA_EnvVar_Year0_3", plot = p, width = 6, height = 6)
 
-##################
-# Fig for thesis #
-##################
+
+# Fig for thesis ----------------------------------------------------------
 
   RdaAllRes <- summary(rda_all)
   seDF$year <- factor(seDF$year, labels = paste0("Year", 0:3))
