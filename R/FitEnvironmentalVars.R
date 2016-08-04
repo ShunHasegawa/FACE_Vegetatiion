@@ -1,4 +1,6 @@
-## ---- OrganiseEnvVars
+
+# OrganiseEnvVars ---------------------------------------------------------
+
 # Environmental variables
   load("output//Data/FACE_EnvironmenVars.RData")
   
@@ -43,17 +45,16 @@
 ###########################
 # Analyse 3-year data set #
 ###########################
+  
   naCol_2ndYear
   # these variables may vary year by year. so remove them for the time being
   EnvDF_3df <- EnvVarDF[, apply(EnvVarDF, 2, function(x) !any(is.na(x)))]
   
   EnvDF_3df$block <- recode(EnvDF_3df$ring, "1:2 = 'A'; 3:4 = 'B'; 5:6 = 'C'")
   save(EnvDF_3df, file = "output/Data/EucFACE_understorey_env_vars_2012-2016.RData")
-  ## ---- RunRDA
   
-  #########
-  ## RDA ##
-  #########
+  
+# RDA ---------------------------------------------------------------------
   
   # possible explanatory variables
   expl <- c("co2",  "TotalC", "moist", "Drysoil_ph", "Depth_HL", "FloorPAR", "temp")
@@ -63,3 +64,5 @@
   
   # PFG
   source("R/Stats_RDA_PFG.R")
+
+
