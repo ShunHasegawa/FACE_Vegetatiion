@@ -52,6 +52,8 @@
   
   EnvDF_3df$block <- recode(EnvDF_3df$ring, "1:2 = 'A'; 3:4 = 'B'; 5:6 = 'C'")
   save(EnvDF_3df, file = "output/Data/EucFACE_understorey_env_vars_2012-2016.RData")
+  write.csv(EnvDF_3df, file = "output/Data/EucFACE_understorey_env_vars_2012-2016.csv",
+            row.names = FALSE)
   
   
 # RDA ---------------------------------------------------------------------

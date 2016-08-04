@@ -43,6 +43,8 @@ veg <- subsetD(veg, PFG != "c3_4")
 # remove lichen
 veg <- subsetD(veg, form != "Lichen")
 save(veg, file = "output/Data/EucFACE_understorey_vegetation_2012-2106.RData")
+write.csv(veg, file = "output/Data/EucFACE_understorey_vegetation_2012-2106.csv",
+          row.names = FALSE)
 
 # organise data frame -----------------------------------------------------
 
