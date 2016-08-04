@@ -5,7 +5,7 @@
 #######
 # RDA #
 #######
-# source("R/RDA.analysis.R")
+# source("R/OrganiseEnvVar.R") # organise environmental variables
 source("R/FitEnvironmentalVars.R")
 
 ####################

@@ -1,7 +1,14 @@
+
+# Organise soil variable --------------------------------------------------
+
+
 ##########################
 # Organise soil variable #
 ##########################
 SoilDf <- read.csv("Data//FACE_Environmtal_Variable.csv", header = TRUE)
+
+
+# > TC and TN -------------------------------------------------------------
 
 #############
 # TC and TN #
@@ -55,9 +62,9 @@ SoilDf <- read.csv("Data//FACE_Environmtal_Variable.csv", header = TRUE)
 # Merge all year data
   TcnDF <- rbind.fill(TcnDF, TcnDF_2015dd)
     
-#######################
-# TC and TN from Hiev #
-#######################
+
+# . TC and TN from Hiev ---------------------------------------------------
+
 HtcnDF <- read.csv("Data/SoilVariables/FACE_P0014_ALL_ SoilCN_June2012-Spet2014_V1.csv")
 HtcnDF <- within(HtcnDF, {
   Date <- as.Date(dmy(as.character(Date)))
@@ -102,6 +109,9 @@ d_ply(TcnDF_Ring, .(year), function(x)
   # There doesn't seem to be interaction so just use top 0-10 cm
 
 TcnDF_Ring <- subsetD(TcnDF_Ring, depth == "0-10cm", select = -depth)
+
+
+# > Dry soil pH -----------------------------------------------------------
 
 ###############
 # Dry soil pH #
@@ -159,6 +169,9 @@ with(phDF_ring, interaction.plot(year, ring, Drysoil_ph, ylim = c(5, 6)))
 with(SoilDf, interaction.plot(year, ring, ph, ylim = c(5, 6)))
   # quite different
 
+
+# > soil elemental analysis -----------------------------------------------
+
 ###############################
 # Comprehensive soil analysis #
 ###############################
@@ -203,6 +216,9 @@ summary(SoilChemDF_Mar)
 SoilChemDF_ring <- ddply(SoilChemDF_Mar, .(year, ring), function(x) colMeans(x[, chems]))
 
 
+
+# > Soil moist and temp ---------------------------------------------------
+
 #######################
 # Soil moist and temp #
 #######################
@@ -221,6 +237,10 @@ Probes <-names(SoilMTdf)[!names(SoilMTdf) %in% SiteVec]
 
 SoilMTdf_Ring <- ddply(SoilMTdf, .(year, ring), function(x) colMeans(x[, Probes], na.rm = TRUE))
 
+
+
+# > light -----------------------------------------------------------------
+
 #########
 # light #
 #########
@@ -235,6 +255,9 @@ LightNovDec$year <- factor(year(LightNovDec$Date), labels = paste0("Year", 0:3))
 
 FlorLight_Ring <- ddply(LightNovDec, .(year, ring), summarise, 
                         FloorPAR = mean(FloorPAR, na.rm = TRUE))
+
+
+# > IEM ---------------------------------------------------------------------
 
 #######
 # IEM #
@@ -251,6 +274,9 @@ iem_ring <- ddply(iemNovJan, .(ring, year), summarise,
                     IEM_nh = mean(nh, na.rm = TRUE), 
                     IEM_p  = mean(p, na.rm = TRUE)
                   )
+
+
+# > Soil Extracts ---------------------------------------------------------
 
 #################
 # Soil Extracts #
@@ -271,6 +297,9 @@ Extract_ring <- ddply(ExtrDec, .(year, ring), summarise,
                       Ext_p  = mean(po, na.rm = TRUE)
                       )
 
+
+# > Mineralisation --------------------------------------------------------
+
 ##################
 # Mineralisation #
 ##################
@@ -289,6 +318,10 @@ Mineralisation_ring <- ddply(MineJan, .(year, ring), summarise,
                                nitrification = mean(nitrification, na.rm = TRUE), 
                                p.min         = mean(p.min, na.rm = TRUE)
                              )
+
+
+# > Lysimeter -------------------------------------------------------------
+
 #############
 # Lysimeter #
 #############
@@ -301,6 +334,9 @@ tdf <- within(lys, {
 tdfS <- subsetD(tdf, depth == "shallow")
 xtabs(~ Y + M, data = tdfS)
 # no complete months for even two years.. don't use for the time being
+
+
+# > Combine all -----------------------------------------------------------
 
 ###############
 # Combine all #
@@ -317,6 +353,9 @@ EnvVarDF <- within(EnvVarDF, {
 })
 
 save(EnvVarDF, file = "output/Data/FACE_EnvironmenVars.RData")
+
+
+# > Sumamry ---------------------------------------------------------------
 
 #######################################################
 # Sumamry and simple stats on environmental variables #
@@ -340,11 +379,12 @@ TreatSummary$value <- with(TreatSummary, paste0(round(Mean, 2),
                                                 ")"))
 TreatSummary_cst <- dcast(variable ~ year + co2, data = TreatSummary)
 
-#########
-# Stats #
-#########
 
-# totalC----
+# > Stats -----------------------------------------------------------------
+
+
+# . totalC ----------------------------------------------------------------
+
 bxplts(value = "TotalC", xval = "co2", data = envDF)
 m1 <- lmer(TotalC ~ co2 * year + (1|ring), data = envDF)
 m2 <- stepLmer(m1)
@@ -354,7 +394,9 @@ qqline(resid(m2))
 AnvF_totalC <- Anova(m2, test.statistic = "F")
 AnvF_totalC
 
-# moist----
+
+# . moist -----------------------------------------------------------------
+
 bxplts(value = "moist", xval = "co2", data = envDF)
 m1 <- lmer(moist ~ co2 * year + (1|ring), data = envDF)
 qqnorm(resid(m2))
@@ -362,7 +404,9 @@ qqline(resid(m2))
 AnvF_moist <- Anova(m1, test.statistic = "F")
 AnvF_moist
 
-# ph----
+
+# . ph --------------------------------------------------------------------
+
 bxplts(value = "Drysoil_ph", xval = "co2", data = envDF)
 m1 <- lmer(Drysoil_ph ~ co2 * year + (1|ring), data = envDF)
 m2 <- stepLmer(m1)
@@ -372,13 +416,17 @@ qqline(resid(m2))
 AnvF_ph <- Anova(m2, test.statistic = "F")
 AnvF_ph
 
-# dpeth HL-----
+
+# . depth of HL -----------------------------------------------------------
+
 bxplts(value = "Depth_HL", xval = "co2", data = envDF)
 m1 <- lm(Depth_HL ~ co2, data = envDF, subset = year == "Year0")
 AnvF_HL <- summary.aov(m1)
 AnvF_HL
 
-# PAR----
+
+# . understorey PAR ---------------------------------------------------------
+
 bxplts(value = "FloorPAR", xval = "co2", data = envDF)
 m1 <- lmer(FloorPAR ~ co2 * year + (1|ring), data = envDF)
 m2 <- stepLmer(m1)
@@ -388,7 +436,9 @@ qqline(resid(m2))
 AnvF_par <- Anova(m2, test.statistic = "F")
 AnvF_par
 
-# temp----
+
+# . temperature -----------------------------------------------------------
+
 bxplts(value = "temp", xval = "co2", data = envDF)
 m1 <- lmer(temp ~ co2 * year + (1|ring), data = envDF)
 m2 <- stepLmer(m1)
@@ -398,7 +448,9 @@ qqline(resid(m2))
 AnvF_temp <- Anova(m2, test.statistic = "F")
 AnvF_temp
 
-# Summary----
+
+# . sumamry stats ---------------------------------------------------------
+
 AnvF_Env <- ldply(list(TotalC = AnvF_totalC, moist = AnvF_moist,
                        temp = AnvF_temp, 
                        Drysoil_ph = AnvF_ph, FloorPAR = AnvF_par),
@@ -423,6 +475,10 @@ Env_summary <- Env_summary[match(c("TotalC", "moist", "Drysoil_ph",
                                    "Depth_HL", "FloorPAR", "temp"), 
                                  Env_summary$variable), ]
 write.csv(Env_summary, file = "output/table/FACE_EnvVarSummary.csv", row.names = FALSE)
+
+
+
+# > Extractable NO vs. Dry soil pH ----------------------------------------
 
 ##################################
 # Extractable NO vs. Dry soil pH #
