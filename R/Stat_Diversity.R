@@ -46,7 +46,21 @@ plot(value ~ value0, pch = 19, col = year, data = h_dd)
 Dml1 <- lmer(value ~ co2 * year + value0 + (1|block) + (1|ring) + (1|id), 
              data = h_dd)
 
+AnvF_Dml <- Anova(Dml1, test.statistic = "F")
 AnvF_Dml
+
+# CO2 is not quite significant, but F is reasonably hight (>5). worth to more
+# explore
+options(na.action = "na.fail")
+tm <- update(Dml1, REML = FALSE)
+mm <- dredge(tm)
+mm
+# removing co2 increase more than 2 (>4) AICc units, indicating that co2 is
+# animportant term
+tm2 <- get.models(mm, 1)[[1]]
+tm3 <- update(tm2, REML = TRUE)
+Anova(tm3, test.statistic = "F")
+
 plot(Dml1)
 qqnorm(resid(Dml1))
 qqline(resid(Dml1))
