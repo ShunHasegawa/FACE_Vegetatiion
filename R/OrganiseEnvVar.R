@@ -484,8 +484,7 @@ write.csv(Env_summary, file = "output/table/FACE_EnvVarSummary.csv", row.names =
 # Extractable NO vs. Dry soil pH #
 ##################################
 extJun <- subset(extr, month(date) == 6)
-extJun$year <- factor(year(extJun$date)+1)
-phDF_June$year <- factor(phDF_June$year)
+extJun$year <- factor(year(extJun$date), labels = c("Year0", "Year1"))
 llply(list(extJun, phDF_June), nrow)
 dd <- merge(extJun, phDF_June, all.x = TRUE, by = c("year", "ring", "plot"))
 
