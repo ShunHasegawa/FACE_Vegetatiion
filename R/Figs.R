@@ -445,12 +445,13 @@ ggsavePP(filename = "output/figs/FACE_PFG_CO2", plot = p2, width= 8, height = 6)
   ratio <- function(d, w) {
     c3SE          <- sum(d$c3 * w)/sum(d$Total * w)
     c4SE          <- sum(d$c4 * w)/sum(d$Total * w)
+    fernSE        <- sum(d$fern * w)/sum(d$Total * w)
     legumeSE      <- sum(d$legume * w)/sum(d$Total * w)
     mossSE        <- sum(d$moss * w)/sum(d$Total * w)
     Non_legumeSE  <- sum(d$Non_legume * w)/sum(d$Total * w)
     woodSE        <- sum(d$wood * w)/sum(d$Total * w)
     
-    c(c3SE, c4SE, legumeSE, mossSE, Non_legumeSE, woodSE)
+    c(c3SE, c4SE, fernSE, legumeSE, mossSE, Non_legumeSE, woodSE)
   }
   
   PFG_Fraction <- ddply(Veg_RingSum_cst, 
@@ -471,7 +472,7 @@ ggsavePP(filename = "output/figs/FACE_PFG_CO2", plot = p2, width= 8, height = 6)
   PFG_Fraction <- within(
                     PFG_Fraction, {
                       PFG <- factor(PFG, 
-                                    levels = c("c3", "c4", "legume", 
+                                    levels = c("c3", "c4", "fern", "legume", 
                                                "Non_legume", "wood", "moss")
                                     )
                       co2 <- factor(co2, 
@@ -488,8 +489,8 @@ ggsavePP(filename = "output/figs/FACE_PFG_CO2", plot = p2, width= 8, height = 6)
                         yend   = cumsum(original) + bootSE
                         )
   
-  pfgLabs <- c(expression(C[3]~grass), expression(C[4]~grass), "Legume", "Forb", 
-               "Woody plants", "Moss")
+  pfgLabs <- c(expression(C[3]~grass), expression(C[4]~grass), "Fern","Legume", 
+               "Forb", "Woody plants", "Moss")
   
   p <- ggplot(PFG_Fraction,
               aes(
