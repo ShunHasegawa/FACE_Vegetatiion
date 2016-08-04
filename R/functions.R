@@ -613,3 +613,21 @@ facet_wrap_labeller <- function(gg.plot,labels=NULL) {
 # save png file with 600 dpi 
 
 save_png600 <- function(...) png(..., res = 600, units = "in")
+
+
+# ggplot theme setting ----------------------------------------------------
+
+theme_set(theme_bw() + 
+            theme(panel.grid.major = element_blank(), 
+                  panel.grid.minor = element_blank()))
+
+# define graphic background
+science_theme <- theme(panel.border = element_rect(color = "black"),
+                       panel.grid.major = element_blank(), 
+                       panel.grid.minor = element_blank(), 
+                       legend.position = c(.91, .91),
+                       # legend.text = element_text(size = 2),
+                       legend.title = element_blank(),
+                       legend.background = element_blank(),
+                       legend.key = element_blank())
+
