@@ -609,3 +609,7 @@ facet_wrap_labeller <- function(gg.plot,labels=NULL) {
   class(g) = c("arrange", "ggplot",class(g)) 
   g
 }
+
+# save png file with 600 dpi 
+
+save_png600 <- function(...) png(..., res = 600, units = "in")
