@@ -304,13 +304,18 @@ p2
 # save----
 save(vdf, file = "output//Data/FACE_Vegetation_Raw_2013_2016_PreInspection.RData")
 
-#######################################
-# How to process 1st year Sep and Dec #
-#######################################
+
+# process Year0 ----------------------------------
+
+###################################################
+# Handling Year0 data from September and December #
+###################################################
+
+
 # Three options
-# 1) Use only December 2012
-# 2) Combine Sep ad Dec and use only dominant spp
-# 3) Combine Sep ad Dec and use only spp seen in 2014 and 2015
+  # 1) Use only December 2012
+  # 2) Combine Sep ad Dec and use only dominant spp
+  # 3) Combine Sep ad Dec and use only spp seen in 2014 and 2015
 
 vdf.mlt <- melt(vdf, id = c("year", "month", "ring", "plot", "position", "cell"))
 # Combine Sep and Dec
@@ -341,6 +346,9 @@ OderedSpp <- Total_sum$variable[order(Total_sum$value, decreasing = TRUE)]
 
 VegRes16_YearSum$variable <- factor(VegRes16_YearSum$variable, levels = OderedSpp)
 
+
+# . Solution 1) - only Dec-----------------------------------------------------------
+
 # Barplot
 theme_set(theme_bw())
 p <- ggplot(VegRes16_YearSum, aes(x = variable, y = value))
@@ -355,6 +363,11 @@ p2
 p2 + coord_cartesian(ylim = c(0, 50))
   # surely there are more spp in 2013:Sep_Dec than 2014 and 2015, but many of
   # them are observed only <5 cells
+
+
+
+# . Solutino 2) - Dominant spp --------------------------------------------
+
 
 # Plot only dominant spp
 PlotDominantSpp <- function(coverage, dfs = VegRes16_YearSum){
@@ -382,24 +395,45 @@ PlotDominantSpp(coverage = 0.05)
 # 5 % seems to cut too many species. Removeing <1% coverage species may be
 # suitable.
 
-#############################
-# Use full-combined Sep-Dec #
-#############################
 
-# After discussion with Sally, we decided to use the whole data set. And accept
-# the fact species dropping between the 1st and 2nd year is in part due to this.
+# . Solution 3) - use common spp --------------------------------------------
+
+# Use full-combined Sep-Dec, but without species uniquely found in Year0
+
 FullSpdf <- subset(VegRes16_SD, ym != "2013:December")
 summary(FullSpdf)
-FullSpdf
-FullVdf <- dcast(year + month + ring + plot + position + cell ~ variable,  
+FullSpdf <- VegRes16_SD %>% 
+              filter(ym != "2013:December") %>% 
+              select(-month, -ym) %>% 
+              mutate(year = factor(year, labels = paste0("Year", 0:3)),
+                     cell = factor(cell)) 
+              
+FullVdf <- dcast(year + ring + plot + position + cell ~ variable,  
                 value.var = "value", data = FullSpdf)
-FullVdf <- within(FullVdf, {
-  month <- NULL
-  cell <- factor(cell)
-  year <- factor(year, labels = paste0("Year", 0:3))
-})
+summary(FullVdf)
+
+full_species <- setdiff(names(FullVdf), SiteVec)
+spp_sum_by_year <- ddply(FullVdf, .(year), function(x) colSums(x[, full_species]))
+
+rm_spp <- names(which(apply(spp_sum_by_year[, -1], 2, function(x) all(x[2:4] == 0))))
+length(rm_spp)
+# 21 spp are to be removed
+
+# remove those spp
+FullVdf <- select(FullVdf, -one_of(rm_spp))
+
+# check if it's correct
+new_full_species <- setdiff(names(FullVdf), SiteVec)
+new_spp_sum_by_year <- ddply(FullVdf, .(year), 
+                             function(x) colSums(x[, new_full_species]))
+all(!apply(new_spp_sum_by_year[, -1], 2, function(x) all(x[2:4] == 0)))
 
 save(FullVdf, file = "output//Data/FACE_FullVegetation_Raw_2013_2016.RData")
+
+
+
+# Create DF with PFG etc --------------------------------------------------
+
 
 ##############################
 # Create df including plant  #
