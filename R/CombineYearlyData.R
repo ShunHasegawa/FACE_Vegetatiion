@@ -428,6 +428,43 @@ new_spp_sum_by_year <- ddply(FullVdf, .(year),
                              function(x) colSums(x[, new_full_species]))
 all(!apply(new_spp_sum_by_year[, -1], 2, function(x) all(x[2:4] == 0)))
 
+# some species were observed in Year0 as well as subsequent years but not in the
+# same plot. Unless they were observed in the same plot, turn their values into 
+# 0 for Year0. 
+
+# e.g. species1 was observed in plot1 in Year0 and other plots in the following
+# years. But it was not observed in the following year in the same plot. Turn
+# the value for this species in that plot in Year0 into 0.
+
+summary(FullVdf)
+ddply(FullVdf, .(ring, plot), )
+
+plotSum_by_year <- FullVdf %>% 
+                    select(-position, -cell) %>% 
+                    group_by(year, ring, plot) %>% 
+                    summarise_each(funs(sum))
+
+
+FullVdf <- ddply(FullVdf, .(ring, plot), correct_year0)
+
+correct_year0 <- function(x){
+  d <- x
+  
+  # column sum
+  d_sum <- d %>% 
+    select(-position, -cell) %>% 
+    group_by(year) %>% 
+    summarise_each_(funs(sum), new_full_species)
+  
+  # identify species which was observed in Year0 in this plot
+  a <- names(which(apply(d_sum[, -1], 2, function(x) all(x[2:4] == 0) & x[1] != 0)))
+  
+  # replace their values with 0
+  d[, a] <- 0
+  
+  return(d)
+}
+
 save(FullVdf, file = "output//Data/FACE_FullVegetation_Raw_2013_2016.RData")
 
 
