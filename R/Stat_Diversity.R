@@ -72,19 +72,23 @@ qqline(resid(Dml1))
 # Species richness #
 ####################
 s_dd <- filter(DivDF_year0, variable == "S")
+par(mfrow = c(1, 3))
 plot(value ~ value0, pch = 19, col = year, data = s_dd)
 plot(log(value) ~ value0, pch = 19, col = year, data = s_dd)
+plot(log(value) ~ log(value0), pch = 19, col = year, data = s_dd)
 
 SmlLmm1 <- lmer(value ~ co2 * year + value0 + (1|block) + (1|ring) + (1|id), 
                 data = s_dd)
 SmlLmm2 <- lmer(log(value) ~ co2 * year + value0 + (1|block) + (1|ring) + (1|id), 
                 data = s_dd)
-ldply(list(SmlLmm1, SmlLmm2), r.squared)
+SmlLmm3 <- lmer(log(value) ~ co2 * year + log(value0) + (1|block) + (1|ring) + (1|id), 
+                data = s_dd)
+ldply(list(SmlLmm1, SmlLmm2, SmlLmm3), r.squared)
 
-plot(SmlLmm1)
-qqnorm(resid(SmlLmm1))
-qqline(resid(SmlLmm1))
-AnvF_Sml <- Anova(SmlLmm1, test.statistic = "F")
+plot(SmlLmm3)
+qqnorm(resid(SmlLmm3))
+qqline(resid(SmlLmm3))
+AnvF_Sml <- Anova(SmlLmm3, test.statistic = "F")
 AnvF_Sml
 
 # . number of species -----------------------------------------------------
