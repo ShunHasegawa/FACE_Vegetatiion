@@ -445,7 +445,6 @@ plotSum_by_year <- FullVdf %>%
                     summarise_each(funs(sum))
 
 
-FullVdf <- ddply(FullVdf, .(ring, plot), correct_year0)
 
 correct_year0 <- function(x){
   d <- x
@@ -464,6 +463,8 @@ correct_year0 <- function(x){
   
   return(d)
 }
+
+FullVdf <- ddply(FullVdf, .(ring, plot), correct_year0)
 
 save(FullVdf, file = "output//Data/FACE_FullVegetation_Raw_2013_2016.RData")
 
