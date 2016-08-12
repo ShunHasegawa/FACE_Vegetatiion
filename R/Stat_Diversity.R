@@ -1,28 +1,46 @@
+
+# Year0 = covariate -------------------------------------------------------
+
 # Move Year0 value to a new column to be used as covariate for the analysis
-DivDF_mlt <- melt(DivDF, id = c("year", "ring", "plot", "block", "co2", "id"))
 
-# year0
-year0_dd <- DivDF_mlt %>%
-  filter(year == "Year0") %>%
-  select(id, value, variable) %>%
-  rename(value0 = value)
+DivDF_year0_list <- llply(DivDF_list, function(x){
+  
+  DivDF_mlt <- melt(x, id = c("year", "ring", "plot", "block", "co2", "id"))
+  
+  # year0
+  year0_dd <- DivDF_mlt %>%
+    filter(year == "Year0") %>%
+    select(id, value, variable) %>%
+    rename(value0 = value)
+  
+  # subseqent years
+  subyear_dd <- filter(DivDF_mlt, year != "Year0")
+  
+  # merge
+  DivDF_year0 <- merge(subyear_dd, year0_dd, by = c("id", "variable")) 
+  
+  return(DivDF_year0)
+  })
 
-# subseqent years
-subyear_dd <- filter(DivDF_mlt, year != "Year0")
+par(mfrow = c(3, 3), mar = c(4, 4, 2, 1))
 
-# merge
-DivDF_year0 <- merge(subyear_dd, year0_dd, by = c("id", "variable")) 
+l_ply(names(DivDF_year0_list), function(x){
+  d_ply(DivDF_year0_list[[x]], .(variable), function(y){
+    figtitle <- paste(x, unique(y$variable), sep = "-")
+    plot(value ~ value0, pch = 19, col = year, data = y, main = figtitle)
+  })
+})
 
-par(mfrow = c(1, 3), mar = c(5, 4, 2, 1))
-d_ply(DivDF_year0, .(variable),  function(x) 
-  plot(value ~ value0, pch = 19, col = year, data = x, main = unique(x$variable)))
 
+# all species -----------------------------------------------------------
+DivDF_year0 <- DivDF_year0_list[["all_spp"]]
 
-# Evenness ----------------------------------------------------------------
+# . Evenness ----------------------------------------------------------------
 
 ############
 # Evenness #
 ############
+
 j_dd <- filter(DivDF_year0, variable == "J")
 plot(value ~ value0, pch = 19, col = year, data = j_dd)
 
@@ -35,7 +53,7 @@ qqnorm(resid(Eml1))
 qqline(resid(Eml1))
 
 
-# Diversity ---------------------------------------------------------------
+# . Diversity ---------------------------------------------------------------
 
 #############
 # Diversity #
@@ -66,7 +84,7 @@ qqnorm(resid(Dml1))
 qqline(resid(Dml1))
 
 
-# Species richness --------------------------------------------------------
+# . Species richness --------------------------------------------------------
 
 ####################
 # Species richness #
@@ -91,7 +109,135 @@ qqline(resid(SmlLmm3))
 AnvF_Sml <- Anova(SmlLmm3, test.statistic = "F")
 AnvF_Sml
 
-# . number of species -----------------------------------------------------
+
+# Grass -------------------------------------------------------------------
+
+DivDF_year0_grass <- DivDF_year0_list[["grass_spp"]]
+
+# . Evenness ----------------------------------------------------------------
+
+j_dd <- filter(DivDF_year0_grass, variable == "J" & !is.na(value))
+plot(value ~ value0, pch = 19, col = year, data = j_dd)
+
+Eml1 <- lmer(value ~ co2 * year + value0 + (1|block) + (1|ring) + (1|id), 
+             data = j_dd)
+
+plot(j_dd$value)
+
+AnvF_Eml_grass <- Anova(Eml1, test.statistic = "F")
+AnvF_Eml_grass
+plot(Eml1)
+qqnorm(resid(Eml1))
+qqline(resid(Eml1))
+
+# one obvious outlier. what if we remove
+rm_val <- which.min(resid(Eml1))
+Eml2 <- update(Eml1, subset = -rm_val)
+summary(Eml2)
+plot(Eml2)
+qqnorm(resid(Eml2))
+qqline(resid(Eml2))
+AnvF_Eml_grass <- Anova(Eml2, test.statistic = "F")
+AnvF_Eml_grass 
+
+# . Diversity -------------------------------------------------------------
+h_dd <- filter(DivDF_year0_grass, variable == "H")
+plot(value ~ value0, pch = 19, col = year, data = h_dd)
+
+Dml1 <- lmer(value ~ year* co2 + value0 + (1|block) + (1|ring) + (1|id), 
+             data = h_dd)
+
+AnvF_Dml_grass <- Anova(Dml1, test.statistic = "F")
+AnvF_Dml_grass
+
+plot(Dml1)
+qqnorm(resid(Dml1))
+qqline(resid(Dml1))
+
+plot(lmerTest::lsmeans(Dml1))
+lsmeans::lsmeans(Dml1, pairwise ~ co2 | year)
+
+# . Species richness --------------------------------------------------------
+
+s_dd <- filter(DivDF_year0_grass, variable == "S")
+plot(value ~ value0, pch = 19, col = year, data = s_dd)
+plot(log(value) ~ value0, pch = 19, col = year, data = s_dd)
+plot(log(value) ~ log(value0), pch = 19, col = year, data = s_dd)
+
+SmlLmm1 <- lmer(value ~ co2 * year + value0 + (1|block) + (1|ring) + (1|id), 
+                data = s_dd)
+SmlLmm2 <- lmer(log(value) ~ co2 * year + value0 + (1|block) + (1|ring) + (1|id), 
+                data = s_dd)
+SmlLmm3 <- lmer(log(value) ~ co2 * year + log(value0) + (1|block) + (1|ring) + (1|id), 
+                data = s_dd)
+ldply(list(SmlLmm1, SmlLmm2, SmlLmm3), r.squared)
+
+plot(SmlLmm1)
+qqnorm(resid(SmlLmm1))
+qqline(resid(SmlLmm1))
+AnvF_Sml_grass <- Anova(SmlLmm1, test.statistic = "F")
+AnvF_Sml_grass
+
+plot(lmerTest::lsmeans(SmlLmm1))
+
+
+# Forb --------------------------------------------------------------------
+DivDF_year0_forb <- DivDF_year0_list[["forb_spp"]]
+
+# . Evenness ----------------------------------------------------------------
+
+j_dd <- filter(DivDF_year0_forb, variable == "J" & !is.na(value))
+plot(value ~ value0, pch = 19, col = year, data = j_dd)
+
+Eml1 <- lmer(value ~ co2 * year + value0 + (1|block) + (1|ring) + (1|id), 
+             data = j_dd)
+
+AnvF_Eml_forb <- Anova(Eml1, test.statistic = "F")
+AnvF_Eml_forb
+# COVARIATE IS NOT SIGNIFICANT!!! RECONSIDER COVARIATE
+
+plot(Eml1)
+qqnorm(resid(Eml1))
+qqline(resid(Eml1))
+
+# . Diversity -------------------------------------------------------------
+h_dd <- filter(DivDF_year0_forb, variable == "H")
+plot(value ~ value0, pch = 19, col = year, data = h_dd)
+
+Dml1 <- lmer(value ~ year* co2 + value0 + (1|block) + (1|ring) + (1|id), 
+             data = h_dd)
+
+AnvF_Dml_forb <- Anova(Dml1, test.statistic = "F")
+AnvF_Dml_forb
+# COVARIATE IS NOT SIGNIFICANT!!! RECONSIDER COVARIATE
+
+plot(Dml1)
+qqnorm(resid(Dml1))
+qqline(resid(Dml1))
+
+
+# . Species richness ------------------------------------------------------
+
+s_dd <- filter(DivDF_year0_forb, variable == "S")
+plot(value ~ value0, pch = 19, col = year, data = s_dd)
+plot(log(value) ~ value0, pch = 19, col = year, data = s_dd)
+plot(log(value) ~ log(value0), pch = 19, col = year, data = s_dd)
+
+SmlLmm1 <- lmer(value ~ co2 * year + value0 + (1|block) + (1|ring) + (1|id), 
+                data = s_dd)
+SmlLmm2 <- lmer(log(value) ~ co2 * year + value0 + (1|block) + (1|ring) + (1|id), 
+                data = s_dd)
+SmlLmm3 <- lmer(log(value) ~ co2 * year + log(value0) + (1|block) + (1|ring) + (1|id), 
+                data = s_dd)
+ldply(list(SmlLmm1, SmlLmm2, SmlLmm3), r.squared)
+
+plot(SmlLmm3)
+qqnorm(resid(SmlLmm3))
+qqline(resid(SmlLmm3))
+AnvF_Sml_forb <- Anova(SmlLmm3, test.statistic = "F")
+AnvF_Sml_forb
+
+# number of species -----------------------------------------------------
 
 totalSum <- ddply(veg, .(variable), summarise, value = sum(value, na.rm = TRUE))
 summary(totalSum)

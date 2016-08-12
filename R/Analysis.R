@@ -62,6 +62,16 @@ veg.face <- within(FullVdf, {
 SiteName <- c("year", "block", "ring", "co2", "plot", "id", "position", "cell")
 SppName <- names(veg.face)[!names(veg.face) %in% SiteName]
 
+# grass and forb sp maes
+gfspp <- veg %>% 
+  filter(form %in% c("Grass", "Forb")) %>% 
+  select(variable, form) %>%
+  mutate(variable = as.character(variable)) %>% 
+  distinct()
+
+SppName_grass <- gfspp[gfspp$form == "Grass", 1]
+SppName_forb <- gfspp[gfspp$form == "Forb", 1]
+
 # plot sum
 PlotSumVeg <- ddply(veg.face, .(year, ring, plot, block, co2, id), function(x) colSums(x[, SppName]))
 
@@ -92,14 +102,25 @@ RingSumPFGMatrix <- ddply(PlotSumPFGMatrix, .(year, block, ring, co2, yco),
 # diversity indices -------------------------------------------------------
 
 # Diversity & eveness
-vegDF <- PlotSumVeg[, SppName]
 siteDF <- PlotSumVeg[, !names(PlotSumVeg) %in% SppName]
 
-DivDF <- within(siteDF,{
-  H <- diversity(vegDF) # Shannon's index
-  S <- specnumber(vegDF) # number of spp
-  J <- H/log(S)  # Pielou's evenness
-})
+vegDF_list <- llply(list(all_spp = SppName, grass_spp = SppName_grass, 
+                         forb_spp = SppName_forb), 
+                    function(x) PlotSumVeg[, x])
+
+vegDF <- vegDF_list[["all_spp"]]
+
+# compute diversity indices
+DivDF_list <- llply(vegDF_list, function(x) {
+  mutate(siteDF, 
+         H = diversity(x),  # Shannon's index
+         S = specnumber(x), # number of spp
+         J = H/log(S)       # Pielou's evenness
+  )})
+
+DivDF       <- DivDF_list[["all_spp"]]
+DivDF_grass <- DivDF_list[["grass_spp"]]
+DivDF_forb  <- DivDF_list[["forb_spp"]]
 
 # Identify dominant spp
 SppSum <- ddply(veg, .(variable), summarise, value = sum(value))
