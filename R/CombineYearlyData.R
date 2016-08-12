@@ -305,112 +305,57 @@ p2
 save(vdf, file = "output//Data/FACE_Vegetation_Raw_2013_2016_PreInspection.RData")
 
 
-# process Year0 ----------------------------------
+# process Year0 -----------------------------------------------------------
+
 
 ###################################################
 # Handling Year0 data from September and December #
 ###################################################
 
-
 # Three options
-  # 1) Use only December 2012
-  # 2) Combine Sep ad Dec and use only dominant spp
-  # 3) Combine Sep ad Dec and use only spp seen in 2014 and 2015
+  # 1) Combine Sep ad Dec in Year0 (full_df)
+  # 2) Combine Sep ad Dec in Year0 and use only spp seen in subsequent years
+  # (uniqueYear0_df)
+  # 3) Following 2), remove species from Year0 if they are not observed in the
+  # same plots in the subsequent years (uniqueYear0_plot_df)
 
 vdf.mlt <- melt(vdf, id = c("year", "month", "ring", "plot", "position", "cell"))
-# Combine Sep and Dec
-DF2013 <- subset(vdf.mlt, year == 2013)
-# combine sep and dec and remove duplicates
-DF2013_merged <- DF2013 %>%
-  group_by(variable, year, ring, plot, position, cell) %>%
-  summarise(value = sum(value, na.rm = TRUE))
-
-# Remove double count
-DF2013_merged$value[which(DF2013_merged$value == 2)] <- 1
-DF2013_merged$month <- factor("Sep_Dec")
-
-# Create a new data frame containing Dec2013, S+D2013, 2014, 2015 and 2016
-VegRes16_SD <- rbind.fill(subset(vdf.mlt, month %in% c("December", "February")), DF2013_merged)
-
-# Create a barplot for each year
-VegRes16_SD$ym <- with(VegRes16_SD, year:month)
-
-# Yearly sum
-VegRes16_YearSum <- ddply(VegRes16_SD, .(ym, variable), summarise, value = sum(value))
-
-# Reorder accoridng to abundance
-Total_sum <- ddply(subset(VegRes16_YearSum, ym != "2013:December"), 
-                   .(variable), 
-                   summarise, value = sum(value))
-OderedSpp <- Total_sum$variable[order(Total_sum$value, decreasing = TRUE)]
-
-VegRes16_YearSum$variable <- factor(VegRes16_YearSum$variable, levels = OderedSpp)
 
 
-# . Solution 1) - only Dec-----------------------------------------------------------
+# . Solution 1) Combine sep and dec in Year0 ------------------------------
 
-# Barplot
-theme_set(theme_bw())
-p <- ggplot(VegRes16_YearSum, aes(x = variable, y = value))
-p2 <- p + geom_bar(stat = "identity") + 
-  facet_grid(ym ~ .) + 
-  theme(axis.text.x = element_text(angle = 90))
-p2
-  # Using only Dec don't seeme to be a good idea as I loose quite many dominant
-  # herb spp compared to 2014 and 2015.
-
-# Zoom in to see minor spp
-p2 + coord_cartesian(ylim = c(0, 50))
-  # surely there are more spp in 2013:Sep_Dec than 2014 and 2015, but many of
-  # them are observed only <5 cells
-
-
-
-# . Solutino 2) - Dominant spp --------------------------------------------
-
-
-# Plot only dominant spp
-PlotDominantSpp <- function(coverage, dfs = VegRes16_YearSum){
-  # coverage: percentage coverage for threshhold. Spp below this is removed
-  tdf <- ddply(dfs, .(ym), mutate, 
-               Dominant = ifelse(value > coverage * 2400, TRUE, FALSE))
+  # Combine Sep and Dec and remove duplicates
+  DF2013 <- subset(vdf.mlt, year == 2013)
+  DF2013_merged <- DF2013 %>%
+    group_by(variable, year, ring, plot, position, cell) %>%
+    summarise(value = sum(value, na.rm = TRUE))
   
-  # Spp which coveres >1% at least one of three years
-  DominantSpp <- unique(tdf$variable[tdf$Dominant])
+  # Remove double count
+  DF2013_merged$value[which(DF2013_merged$value == 2)] <- 1
+  DF2013_merged$month <- factor("Sep_Dec")
   
-  p <- ggplot(subset(tdf, variable %in% DominantSpp), aes(x = variable, y = value))
-  p2 <- p + geom_bar(stat = "identity") + 
-    facet_grid(ym ~ ., scale = "free_x") + 
-    theme(axis.text.x = element_text(angle = 90)) +
-    ggtitle(paste0(">", coverage * 100, "% coverage species"))
-  return(p2)
-}
-
-# 1 %
-PlotDominantSpp(coverage = 0.01)
-
-# 5 %
-PlotDominantSpp(coverage = 0.05)
-
-# 5 % seems to cut too many species. Removeing <1% coverage species may be
-# suitable.
-
-
-# . Solution 3) - use common spp --------------------------------------------
+  # Create a new data frame containing Dec2013, S+D2013, 2014, 2015 and 2016
+  VegRes16_SD <- rbind.fill(subset(vdf.mlt, month %in% c("December", "February")), 
+                            DF2013_merged)
+  
+  # remove Dec2013
+  FullSpdf <- subset(VegRes16_SD, ym != "2013:December")
+  summary(FullSpdf)
+  FullSpdf <- VegRes16_SD %>% 
+    filter(ym != "2013:December") %>% 
+    select(-month, -ym) %>% 
+    mutate(year = factor(year, labels = paste0("Year", 0:3)),
+           cell = factor(cell)) 
+  
+  # create matrix
+  FullVdf <- dcast(year + ring + plot + position + cell ~ variable,  
+                   value.var = "value", data = FullSpdf)
+  summary(FullVdf)
+  
+# . Solution 2) - remove unique spp in Year0------------------------------------
 
 # Use full-combined Sep-Dec, but without species uniquely found in Year0
 
-FullSpdf <- subset(VegRes16_SD, ym != "2013:December")
-summary(FullSpdf)
-FullSpdf <- VegRes16_SD %>% 
-              filter(ym != "2013:December") %>% 
-              select(-month, -ym) %>% 
-              mutate(year = factor(year, labels = paste0("Year", 0:3)),
-                     cell = factor(cell)) 
-              
-FullVdf <- dcast(year + ring + plot + position + cell ~ variable,  
-                value.var = "value", data = FullSpdf)
-summary(FullVdf)
 
 full_species <- setdiff(names(FullVdf), SiteVec)
 spp_sum_by_year <- ddply(FullVdf, .(year), function(x) colSums(x[, full_species]))
