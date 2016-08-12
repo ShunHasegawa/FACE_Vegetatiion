@@ -631,3 +631,22 @@ science_theme <- theme(panel.border = element_rect(color = "black"),
                        legend.background = element_blank(),
                        legend.key = element_blank())
 
+# correct year0 vaalue; this remove species that were observed only in Year0 yet
+# not in the subseqent years
+correct_year0 <- function(x, spp){
+  d <- x
+  
+  # column sum for each of spp
+  d_sum <- d %>% 
+    select(-position, -cell) %>% 
+    group_by(year) %>% 
+    summarise_each_(funs(sum), spp)
+  
+  # identify species which was observed only in Year0 in this plot
+  a <- names(which(apply(d_sum[, -1], 2, function(x) all(x[2:4] == 0) & x[1] != 0)))
+  
+  # replace their values with 0
+  d[, a] <- 0
+ 
+  return(d)
+}

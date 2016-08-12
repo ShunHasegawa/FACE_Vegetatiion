@@ -313,11 +313,11 @@ save(vdf, file = "output//Data/FACE_Vegetation_Raw_2013_2016_PreInspection.RData
 ###################################################
 
 # Three options
-  # 1) Combine Sep ad Dec in Year0 (full_df)
+  # 1) Combine Sep ad Dec in Year0 (FullVdf)
   # 2) Combine Sep ad Dec in Year0 and use only spp seen in subsequent years
-  # (uniqueYear0_df)
+  # for forbs (uniqueYear0_Vdf)
   # 3) Following 2), remove species from Year0 if they are not observed in the
-  # same plots in the subsequent years (uniqueYear0_plot_df)
+  # same plots in the subsequent years (uniqueYear0_plot_Vdf)
 
 vdf.mlt <- melt(vdf, id = c("year", "month", "ring", "plot", "position", "cell"))
 
@@ -352,78 +352,82 @@ vdf.mlt <- melt(vdf, id = c("year", "month", "ring", "plot", "position", "cell")
                    value.var = "value", data = FullSpdf)
   summary(FullVdf)
   
-# . Solution 2) - remove unique spp in Year0------------------------------------
-
-# Use full-combined Sep-Dec, but without species uniquely found in Year0
-
-
-full_species <- setdiff(names(FullVdf), SiteVec)
-spp_sum_by_year <- ddply(FullVdf, .(year), function(x) colSums(x[, full_species]))
-
-rm_spp <- names(which(apply(spp_sum_by_year[, -1], 2, function(x) all(x[2:4] == 0))))
-length(rm_spp)
-# 21 spp are to be removed
-
-# remove those spp
-FullVdf <- select(FullVdf, -one_of(rm_spp))
-
-# check if it's correct
-new_full_species <- setdiff(names(FullVdf), SiteVec)
-new_spp_sum_by_year <- ddply(FullVdf, .(year), 
-                             function(x) colSums(x[, new_full_species]))
-all(!apply(new_spp_sum_by_year[, -1], 2, function(x) all(x[2:4] == 0)))
-
-# some species were observed in Year0 as well as subsequent years but not in the
-# same plot. Unless they were observed in the same plot, turn their values into 
-# 0 for Year0. 
-
-# e.g. species1 was observed in plot1 in Year0 and other plots in the following
-# years. But it was not observed in the following year in the same plot. Turn
-# the value for this species in that plot in Year0 into 0.
-
-summary(FullVdf)
-ddply(FullVdf, .(ring, plot), )
-
-plotSum_by_year <- FullVdf %>% 
-                    select(-position, -cell) %>% 
-                    group_by(year, ring, plot) %>% 
-                    summarise_each(funs(sum))
-
-
-
-correct_year0 <- function(x){
-  d <- x
+# . Solution 2) - remove unique spp in Year0 for forbs--------------------------
   
-  # column sum
-  d_sum <- d %>% 
-    select(-position, -cell) %>% 
-    group_by(year) %>% 
-    summarise_each_(funs(sum), new_full_species)
+  # forb and grass species
+  spList <- read.csv("Data//FACE_Vegetation_sp.list.csv", na.strings = c("NA", ""))
+  levels(spList$form)
   
-  # identify species which was observed in Year0 in this plot
-  a <- names(which(apply(d_sum[, -1], 2, function(x) all(x[2:4] == 0) & x[1] != 0)))
+  grass_spp <- spList %>% 
+    filter(form %in% c("Grass", "Rush", "sedge")) %>% 
+    select(sp)
+  grass_spp <- as.character(grass_spp$sp)
   
-  # replace their values with 0
-  d[, a] <- 0
+  forb_spp <-  spList %>% 
+    filter(!form %in% c("Grass", "Rush", "sedge")) %>% 
+    select(sp) 
+  forb_spp <- as.character(forb_spp$sp)
   
-  return(d)
-}
+  # Use full-combined Sep-Dec, but without species uniquely found in Year0 for
+  # forbs
+  spp_sum_by_year <- ddply(FullVdf, .(year), function(x) colSums(x[, forb_spp]))
+  
+  rm_spp <- names(which(apply(spp_sum_by_year[, -1], 2, function(x) all(x[2:4] == 0))))
+  length(rm_spp)
+  # 19 spp are to be removed
+  
+  # remove those spp
+  uniqueYear0_Vdf <- select(FullVdf, -one_of(rm_spp))
+  
+  # check if it's correct
+  new_forb_species <- setdiff(names(uniqueYear0_Vdf), c(SiteVec, grass_spp))
+  new_spp_sum_by_year <- ddply(uniqueYear0_Vdf, .(year), 
+                               function(x) colSums(x[, new_full_species]))
+  all(!apply(new_spp_sum_by_year[, new_forb_species], 
+             2, function(x) all(x[2:4] == 0)))
 
-FullVdf <- ddply(FullVdf, .(ring, plot), correct_year0)
-
-save(FullVdf, file = "output//Data/FACE_FullVegetation_Raw_2013_2016.RData")
-
-
+# . Solution 3) remove spp that are not observed in the same plots-------------
+  
+  # some species were observed in Year0 as well as subsequent years but not in the
+  # same plot. Unless they were observed in the same plot, turn their values into 
+  # 0 for Year0. 
+  
+  # e.g. species1 was observed in plot1 in Year0 and other plots in the following
+  # years. But it was not observed in the following year in the same plot. Turn
+  # the value for this species in that plot in Year0 into 0.
+  
+  uniqueYear0_plot_Vdf <- ddply(uniqueYear0_Vdf, .(ring, plot), 
+                                function(x) correct_year0(x, spp = new_forb_species))
+  
+# save
+save(FullVdf, file = "output//Data/FACE_FullVegetation_Raw_2013_2016_FullVdf.RData")
+save(uniqueYear0_Vdf, 
+     file = "output//Data/FACE_FullVegetation_Raw_2013_2016_uniqueYear0_Vdf.RData")
+save(uniqueYear0_plot_Vdf, 
+     file = "output//Data/FACE_FullVegetation_Raw_2013_2016_uniqueYear0_plot_Vdf.RData")
 
 # Create DF with PFG etc --------------------------------------------------
 
-
-##############################
-# Create df including plant  #
-# characteristis (e.g. PFGs) #
-##############################
-FullVdf_mlt <- melt(FullVdf, id = c("year", "ring", "plot", "position", "cell"))
+# Create df including plant characteristis (e.g. PFGs)
+FullVdf_list <- list(FullVdf, uniqueYear0_Vdf, uniqueYear0_plot_Vdf)
+FullVdf_list_mlt <- llply(FullVdf_list, function(x) 
+  melt(x, id = c("year", "ring", "plot", "position", "cell")))
+  
 # plant properties
-spList <- read.csv("Data//FACE_Vegetation_sp.list.csv", na.strings = c("NA", ""))
-VegRes16 <- merge(FullVdf_mlt, spList, by.x = "variable", by.y = "sp", all.x = TRUE)
-save(VegRes16, file = "output/Data/FACE_FullVegetation_PFG_2016.RData")
+VegRes16_list <- llply(FullVdf_list_mlt, function(x) {
+  merge(x, spList, by.x = "variable", by.y = "sp", all.x = TRUE)
+  })
+  
+
+# save
+
+FullVdf_with_PFG <- VegRes16_list[[1]]
+uniqueYear0_Vdf_with_PFG <- VegRes16_list[[2]]
+uniqueYear0_plot_Vdf_with_PFG <- VegRes16_list[[3]]
+
+save(FullVdf_with_PFG, 
+     file = "output/Data/FACE_FullVdf_with_PFG.RData")
+save(uniqueYear0_Vdf_with_PFG, 
+     file = "output/Data/FACE_uniqueYear0_Vdf_with_PFG.RData")
+save(uniqueYear0_plot_Vdf_with_PFG, 
+     file = "output/Data/FACE_uniqueYear0_plot_Vdf_with_PFG.RData")
