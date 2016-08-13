@@ -8,35 +8,25 @@ SiteName <- c("year", "block", "ring", "co2", "plot", "id", "position", "cell")
 # Process Data ------------------------------------------------------------
 # source("R/CombineYearlyData.R")
 
-
 # load data ---------------------------------------------------------------
 
-# Raw data for multi variate analysis (veg_matrix)
+# Raw data for multi variate analysis (matrix)
 load("output//Data/EucFACE_understorey_vegetation_2012-2106_S1.RData")
-load("output//Data/EucFACE_understorey_vegetation_2012-2106_S2.RData")
-load("output//Data/EucFACE_understorey_vegetation_2012-2106_S3.RData")
-veg_matrix_list <- list(S1 = FullVdf, 
-                        S2 = uniqueYear0_Vdf, 
-                        S3 = uniqueYear0_plot_Vdf)
-llply(veg_matrix_list, summary)
+summary(FullVdf)
 
-# dfs with plant functional groups (veg_df)
+# dfs with plant functional groups (df)
 load("output//Data/EucFACE_understorey_vegetation_2012-2106_S1_PFG.RData")
-load("output//Data/EucFACE_understorey_vegetation_2012-2106_S2_PFG.RData")
-load("output//Data/EucFACE_understorey_vegetation_2012-2106_S3_PFG.RData")
-veg_df_list <- list(S1 = veg_FullVdf, 
-                    S2 = veg_uniqueYear0_Vdf, 
-                    S3 = veg_uniqueYear0_plot_Vdf)
-llply(veg_df_list, summary)
+summary(veg_FullVdf)
 
 # spp
-SppName_list <- llply(veg_df_list, function(x) as.character(unique(x$variable)))
+SppName <- as.character(unique(veg_FullVdf$variable))
   
+# organise dfs ------------------------------------------------------------
+
 # > all species -----------------------------------------------------------
 
-
-# grass and forb sp maes
-gfspp <- veg %>% 
+# grass and forb spp
+gfspp <- veg_FullVdf %>% 
   filter(form %in% c("Grass", "Forb")) %>% 
   select(variable, form) %>%
   mutate(variable = as.character(variable)) %>% 
@@ -46,7 +36,8 @@ SppName_grass <- gfspp[gfspp$form == "Grass", 1]
 SppName_forb <- gfspp[gfspp$form == "Forb", 1]
 
 # plot sum
-PlotSumVeg <- ddply(veg.face, .(year, ring, plot, block, co2, id), function(x) colSums(x[, SppName]))
+PlotSumVeg <- ddply(FullVdf, .(year, ring, plot, block, co2, id), 
+                    function(x) colSums(x[, SppName]))
 
 # ring sum
 RingSumVeg <- ddply(PlotSumVeg, .(year, ring, block, co2), function(x) colSums(x[, SppName]))
@@ -56,26 +47,24 @@ RingSumVeg <- ddply(PlotSumVeg, .(year, ring, block, co2), function(x) colSums(x
 
 # plot
 PlotSumPFGMatrix <- dcast(year + block + co2 + ring + plot ~ PFG, 
-                          data = subset(veg, !is.na(PFG)), sum)
-colSums(PlotSumPFGMatrix[,6:11])
+                          data = subset(veg_FullVdf, !is.na(PFG)), sum)
+PlotSumPFGMatrix %>% 
+  select(-one_of(SiteName)) %>% 
+  summarise_each(funs(sum))
 
-# remove lichen, also add interaction term
-PlotSumPFGMatrix <- within(PlotSumPFGMatrix, {
-  id = ring:plot
-  yco = year:co2
-})
+# add interaction term
+PlotSumPFGMatrix <- mutate(PlotSumPFGMatrix, id = ring:plot, yco = year:co2)
 
-PFGName <- c("c3", "c4", "legume", "moss", "Non_legume", "wood")
+PFGName <- c("c3", "c4", "fern", "legume", "moss", "Non_legume", "wood")
 
 # ring
 RingSumPFGMatrix <- ddply(PlotSumPFGMatrix, .(year, block, ring, co2, yco), 
                           function(x) colSums(x[, PFGName]))
   
-
 # diversity indices -------------------------------------------------------
 
 # Diversity & eveness
-siteDF <- PlotSumVeg[, !names(PlotSumVeg) %in% SppName]
+siteDF <- select(PlotSumVeg, -one_of(SppName))
 
 vegDF_list <- llply(list(all_spp = SppName, grass_spp = SppName_grass, 
                          forb_spp = SppName_forb), 
@@ -96,7 +85,7 @@ DivDF_grass <- DivDF_list[["grass_spp"]]
 DivDF_forb  <- DivDF_list[["forb_spp"]]
 
 # Identify dominant spp
-SppSum <- ddply(veg, .(variable), summarise, value = sum(value))
+SppSum <- ddply(veg_FullVdf, .(variable), summarise, value = sum(value))
 SppSum <- SppSum[order(SppSum$value, decreasing = TRUE),]
 SppSum <- within(SppSum, {
   Cov <- round(value * 100/sum(value), 3)
@@ -106,7 +95,6 @@ SppSum <- within(SppSum, {
 DmSpp <- droplevels(SppSum$variable[SppSum$Dominant])
 DmSpp
 sum(SppSum$value[SppSum$Dominant])/sum(SppSum$value)
-
 
 # figs --------------------------------------------------------------------
 source("R//Figs.R")
