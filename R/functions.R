@@ -651,7 +651,7 @@ correct_year0 <- function(x, spp){
 }
 
 # save as .RData and .csv files
-save_Rdata_csv <- function(file, filename, ...){
-  save(file, file = paste0(filename, ".RData"))
-  write.csv(file, file = paste0(filename, ".csv"), row.names = FALSE, ...)
+save_Rdata_csv <- function(filename, ...){
+  save(..., file = paste0(filename, ".RData"))
+  write.csv(..., file = paste0(filename, ".csv"), row.names = FALSE)
 }
