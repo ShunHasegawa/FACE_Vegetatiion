@@ -148,12 +148,12 @@ newSp_2016 <- names(YearSum)[apply(rbind(YearSum[1:3, ] == 0, YearSum[4, ] != 0)
 YearSum[newSp_2015] # very small..
 YearSum[newSp_2016] 
 
-# remove Lichen and Carex.breviformis for the time being
-vdf$Lichen <- NULL
+# remove Lichen (Cladonia.sp, Parmelia.sp, Thysanothecium.sp) and
+# Carex.breviformis for the time being
+vdf <- select(vdf, -Lichen, -Cladonia.sp, -Parmelia.sp, -Thysanothecium.sp)
 
 # month is factor
 vdf$month <- factor(vdf$month)
-
 
 # data correction -------------------------------------------------------
 
@@ -429,11 +429,11 @@ vdf.mlt <- melt(vdf, id = c("year", "month", "ring", "plot", "position", "cell")
 
 # save
 save_Rdata_csv(FullVdf, 
-               file = "output//Data/EucFACE_understorey_vegetation_2012-2106_S1")
+          filename = "output//Data/EucFACE_understorey_vegetation_2012-2106_S1")
 save_Rdata_csv(uniqueYear0_Vdf, 
-               file = "output//Data/EucFACE_understorey_vegetation_2012-2106_S2")
+          filename = "output//Data/EucFACE_understorey_vegetation_2012-2106_S2")
 save_Rdata_csv(uniqueYear0_plot_Vdf, 
-               file = "output//Data/EucFACE_understorey_vegetation_2012-2106_S3")
+          filename = "output//Data/EucFACE_understorey_vegetation_2012-2106_S3")
 
 # combine veg dfs  with PFG etc -----------------------------------------------
 # Create df including plant characteristis (e.g. PFGs)
@@ -462,10 +462,6 @@ veg_list <- llply(veg_list, function(x) filter(x, PFG != "c3_4"))
 veg_FullVdf <- veg_list[[1]]
 veg_uniqueYear0_Vdf <- veg_list[[2]]
 veg_uniqueYear0_plot_Vdf <- veg_list[[3]]
-
-
-l_ply(list())
-
 
 save_Rdata_csv(veg_FullVdf, 
                filename = "output/Data/EucFACE_understorey_vegetation_2012-2106_S1_PFG")
