@@ -3,64 +3,37 @@ rm(list=ls(all=TRUE))
 ## ---- LoadData
 source("R/Packages.R")
 source("R/functions.R")
+SiteName <- c("year", "block", "ring", "co2", "plot", "id", "position", "cell")
 
 # Process Data ------------------------------------------------------------
-
 # source("R/CombineYearlyData.R")
 
-# Raw data for multi variate analysis
-load("output//Data/FACE_FullVegetation_Raw_2013_2016.RData")
 
-# Data frame with plant functional groups
-load("output/Data/FACE_FullVegetation_PFG_2016.RData")
+# load data ---------------------------------------------------------------
 
-# check unknown spp
-all(!grepl("unknown", VegRes16$variable, ignore.case = TRUE))
+# Raw data for multi variate analysis (veg_matrix)
+load("output//Data/EucFACE_understorey_vegetation_2012-2106_S1.RData")
+load("output//Data/EucFACE_understorey_vegetation_2012-2106_S2.RData")
+load("output//Data/EucFACE_understorey_vegetation_2012-2106_S3.RData")
+veg_matrix_list <- list(S1 = FullVdf, 
+                        S2 = uniqueYear0_Vdf, 
+                        S3 = uniqueYear0_plot_Vdf)
+llply(veg_matrix_list, summary)
 
-# co2, block and id, combine sedge and grass, wood and shrub
-veg <- within(VegRes16, {
-  block <- recode(ring, "1:2 = 'A'; 3:4 = 'B'; 5:6 = 'C'")
-  co2   <- factor(ifelse(ring %in% c(1, 4, 5), "elev", "amb"))
-  id    <- ring:plot
-  form  <- factor(ifelse(form %in% c("Tree", "Shrub"), "Wood",
-                         ifelse(form %in% c("Grass", "Sedge", "Rush"), "Grass",
-                                as.character(form)
-                         )
-  )
-  )
-}
-)
+# dfs with plant functional groups (veg_df)
+load("output//Data/EucFACE_understorey_vegetation_2012-2106_S1_PFG.RData")
+load("output//Data/EucFACE_understorey_vegetation_2012-2106_S2_PFG.RData")
+load("output//Data/EucFACE_understorey_vegetation_2012-2106_S3_PFG.RData")
+veg_df_list <- list(S1 = veg_FullVdf, 
+                    S2 = veg_uniqueYear0_Vdf, 
+                    S3 = veg_uniqueYear0_plot_Vdf)
+llply(veg_df_list, summary)
 
-# remove Euc seedlings as it's not reliable
-veg <- subsetD(veg, variable != "Euc.seedling")
-
-# remove c3_4 as it's really small number and hard to deal with c3_4..
-# (Aristida.warburgii)
-unique(veg$variable[veg$PFG == "c3_4"])
-sum(veg$value[veg$PFG == "c3_4"])
-veg <- subsetD(veg, PFG != "c3_4")
-
-# remove lichen
-veg <- subsetD(veg, form != "Lichen")
-save(veg, file = "output/Data/EucFACE_understorey_vegetation_2012-2106.RData")
-write.csv(veg, file = "output/Data/EucFACE_understorey_vegetation_2012-2106.csv",
-          row.names = FALSE)
-
-# organise data frame -----------------------------------------------------
-
-
+# spp
+SppName_list <- llply(veg_df_list, function(x) as.character(unique(x$variable)))
+  
 # > all species -----------------------------------------------------------
 
-FullVdf$Euc.seedling <- NULL
-FullVdf$Aristida.warburgii <- NULL
-
-veg.face <- within(FullVdf, {
-  co2 <- factor(ifelse(ring %in% c(1, 4, 5), "elev", "amb"))
-  block <- recode(ring, "1:2 = 'A'; 3:4 = 'B'; 5:6 = 'C'")
-  id <- ring:plot
-})
-SiteName <- c("year", "block", "ring", "co2", "plot", "id", "position", "cell")
-SppName <- names(veg.face)[!names(veg.face) %in% SiteName]
 
 # grass and forb sp maes
 gfspp <- veg %>% 

@@ -1,6 +1,8 @@
-################################
-# Combine 2013, 2014 2015 Data #
-################################
+#########################
+# combine all year Data #
+#########################
+
+# load data ---------------------------------------------------------------
 
 # vector for site
 SiteVec <- c("year", "month", "ring", "plot", "position", "cell")
@@ -32,9 +34,9 @@ veg.2016[, Sp2016][which(veg.2016[, Sp2016] > 0, arr.ind = TRUE)] <- 1
 
 vdf <- rbind.fill(df2013, veg.14, veg.2015, veg.2016)
 
-####################
-# organise dataset #
-####################
+
+# organise dataset ------------------------------------------------------
+
 # turn na into 0
 vdf[is.na(vdf)] <- 0
 
@@ -48,7 +50,7 @@ vdf <- vdf[, c(SiteVec, sort(SppVec))]
 # rmeove unknown spp
 vdf <- vdf[!grepl("unknown", names(vdf), ignore.case = TRUE)]
 
-# organise spp----
+# organise spp
 SpName <- names(vdf)[!names(vdf) %in% SiteVec]
 
 # Carex.breviformis -> Carex.breviculmis
@@ -133,7 +135,7 @@ vdf[, tsp][which(vdf[, tsp] > 1, arr.ind = TRUE)] <- 1
 all(vdf[, tsp] < 2)
 # TRUE
 
-# Spp list----
+# Spp list
 vdf.mlt <- melt(vdf, id = c("year", "month", "ring", "plot", "position", "cell"))
 spp <- data.frame(sp = sort(levels(vdf.mlt$variable)))
 write.csv(spp, file = "output/Data/spp_2016.csv", row.names = FALSE)
@@ -146,15 +148,14 @@ newSp_2016 <- names(YearSum)[apply(rbind(YearSum[1:3, ] == 0, YearSum[4, ] != 0)
 YearSum[newSp_2015] # very small..
 YearSum[newSp_2016] 
 
-# remove Lichen and Carex.breviformis for the time being----
+# remove Lichen and Carex.breviformis for the time being
 vdf$Lichen <- NULL
 
 # month is factor
 vdf$month <- factor(vdf$month)
 
-###################
-# Data correction # 
-################### 
+
+# data correction -------------------------------------------------------
 
 # For 2013 data, two surveys were conducted in September and December 2012. 
 # September data is used for forbs and December for grass and sedge. In 
@@ -168,8 +169,10 @@ vdf$month <- factor(vdf$month)
 # but shouldn't change the final result too much cause those spp were not that
 # abundant.
 
-# 1.1.C, D Commelina.cyanea
-  # "Observed in numerous cells.."
+
+# . 1.1.C, D Commelina.cyanea ---------------------------------------------
+
+# "Observed in numerous cells.."
 InspctPlot(ringval = 1, plotval = 1, sp = "Commelina.cyanea")
 # not that abundant in the adjacent plots but it still says "numerous". So add 5
 # for each of C and D
@@ -189,7 +192,9 @@ vdf[vdf$year == "2013" &
       vdf$Commelina.cyanea == 0, 
     "Commelina.cyanea"][1:5] <- 1
 
-# 6.2.D. Parsonsia.straminea
+
+# . 6.2.D. Parsonsia.straminea --------------------------------------------
+
 InspctPlot(ringval = 6, plotval = 2, sp = "Parsonsia.straminea")
   # This one is tricky.. Ovserved in September in A, B and C, but not in D. Then
   # it was found in December in D but no notes for A, B and C. Probably, it was
@@ -217,7 +222,9 @@ vdf[vdf$year == "2013" &
       vdf$Parsonsia.straminea == 0, 
     "Parsonsia.straminea"][1:2] <- 1
 
-# 6.3.A. Parsonsia.straminea
+
+# . 6.3.A. Parsonsia.straminea --------------------------------------------
+
 InspctPlot(ringval = 6, plotval = 3, sp = "Parsonsia.straminea")
   # Same problem as above. Copy September to December and add 2 in A in
   # December.
@@ -243,11 +250,13 @@ vdf[vdf$year == "2013" &
       vdf$Parsonsia.straminea == 0, 
     "Parsonsia.straminea"][1:2] <- 1
 
-# 6.3.D. Solanum.nigrum 
+
+# . 6.3.D. Solanum.nigrum  ------------------------------------------------
+
 InspctPlot(ringval = 6, plotval = 3, sp = "Solanum.nigrum")
   # not observed in the adjacent subplots so just ignore
 
-# 6.4.A. Parsonsia.straminea
+# . 6.4.A. Parsonsia.straminea  ------------------------------------------------
 InspctPlot(ringval = 6, plotval = 4, sp = "Parsonsia.straminea")
   # Same problem as above. Copy September to December and add 1 in A in December.
 
@@ -271,6 +280,9 @@ vdf[vdf$year == "2013" &
       vdf$position == "A" & 
       vdf$Parsonsia.straminea == 0, 
     "Parsonsia.straminea"][1] <- 1
+
+
+# . inspect Breynia -------------------------------------------------------
 
 # Coordination of Breynia in 2016 was not very consistent with 2015, so inspect
 # this
@@ -301,12 +313,10 @@ p2 <- p +
 p2  
 # it seems fine.. suggesting that the data sheet I created may be wrong..  
 
-# save----
+# save
 save(vdf, file = "output//Data/FACE_Vegetation_Raw_2013_2016_PreInspection.RData")
 
-
 # process Year0 -----------------------------------------------------------
-
 
 ###################################################
 # Handling Year0 data from September and December #
@@ -339,11 +349,9 @@ vdf.mlt <- melt(vdf, id = c("year", "month", "ring", "plot", "position", "cell")
                             DF2013_merged)
   
   # remove Dec2013
-  FullSpdf <- subset(VegRes16_SD, ym != "2013:December")
-  summary(FullSpdf)
-  FullSpdf <- VegRes16_SD %>% 
-    filter(ym != "2013:December") %>% 
-    select(-month, -ym) %>% 
+  FullSpdf <- VegRes16_SD %>%
+    filter(!(year == "2013" & month == "December")) %>% 
+    select(-month) %>% 
     mutate(year = factor(year, labels = paste0("Year", 0:3)),
            cell = factor(cell)) 
   
@@ -352,11 +360,28 @@ vdf.mlt <- melt(vdf, id = c("year", "month", "ring", "plot", "position", "cell")
                    value.var = "value", data = FullSpdf)
   summary(FullVdf)
   
+  # organise
+  
+  # remove Euc seedlings as it's not reliable
+  FullVdf$Euc.seedling <- NULL
+  
+  # check unknown spp
+  all(!grepl("unknown", names(FullVdf), ignore.case = TRUE))
+  
+  # add co2, block and id, combine sedge and grass, wood and shrub
+  FullVdf <- FullVdf %>% 
+    mutate(cell  = as.character(cell),
+           co2   = factor(ifelse(ring %in% c(1, 4, 5), "elev", "amb")),
+           block = recode(ring, "1:2 = 'A'; 3:4 = 'B'; 5:6 = 'C'"),
+           id    = ring:plot) %>% 
+    select(one_of(SiteName), everything())
+  summary(FullVdf)
+  
 # . Solution 2) - remove unique spp in Year0 for forbs--------------------------
   
   # forb and grass species
   spList <- read.csv("Data//FACE_Vegetation_sp.list.csv", na.strings = c("NA", ""))
-  levels(spList$form)
+  spList <- filter(spList, sp %in% names(FullVdf))
   
   grass_spp <- spList %>% 
     filter(form %in% c("Grass", "Rush", "sedge")) %>% 
@@ -370,9 +395,12 @@ vdf.mlt <- melt(vdf, id = c("year", "month", "ring", "plot", "position", "cell")
   
   # Use full-combined Sep-Dec, but without species uniquely found in Year0 for
   # forbs
-  spp_sum_by_year <- ddply(FullVdf, .(year), function(x) colSums(x[, forb_spp]))
+  spp_sum_by_year <- FullVdf %>% 
+    group_by(year) %>%
+    summarise_each_(funs(sum), forb_spp)
   
-  rm_spp <- names(which(apply(spp_sum_by_year[, -1], 2, function(x) all(x[2:4] == 0))))
+  rm_spp <- names(which(apply(spp_sum_by_year[, -1], 2, 
+                              function(x) all(x[2:4] == 0))))
   length(rm_spp)
   # 19 spp are to be removed
   
@@ -380,9 +408,9 @@ vdf.mlt <- melt(vdf, id = c("year", "month", "ring", "plot", "position", "cell")
   uniqueYear0_Vdf <- select(FullVdf, -one_of(rm_spp))
   
   # check if it's correct
-  new_forb_species <- setdiff(names(uniqueYear0_Vdf), c(SiteVec, grass_spp))
+  new_forb_species <- setdiff(names(uniqueYear0_Vdf), c(SiteName, grass_spp))
   new_spp_sum_by_year <- ddply(uniqueYear0_Vdf, .(year), 
-                               function(x) colSums(x[, new_full_species]))
+                               function(x) colSums(x[, new_forb_species]))
   all(!apply(new_spp_sum_by_year[, new_forb_species], 
              2, function(x) all(x[2:4] == 0)))
 
@@ -398,36 +426,51 @@ vdf.mlt <- melt(vdf, id = c("year", "month", "ring", "plot", "position", "cell")
   
   uniqueYear0_plot_Vdf <- ddply(uniqueYear0_Vdf, .(ring, plot), 
                                 function(x) correct_year0(x, spp = new_forb_species))
-  
+
 # save
-save(FullVdf, file = "output//Data/FACE_FullVegetation_Raw_2013_2016_FullVdf.RData")
-save(uniqueYear0_Vdf, 
-     file = "output//Data/FACE_FullVegetation_Raw_2013_2016_uniqueYear0_Vdf.RData")
-save(uniqueYear0_plot_Vdf, 
-     file = "output//Data/FACE_FullVegetation_Raw_2013_2016_uniqueYear0_plot_Vdf.RData")
+save_Rdata_csv(FullVdf, 
+               file = "output//Data/EucFACE_understorey_vegetation_2012-2106_S1")
+save_Rdata_csv(uniqueYear0_Vdf, 
+               file = "output//Data/EucFACE_understorey_vegetation_2012-2106_S2")
+save_Rdata_csv(uniqueYear0_plot_Vdf, 
+               file = "output//Data/EucFACE_understorey_vegetation_2012-2106_S3")
 
-# Create DF with PFG etc --------------------------------------------------
-
+# combine veg dfs  with PFG etc -----------------------------------------------
 # Create df including plant characteristis (e.g. PFGs)
+
 FullVdf_list <- list(FullVdf, uniqueYear0_Vdf, uniqueYear0_plot_Vdf)
-FullVdf_list_mlt <- llply(FullVdf_list, function(x) 
-  melt(x, id = c("year", "ring", "plot", "position", "cell")))
-  
-# plant properties
-VegRes16_list <- llply(FullVdf_list_mlt, function(x) {
+FullVdf_list_mlt <- llply(FullVdf_list, function(x) melt(x, id = SiteName))
+
+# merge with plant properties
+veg_list <- llply(FullVdf_list_mlt, function(x) {
   merge(x, spList, by.x = "variable", by.y = "sp", all.x = TRUE)
-  })
-  
+})
+llply(veg_list, summary)
+
+# combine sedge and grass, wood and shrub
+veg_list <- llply(veg_list, function(x)
+  mutate(x, form  = factor(ifelse(form %in% c("Tree", "Shrub"), "Wood",
+                                  ifelse(form %in% c("Grass", "Sedge", "Rush"), 
+                                         "Grass", as.character(form))))))
+
+# remove c3_4 as it's really small number and hard to deal with c3_4..
+# (Aristida.warburgii)
+llply(veg_list, function(x) sum(x$value[x$PFG == "c3_4"]))
+veg_list <- llply(veg_list, function(x) filter(x, PFG != "c3_4"))
 
 # save
+veg_FullVdf <- veg_list[[1]]
+veg_uniqueYear0_Vdf <- veg_list[[2]]
+veg_uniqueYear0_plot_Vdf <- veg_list[[3]]
 
-FullVdf_with_PFG <- VegRes16_list[[1]]
-uniqueYear0_Vdf_with_PFG <- VegRes16_list[[2]]
-uniqueYear0_plot_Vdf_with_PFG <- VegRes16_list[[3]]
 
-save(FullVdf_with_PFG, 
-     file = "output/Data/FACE_FullVdf_with_PFG.RData")
-save(uniqueYear0_Vdf_with_PFG, 
-     file = "output/Data/FACE_uniqueYear0_Vdf_with_PFG.RData")
-save(uniqueYear0_plot_Vdf_with_PFG, 
-     file = "output/Data/FACE_uniqueYear0_plot_Vdf_with_PFG.RData")
+l_ply(list())
+
+
+save_Rdata_csv(veg_FullVdf, 
+               filename = "output/Data/EucFACE_understorey_vegetation_2012-2106_S1_PFG")
+save_Rdata_csv(veg_uniqueYear0_Vdf, 
+               filename = "output/Data/EucFACE_understorey_vegetation_2012-2106_S2_PFG")
+save_Rdata_csv(veg_uniqueYear0_plot_Vdf, 
+               filename = "output/Data/EucFACE_understorey_vegetation_2012-2106_S3_PFG")
+
