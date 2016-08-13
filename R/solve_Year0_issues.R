@@ -50,11 +50,12 @@ PlotSumVeg_list <- llply(1:3, function(x) {
   
 # > diversity indices -------------------------------------------------------
 
+# create list of dfs containing only species (not site values)
 vegDF_list <- llply(1:3, function(x){
   d <- PlotSumVeg_list[[x]]
-  d_list <- list(all_spp   = d[, SppName_list[[x]]], # all spp
+  d_list <- list(all_spp   = d[, SppName_list[[x]]],       # all spp
                  grass_spp = d[, SppName_grass_list[[x]]], # grass spp
-                 forb_spp  = d[, SppName_forb_list[[x]]]) # forb spp
+                 forb_spp  = d[, SppName_forb_list[[x]]])  # forb spp
   return(d_list)
 })
 names(vegDF_list) <- paste0("s", 1:3)
