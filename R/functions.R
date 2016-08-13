@@ -638,7 +638,6 @@ correct_year0 <- function(x, spp){
   
   # column sum for each of spp
   d_sum <- d %>% 
-    select(-position, -cell) %>% 
     group_by(year) %>% 
     summarise_each_(funs(sum), spp)
   
@@ -649,4 +648,10 @@ correct_year0 <- function(x, spp){
   d[, a] <- 0
  
   return(d)
+}
+
+# save as .RData and .csv files
+save_Rdata_csv <- function(file, filename, ...){
+  save(file, file = paste0(filename, ".RData"))
+  write.csv(file, file = paste0(filename, ".csv"), row.names = FALSE, ...)
 }
