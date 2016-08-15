@@ -19,14 +19,15 @@ llply(veg_df_list, summary)
 # spp
 SppName_list <- llply(veg_df_list, function(x) unique(as.character((x$variable))))
 
-# number of spp in Year0 for each solutino
-S_Year0 <- sapply(veg_df_list, function(x) { 
-  d <- x %>% 
-    filter(year == "Year0") %>% 
-    select(variable) %>% 
-    distinct()
-  nrow(d)
-})
+# number of spp in Year0 for each solution
+veg_df <- ldply(veg_df_list)
+S_Year0 <-  veg_df %>% 
+  group_by(.id, variable, year, form) %>% 
+  summarise_each(funs(sum), value) %>% 
+  filter(year == "Year0" & value != 0) %>% # rmeove spp not observed in Year0
+  group_by(.id, form) %>% 
+  summarise(S = n()) %>% # number of rows (i.e. spp)
+  spread(.id, S) # reshape for table
 
 # organise for further analysis -------------------------------------------
 
@@ -43,7 +44,6 @@ llply(gfspp_list, some)
 
 SppName_grass_list <- llply(gfspp_list, function(x) x$variable[x$form == "Grass"])
 SppName_forb_list <- llply(gfspp_list, function(x) x$variable[x$form == "Forb"])
-
 
 # > plot sum --------------------------------------------------------------
 
@@ -226,14 +226,24 @@ dev.off()
 # merge two test results and create a table
 anova_df <- bind_rows(Tanova = two_anv_ftest, ancova = ancov_ftest, .id = "test") %>% 
   rename(F = statistic, DFnum = df, DFden = Df.res, P = p.value) %>% 
-  mutate(term = factor(term, 
-                       levels = c("co2", "year", "co2:year", "value0"),
-                       labels = c("CO2", "Year", "CO2xYear", "BL")),
-         F = round(F, 2),
+  filter(!grepl("^s2.grass|^s3.grass", .id)) %>% # grass is identical for all
+  mutate(term  = factor(term, 
+                        levels = c("co2", "year", "co2:year", "value0"),
+                        labels = c("CO2", "Year", "CO2xYear", "BL")),
+         F     = round(F, 2),
          DFden = round(DFden, 0), 
-         P = round(P, 3)) %>% 
+         P     = round(P, 3),
+         S     = ldply(strsplit(.id, "[.]"))[, 1],
+         Form  = ldply(strsplit(.id, "[.]"))[, 2],
+         Ind   = ldply(strsplit(.id, "[.]"))[, 3]) %>% 
   gather(variable, value, F, DFnum, DFden, P) %>% # reshape to make a tabale
   mutate(test_var = paste(test, variable, sep = "_")) %>% 
-  select(-test, -variable) %>% 
-  spread(test_var, value, fill = "") %>% 
-  arrange(.id, term) 
+  select(S, Form, Ind, everything(), -test, -variable, -.id) %>% 
+  spread(test_var, value, fill = "-") %>% 
+  arrange(S, Form, Ind, term) 
+names(anova_df)[5:12] <- gsub("_", "\n", names(anova_df)[5:12])
+
+
+# save --------------------------------------------------------------------
+
+save.image(file = "output/Data/solve_Year0_issues.RData")
