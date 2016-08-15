@@ -2,7 +2,7 @@
 title: "Reanalysis on diversity indices"
 author: "Shun Hasegawa"
 date: "13 August 2016"
-output: pdf_document
+output: html_document
 ---
 
 ```{r setup, include=FALSE}
@@ -72,6 +72,7 @@ pander(anova_df, caption = "Results of two-way anova and ancova",
 In general there is only little difference in the final outcomes between three solutions. A small hint of CO2 effects on diversity index (H') seems to be driven by changes in grass species composition, as such when it's analysed only for grass species, CO2 effec was significant (CO2 x Time; *P < 0.01*).
 
 My suggestions are:
+
 1. Using the full data set withought removing any species (i.e. S1) and anlyse 1) all species, 2) forb species and 3) grass species, separately, not only for diversity indices but also othere analyses (i.e. RDA, C3 vs C4 for grass, legume vs. non-legume). 
 2. Whilst adding more analyses as above, reomve RDA analysis with PFG composition and magnitude of annual composition change as messages from these aren't very strong.
 3. Using ancova with Year0 as covariate in stead of two-way ANOVA, as such we can justify that we take the initial differences into account. Where the covariate is not significant in models (e.g. forb species), it may imply that the initial difference is not effectively taken into account due to Year0 suvery method. However, there's no CO2 effect either way.  
