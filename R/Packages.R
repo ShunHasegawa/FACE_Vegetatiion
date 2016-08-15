@@ -31,6 +31,8 @@ library(pbkrtest)
 library(corrplot)
 library(gridExtra)
 library(MuMIn)
+library(broom)
+library(pander)
 library(vegan)
 
 library(HIEv)
