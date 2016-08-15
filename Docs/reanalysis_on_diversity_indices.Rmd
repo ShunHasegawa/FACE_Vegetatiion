@@ -65,7 +65,7 @@ p1 <- which(anova_df[, 8] <=.1)
 p2 <- which(anova_df[, 12] <=.1)
 emphasize.strong.cells(rbind(cbind(p1, 8), cbind(p2, 12)))
 pander(anova_df, caption = "Results of two-way anova and ancova", 
-       justify = 'right', split.table = Inf)
+       justify = 'right', split.table = Inf, keep.line.breaks = TRUE)
 ```
 
 ## Conclusion
