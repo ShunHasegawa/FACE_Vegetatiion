@@ -97,10 +97,6 @@ DmSpp
 sum(SppSum$value[SppSum$Dominant])/sum(SppSum$value)
 
 
-# compare three solutinos for Year0 ---------------------------------------
-
-
-
 # figs --------------------------------------------------------------------
 source("R//Figs.R")
 
