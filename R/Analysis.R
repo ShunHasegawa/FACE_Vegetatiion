@@ -40,7 +40,8 @@ PlotSumVeg <- ddply(FullVdf, .(year, ring, plot, block, co2, id),
                     function(x) colSums(x[, SppName]))
 
 # ring sum
-RingSumVeg <- ddply(PlotSumVeg, .(year, ring, block, co2), function(x) colSums(x[, SppName]))
+RingSumVeg <- ddply(PlotSumVeg, .(year, ring, block, co2), 
+                    function(x) colSums(x[, SppName]))
 
 
 # > PFG -------------------------------------------------------------------
