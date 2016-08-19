@@ -633,7 +633,8 @@ science_theme <- theme(panel.border      = element_rect(color = "black"),
                        legend.key.height = unit(.8, "lines"),
                        axis.ticks.length = unit(-.2, "lines"),
                        axis.text.x       = element_text(margin = margin(5)),
-                       axis.text.y       = element_text(margin = margin(0, 5)))
+                       axis.text.y       = element_text(margin = margin(0, 5)),
+                       axis.title.y      = element_text(margin = margin(0, 10)))
 
 # correct year0 vaalue; this remove species that were observed only in Year0 yet
 # not in the subseqent years
