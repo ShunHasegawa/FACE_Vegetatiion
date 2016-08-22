@@ -1,4 +1,8 @@
 
+# prepare data frames -----------------------------------------------------
+
+
+# create models to be tests
 m_list <- llply(DivDF_year0_list, function(x){
   dlply(x, .(variable), function(y){
     m1 <- lmer(value ~ co2 * year + value0 + (1|block) + (1|ring) + (1|id), data = y)
@@ -10,12 +14,15 @@ m_list <- llply(DivDF_year0_list, function(x){
 m_list <- unlist(m_list, recursive = FALSE)
 summary(m_list)  
 
+# compute 95 CI and post-hoc test
 lsmeans_list <- llply(m_list, function(x) {
   summary(lsmeans::lsmeans(x, pairwise ~ co2 | year))
   })
 
-
+# 95% CI
 CI_dd <- ldply(lsmeans_list, function(x) data.frame(x$lsmeans)) 
+
+# post-hoc test
 contrast_dd <- ldply(lsmeans_list, function(x) data.frame(x$contrast)) %>% 
   mutate(co2 = factor("amb", levels = c("amb", "elev")),
          star = cut(p.value, right = FALSE,
@@ -23,6 +30,7 @@ contrast_dd <- ldply(lsmeans_list, function(x) data.frame(x$contrast)) %>%
                     labels = c("***", "**", "*", "\u2020", ""))) %>% 
   select(.id, year, co2, p.value, star)
 
+# merge
 ci_dd <- left_join(CI_dd, contrast_dd, by = c(".id", "year", "co2")) %>% 
   mutate(Type = tstrsplit(.id, "[.]")[[1]], 
          variable = tstrsplit(.id, "[.]")[[2]],
@@ -30,6 +38,7 @@ ci_dd <- left_join(CI_dd, contrast_dd, by = c(".id", "year", "co2")) %>%
          year = factor(year, levels = paste0("Year", 0:3)))
 ci_dd$star[is.na(ci_dd$star)] <- ""
          
+# Year0 vlaue to create a box-whisker plot
 div_Year0_dd <- ldply(DivDF_list) %>% 
   filter(year == "Year0") %>% 
   mutate(year = factor(year, levels = paste0("Year", 0:3)), 
@@ -37,15 +46,23 @@ div_Year0_dd <- ldply(DivDF_list) %>%
   rename(Type = .id) %>% 
   gather(variable, value, H, S, J)
 
+
+# create fig --------------------------------------------------------------
+
+
 div_plots <- dlply(ci_dd, .(variable), function(x){
+  
+  # df for Year0
   d <- div_Year0_dd %>%
     filter(variable == unique(x$variable))
     
+  # df for median of Year0
   d_med <- d %>%  
     group_by(Type) %>% 
     summarise(M = median(value)) %>% 
     mutate(Med = "Md[Year0]")
   
+  # fig
   dodgeval <- .4
   p <- ggplot(x, aes(x = year, y = lsmean, fill = co2, group = co2))
   p2 <- p +
@@ -78,6 +95,10 @@ div_plots <- dlply(ci_dd, .(variable), function(x){
   return(p2)
   })
 div_plots[[1]]
+
+
+# fine tuning of figure ---------------------------------------------------
+
 
 # add ylabels
 div_ylabs <- c(expression(Adjusted~diversity~(italic("H'"))), 
