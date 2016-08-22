@@ -38,10 +38,13 @@ div_Year0_dd <- ldply(DivDF_list) %>%
   gather(variable, value, H, S, J)
 
 div_plots <- dlply(ci_dd, .(variable), function(x){
-  d <- filter(div_Year0_dd, variable == unique(x$variable)) # df for each index
-  d_med <- d %>%  # df for Year0 median
+  d <- div_Year0_dd %>%
+    filter(variable == unique(x$variable))
+    
+  d_med <- d %>%  
     group_by(Type) %>% 
-    summarise(M = median(value))
+    summarise(M = median(value)) %>% 
+    mutate(Med = "Md[Year0]")
   
   dodgeval <- .4
   p <- ggplot(x, aes(x = year, y = lsmean, fill = co2, group = co2))
@@ -60,10 +63,15 @@ div_plots <- dlply(ci_dd, .(variable), function(x){
                       labels = c("Ambient", expression(eCO[2]))) +
     scale_linetype_manual(values = c("solid", "dashed"), 
                           labels = c("Ambient", expression(eCO[2]))) +
-    geom_hline(data = d_med, aes(yintercept = M), col = "grey50") +
+    geom_hline(data = d_med, aes(yintercept = M, col = Med), alpha = .8) +
+    scale_color_manual(values = "grey50", labels = expression(Md[Year0])) +
     geom_text(aes(label = star), fontface = "bold", vjust = -1) +
     science_theme +
-    theme(legend.position = c(.9, .85)) + 
+    theme(legend.position = c(.88, .82),
+          legend.margin = unit(-.5, "line")) +
+    guides(linetype = guide_legend(order = 1),
+           fill     = guide_legend(order = 1),
+           col      = guide_legend(order = 2)) +
     scale_x_discrete("", labels = NULL, drop = FALSE) +
     geom_vline(xintercept = 1.5, linetype = "dashed") +
     facet_grid(. ~ Type)
