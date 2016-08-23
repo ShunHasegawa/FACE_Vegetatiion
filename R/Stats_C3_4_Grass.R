@@ -1,22 +1,24 @@
 head(veg)
 
-# Create DFs for C3total:C4, C3grass:C4, legume:non-legume and Native:introduced
-C3grassC4 <- within(subsetD(veg, form %in% c("Sedge", "Grass") & PFG %in% c("c3", "c4")), {
-  yval <- factor(ifelse(PFG == "c3", "p", "q"))  
-})
-C3totalC4 <- within(subsetD(veg, !form %in% c("Moss", "Fern")), {
-  yval <- factor(ifelse(PFG == "c3", "p", "q"))  
-})
+# Create C3grass:C4, legume:non-legume and Native:introduced
+C3grassC4 <- veg_FullVdf %>% 
+  filter(form == "Grass") %>% 
+  mutate(yval = factor(ifelse(PFG == "c3", "p", "q")))
+  
+legumeR <- veg_FullVdf %>% 
+  filter(form == "Forb") %>% 
+  mutate(yval = factor(ifelse(PFG == "legume", "p", "q")))
 
-legumeR <- within(subsetD(veg, form == "Forb"), {
-  yval <- factor(ifelse(PFG == "legume", "p", "q"))  
-})
+d <- filter(legumeR, PFG == "c3")
+unique(d$variable)
 
-NativeR <- within(subsetD(veg, !is.na(origin)), {
-  yval <- factor(ifelse(origin == "native", "p", "q"))  
-})
+  
+NativeR <- veg_FullVdf %>% 
+  filter(!is.na(origin)) %>% 
+  mutate(yval = factor(ifelse(origin == "native", "p", "q")))
+summary(NativeR)  
 
-dfList <- list(C3grassC4 = C3grassC4, C3totalC4 = C3totalC4, legumeR = legumeR, NativeR = NativeR)
+dfList <- list(C3grassC4 = C3grassC4, legumeR = legumeR, NativeR = NativeR)
 
 # compute ratios and total number
 PfgRDF <- llply(dfList, function(x){
@@ -30,25 +32,25 @@ PfgRDF <- llply(dfList, function(x){
 # Move Year0 value to a new column to be used as covariate in the analyssis
 # below
 PfgRDF_year0 <- llply(PfgRDF, function(x) {
-  
-  year0_dd <-x %>%                   # Year0
+
+  newyear_dd <- x %>% # year0
     filter(year == "Year0") %>%
     select(id, ratios) %>%
-    rename(ratios0 = ratios)
-
-  subyear_dd <- filter(x, year != "Year0") # subsequent years
-
-  newyear_dd <- merge(subyear_dd, year0_dd, by = "id") # merge
+    rename(ratios0 = ratios) %>% 
+    left_join(filter(x, year != "Year0"), by = "id") %>%  # merge with subsequent years
+    mutate(logitv0 = logit(ratios0))
   
   newyear_dd$obs <- 1:nrow(newyear_dd) # add id
   return(newyear_dd)
 })
 
-length(PfgRDF_year0)
-par(mfrow = c(2, 2), mar = c(5, 4, 2, 1))
-l_ply(1:4, function(x) {
+llply(PfgRDF_year0, summary)
+par(mfrow = c(3, 2), mar = c(4, 3, 1, 1))
+l_ply(1:3, function(x) {
   d <- PfgRDF_year0[[x]]
-  plot(ratios ~ ratios0, pch = 19, col = year, data = d, main = names(PfgRDF_year0)[x])})
+  plot(ratios ~ ratios0, pch = 19, col = year, data = d, main = names(PfgRDF_year0)[x])
+  plot(logit(ratios) ~ logitv0, pch = 19, col = year, data = d, main = names(PfgRDF_year0)[x])
+})
 
 
 # C3:C4 (grass + sedge) ---------------------------------------------------

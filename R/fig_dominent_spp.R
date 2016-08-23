@@ -50,8 +50,7 @@ ci_dd <- left_join(CI_dd, contrast_dd, by = c(".id", "year", "co2")) %>%
          rlsmean = boot::inv.logit(lsmean) * 25, # reverse transform and standardise for 1mx1m plot
          rlowerCL = boot::inv.logit(lower.CL) * 25,
          rupperCL = boot::inv.logit(upper.CL) * 25,
-         .id = gsub("[.]", " ", .id),
-         year = factor(year, levels = paste0("Year", 0:3)))
+         .id = gsub("[.]", " ", .id))
 ci_dd$star[is.na(ci_dd$star)] <- ""
 
 
