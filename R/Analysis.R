@@ -81,10 +81,6 @@ DivDF_list <- llply(vegDF_list, function(x) {
          J = H/log(S)       # Pielou's evenness
   )})
 
-DivDF       <- DivDF_list[["all_spp"]]
-DivDF_grass <- DivDF_list[["grass_spp"]]
-DivDF_forb  <- DivDF_list[["forb_spp"]]
-
 # Identify dominant spp
 SppSum <- ddply(veg_FullVdf, .(variable), summarise, value = sum(value))
 SppSum <- SppSum[order(SppSum$value, decreasing = TRUE),]
@@ -97,6 +93,14 @@ DmSpp <- droplevels(SppSum$variable[SppSum$Dominant])
 DmSpp
 sum(SppSum$value[SppSum$Dominant])/sum(SppSum$value)
 
+
+# analysis and fig --------------------------------------------------------
+
+source("R/fig_diversity_indices.R") # diversity indices
+source("R/fig_dominent_spp.R")      # dominent spp
+source("R/Stats_C3_4_Grass.R")      # C3vsC4, LegvsNonLeg, NativevsIntro
+source("R/PFG_Proportaion.R")       # Grass vs Forb
+source("R/analysis_summary.R")      # summarise all analyses
 
 # figs --------------------------------------------------------------------
 source("R//Figs.R")
