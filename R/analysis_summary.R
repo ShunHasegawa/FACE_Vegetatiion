@@ -33,6 +33,7 @@ div_tbl <- anova_df_ed %>%
   mutate(Form_var = paste(Form, variable, sep = "_")) %>% 
   select(-Form, -variable) %>% 
   spread(key = Form_var, value) %>% 
+  select(Ind, everything()) %>% 
   arrange(Ind, term)
 
 # dominent species
