@@ -1,219 +1,149 @@
-head(veg)
+# Prepare data frames -----------------------------------------------------
 
+summary(veg_FullVdf)
 
-# co2 effect (% change) ---------------------------------------------------
+# proportion of each form for each plot
+PropDF <- veg_FullVdf %>%
+  group_by(year, co2, block, ring, plot, id) %>% 
+  mutate(Total = sum(value)) %>% # total sum for each plot
+  group_by(form, Total, add = TRUE) %>% 
+  summarise(value = sum(value)) %>% # sum for each form
+  mutate(value = value / Total) %>% 
+  filter(form %in% c("Forb", "Grass")) %>% 
+  ungroup()
 
-#########################
-# co2 effect (% change) #
-#########################
-# plant forms
-summary(veg)
-# get C3, grass, forb etc. abundance fo each plot
-PfgAbundDF <- ddply(veg, .(year, co2, block, ring), function(x){
-  Total   = sum(x$value)
-  C3      = sum(x$value[!x$PFG %in% c("c4", "moss", "fern")])
-  C4grass = sum(x$value[x$PFG  == "c4"])
-  Forb    = sum(x$value[x$form == "Forb"])
-  Grass   = sum(x$value[x$form == "Grass"])
-  Wood    = sum(x$value[x$form == "Wood"])
-  Moss    = sum(x$value[x$form == "Moss"])
-  data.frame(Total, C3, C4grass, Forb, Grass, Wood, Moss)
-})
-PfgAbundDF_mlt <- melt(PfgAbundDF, 
-                       id = c("year", "co2", "block", "ring", "Total"))
-PfgAbundDF_mlt_II <- melt(PfgAbundDF_mlt, 
-                          id            = c("year", "co2", "block", "ring", 
-                                            "variable"), 
-                          variable_name = "count")
-
-# cast to pair each block
-PfgAbundDF_cst <- dcast(PfgAbundDF_mlt_II, variable + year + block ~ co2 + count)
-
-ratio <- function(d, w) {
-  AmbM  <- with(d, sum(amb_value * w) / sum(amb_Total * w))
-  elevM <- with(d, sum(elev_value * w)/ sum(elev_Total * w))
-  elevM/AmbM- 1
-}
-
-RatioSE <- ddply(PfgAbundDF_cst, .(year, variable), function(x) {
-  b <- boot::boot(x, ratio, R = 999, stype = "w")
-  summary(b)
-})
-RatioSE$co2R <- RatioSE$original
-RatioSE[RatioSE$variable == "C3", ]
-# plot
-
-# block mean
-blockMean <- ddply(PfgAbundDF_mlt, .(year, variable, block), 
-                   function(x) {
-                     am <- with(x, value[co2 == "amb"] / Total[co2 == "amb"])
-                     em <- with(x, value[co2 == "elev"]/ Total[co2 == "elev"])
-                     co2R <- em/am - 1
-                     data.frame(co2R) 
-                   })
-
-p <- ggplot(RatioSE, aes(x = year, y = co2R))
-p2 <- p + 
-  geom_point(aes(x = year, y = co2R), size = 4) +
-  geom_errorbar(aes(x = year, ymin = co2R - bootSE, ymax = co2R + bootSE), width = 0) + 
-  geom_point(data = blockMean, size = 2, col = "red", alpha = .7) +
-  geom_hline(yintercept = 0, linetype = "dashed") +
-  labs(y = "CO2 response ratio", x = "") +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1),
-        strip.text.x = element_text(size = 7)) +
-  facet_wrap( ~ variable, scale = "free_y")
-ggsavePP(plot = p2, filename = "output/figs/FACE_CO2ResponseRatio_PFGfraction", width = 6, height = 4)
-
-# organise it to export as a table
-RatioSE$co2R_se <- with(RatioSE, paste0(round(co2R, 2), "(", round(bootSE, 2), ")"))
-
-RatioSE_cst <- dcast(RatioSE[c("variable", "year", "co2R_se")], 
-                     variable  ~ year, 
-                     value.var = "co2R_se")
-write.csv(RatioSE_cst, 
-          file      = "output/table/CO2ResponseRatio_PFGfraction.csv", 
-          row.names = FALSE)
-
-
-# Analysis ----------------------------------------------------------------
-
-############
-# Analysis #
-############
-
-# get C3, grass, forb etc. proportion for each plot
-PropDF <- ddply(veg, .(year, co2, block, ring, plot, id), function(x){
-  Total     = sum(x$value)
-  C3prop    = 1-sum(x$value[x$PFG %in% c("c4", "moss", "fern")])/Total
-  C3grass   = sum(x$value[x$form == "Grass" & x$PFG == "c3"])/Total
-  C4grass   = sum(x$value[x$PFG == "c4"])/Total
-  Forbprop  = sum(x$value[x$form == "Forb"])/Total
-  Legume    = sum(x$value[x$PFG == "legume"])/Total
-  Non_leg   = sum(x$value[x$PFG == "Non_legume"])/Total
-  Grassprop = sum(x$value[x$form %in% c("Grass", "Sedge")])/Total
-  Woodprop  = sum(x$value[x$form %in% "Wood"])/Total
-  Mossprop  = sum(x$value[x$form == "Moss"])/Total
-  data.frame(Total, C3prop, C3grass, C4grass, Forbprop, Legume, Non_leg, 
-             Grassprop, Woodprop, Mossprop)
-})
 
 # Move Year0 value to a new column to be used as covariate in the analyssis
 # below
 
-  PropDF_mlt <- melt(PropDF, id = c("year", "co2", "block", "ring", "plot", "id", "Total"))
+# subsequent years
+subyear_dd <- filter(PropDF, year != "Year0") 
+
+# merge with Year0
+PropDF_year0 <- PropDF %>% 
+  filter(year == "Year0") %>%
+  select(form, id, value) %>%
+  rename(value0 = value) %>%
+  left_join(subyear_dd, by = c("id", "form")) %>% 
+  mutate(logitv0 = logit(value0)) # logit transformation
+
+# plot
+unique(PropDF_year0$form)
+par(mfrow = c(2, 2), mar = c(4, 4, 3, 0.5), cex = .5)
+d_ply(PropDF_year0, .(form), function(x) {
+  plot(value ~ value0, pch = 19, col = year, data = x, main = unique(x$form))
+  plot(logit(value) ~ logitv0, pch = 19, col = year, data = x, 
+       main = unique(x$form))
+})
+
+# Analysis ----------------------------------------------------------------
+
+# models to be tested
+m_list <- dlply(PropDF_year0, .(form), function(x){
+  m1 <- lmer(logit(value) ~ co2 * year + logitv0 + (1|block) + (1|ring) + (1|id), data = x)
+  m2 <- update(m1, ~ . - (1|block))
+  if (AICc(m1) >= AICc(m2)) return(m2) else return(m1)
+})
+llply(m_list, function(x) Anova(x, test.statistic = "F"))
   
-  # Year0
-  year0_dd <- PropDF_mlt %>%                   
-    filter(year == "Year0") %>%
-    select(variable, id, value) %>%
-    rename(value0 = value)
+PropDF_year0 %>%
+  select(id, year, form, value) %>% 
+  spread(form, value) %>% 
+  qplot(x = Forb, y = Grass, geom = "point", data = .)
+
+# compute 95 CI and post-hoc test
+lsmeans_list <- llply(m_list, function(x) {
+  summary(lsmeans::lsmeans(x, pairwise ~ co2 | year))
+})
+
+# 95% CI
+CI_dd <- ldply(lsmeans_list, function(x) data.frame(x$lsmeans)) 
+
+# post-hoc test
+contrast_dd <- ldply(lsmeans_list, function(x) data.frame(x$contrast)) %>% 
+  mutate(co2 = factor("amb", levels = c("amb", "elev")),
+         star = cut(p.value, right = FALSE,
+                    breaks = c(0, .1, .05, .01, .001, 1),  
+                    labels = c("***", "**", "*", "\u2020", ""))) %>% 
+  select(.id, year, co2, p.value, star)
+
+# merge
+ci_dd <- left_join(CI_dd, contrast_dd, by = c(".id", "year", "co2")) %>% 
+  mutate(year = factor(year, levels = paste0("Year", 0:3)))
+ci_dd$star[is.na(ci_dd$star)] <- ""
+
+
+
+# Create fig --------------------------------------------------------------
+
+# df for Year0
+d <- PropDF %>%
+  filter(year == "Year0") %>% 
+  mutate(year = factor(year, levels = paste0("Year", 0:3)))
+
+# df for median of Year0
+d_med <- d %>%  
+  group_by(form) %>% 
+  summarise(M = median(value)) %>% 
+  mutate(Med = "Md[Year0]")
+
+
+ci_dd <- ci_dd %>% 
+  mutate(rlsmean = boot::inv.logit(lsmean), # reverse transform
+         rlowerCL = boot::inv.logit(lower.CL),
+         rupperCL = boot::inv.logit(upper.CL),
+         year = factor(year, levels = paste0("Year", 0:3)))
+
+# fig
+dodgeval <- .4
+
+
+p <- ggplot(ci_dd, aes(x = year, y = rlsmean, fill = co2)) +
+  geom_bar(stat = "identity")+
+  scale_y_continuous()
+  facet_grid(. ~ .id)
+p
   
-  # subsequent years
-  subyear_dd <- filter(PropDF_mlt, year != "Year0") 
+  geom_errorbar(aes(ymin = rlowerCL, ymax = rupperCL), width = 0, 
+                position = position_dodge(width = dodgeval)) +
+  geom_line(aes(linetype = co2), position = position_dodge(width = dodgeval)) +
+  geom_boxplot(data = d, aes(x = year, y = value),  alpha = .6, 
+               position = position_dodge(.7), outlier.shape = 21, width = .7, 
+               show.legend = FALSE) +
+  geom_point(shape = 21, size = 3, position = position_dodge(width = dodgeval)) +
+  geom_hline(data = d_med, aes(yintercept = M, col = Med), alpha = .8) +
+  geom_vline(xintercept = 1.5, linetype = "dashed") +
+  geom_text(aes(label = star, y = rupperCL), fontface = "bold", vjust = 0) +
   
-  # merge
-  PropDF_year0 <- merge(subyear_dd, year0_dd, by = c("id", "variable")) 
-  PropDF_year0$obs <- 1:nrow(PropDF_year0) 
-
-  unique(PropDF_year0$variable)
-  par(mfrow = c(3, 3), mar = c(2, 4, 2, 0.5), cex = .5)
-  d_ply(PropDF_year0, .(variable), function(x) {
-    plot(value ~ value0, pch = 19, col = year, data = x, 
-         main = unique(x$variable))
-    })
-
-
-# C3 proportion -------------------------------------------------------
-
-########################################
-# C3 proportion in the whole community #
-########################################
-
-c3prop_dd <- filter(PropDF_year0, variable == "C3prop")
-par(mfrow = c(1, 3))
-plot(value ~ value0, data = c3prop_dd, pch = 19, col = year)
-plot(asin(value) ~ value0, data = c3prop_dd, pch = 19, col = year)
-plot(logit(value) ~ value0, data = c3prop_dd, pch = 19, col = year)
-
-rm1 <- lmer(value ~ year * co2 + value0 + (1|block) +  (1|ring) + (1|id),
-            data = c3prop_dd)
-rm2 <- lmer(asin(value) ~ year * co2 + value0 + (1|block) +  (1|ring) + (1|id),
-            data = c3prop_dd)
-rm3 <- lmer(logit(value) ~ year * co2 + value0 + (1|block) +  (1|ring) + (1|id),
-            data = c3prop_dd)
-
-ldply(list(rm1, rm2, rm3), r.squared)
-
-Anova(rm1, test.statistic = "F")
-plot(rm1)
-qqnorm(resid(rm1))
-qqline(resid(rm1))
-
-AnvF_PropC3_total <- Anova(rm1, test.statistic = "F")
-AnvF_PropC3_total
-
-# C3 grass proportion -----------------------------------------------------
-#######################
-# C3 grass proportion #
-#######################
-
-c3gprop_dd <- filter(PropDF_year0, variable == "C3grass")
-par(mfrow = c(1, 3))
-plot(value ~ value0, data = c3gprop_dd, pch = 19, col = year)
-plot(asin(value) ~ value0, data = c3gprop_dd, pch = 19, col = year)
-plot(logit(value) ~ value0, data = c3gprop_dd, pch = 19, col = year)
-
-c3gm1 <- lmer(value ~ year * co2 + value0 + 
-                (1|block) +(1|ring) + (1|id), data = c3gprop_dd)
-c3gm2 <- lmer(logit(value) ~ year * co2 + value0 + 
-                (1|block) +(1|ring) + (1|id), data = c3gprop_dd)
-c3gm3 <- lmer(asin(value) ~ year * co2 + value0 + 
-                (1|block) +(1|ring) + (1|id), data = c3gprop_dd)
-ldply(list(c3gm1, c3gm2, c3gm3), r.squared)
-
-plot(c3gm3)
-qqnorm(resid(c3gm3))
-qqline(resid(c3gm3))
-
-AnvF_C3grass <- Anova(c3gm3, test.statistic = "F")
-AnvF_C3grass
-
-# C4 grass proportion ----------------------------------------------------------
-
-#################
-# C4 proportion #
-#################
-
-c4gprop_dd <- filter(PropDF_year0, variable == "C4grass")
-
-par(mfrow = c(2, 2))
-boxplot(logit(value) ~ year:ring, data = c4gprop_dd, main = "logit")
-plot(logit(value) ~ value0, data = c4gprop_dd, pch = 19, col = year)
-plot(value ~ value0, data = c4gprop_dd, pch = 19, col = year)
-
-m2Lmer <- lmer(logit(value) ~ year * co2 + value0 + 
-                 (1|block) +(1|ring) + (1|id), data = c4gprop_dd)
-m3Lmer <- lmer(value ~ year * co2 + value0 + 
-                 (1|block) +(1|ring) + (1|id), data = c4gprop_dd)
-ldply(list(m2Lmer, m3Lmer), r.squared)
-
-plot(m3Lmer)
-qqnorm(resid(m3Lmer))
-qqline(resid(m3Lmer))
-AnvF_C4grass <- Anova(m3Lmer, test.statistic = "F")
-AnvF_C4grass
+  scale_fill_manual(values = c("black", "white"), 
+                    labels = c("Ambient", expression(eCO[2]))) +
+  scale_linetype_manual(values = c("solid", "dashed"), 
+                        labels = c("Ambient", expression(eCO[2]))) +
+  scale_color_manual(values = "grey50", labels = expression(Md[Year0])) +
+  scale_y_continuous(limits = c(0, 25)) +
+  scale_x_discrete("Year", labels = 0:4, drop = FALSE) +
+  
+  science_theme +
+  theme(legend.position = c(.87, .91),
+        legend.margin = unit(-.5, "line"),
+        strip.text.x = element_text(face = "italic")) +
+  guides(linetype = guide_legend(order = 1),
+         fill     = guide_legend(order = 1),
+         col      = guide_legend(order = 2)) +
+  
+  
+  facet_wrap( ~ .id) +
+  labs(y = expression(Abundance~(Counts~m^'-1')))
+p2
 
 
-# . post-hoc test ---------------------------------------------------------
-plot(lmerTest::lsmeans(m3Lmer))
-lsmeans::lsmeans(m3Lmer, pairwise ~ co2 | year)
 
 
-# Grass proportion -------------------------------------------------------
 
-########################
-# Grass + Sedge + rush #
-########################
+
+
+
+  # > Grass proportion -------------------------------------------------------
 
 gProp_dd <- filter(PropDF_year0, variable == "Grassprop")
 
