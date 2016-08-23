@@ -15,9 +15,9 @@ NativeR <- veg_FullVdf %>%
   mutate(yval = factor(ifelse(origin == "native", "p", "q")))
 summary(NativeR)  
 
-dfList <- list('C3 in grass: C3 vs. C4' = C3grassC4, 
-               'Legume in forb: Legume vs. Non-legume' = legumeR, 
-               'Native plants: native vs. introduced' = NativeR)
+dfList <- list('C3vsC4' = C3grassC4, 
+               'LegvsNonleg' = legumeR, 
+               'NatvsIntr' = NativeR)
 
 # compute ratios and total number
 PfgRDF <- llply(dfList, function(x){
@@ -55,7 +55,7 @@ PfgRDF_year0[[3]]$t_value0 <- sqrt(PfgRDF_year0[[3]]$ratios0)
 # Aanlysis ----------------------------------------------------------------
 
 # models to be tested
-m_list <- llply(PfgRDF_year0, function(x) {
+pfgprop_m_list <- llply(PfgRDF_year0, function(x) {
   m1 <- lmer(logit(ratios) ~ co2 * year + t_value0 + (1|block) + (1|ring) + (1|id), data = x)
   m2 <- update(m1, ~ . - (1|block))
   if (AICc(m1) >= AICc(m2)) return(m2) else return(m1)
@@ -63,7 +63,7 @@ m_list <- llply(PfgRDF_year0, function(x) {
 )
 
 # compute 95 CI and post-hoc test
-lsmeans_list <- llply(m_list, function(x) {
+lsmeans_list <- llply(pfgprop_m_list, function(x) {
   summary(lsmeans::lsmeans(x, pairwise ~ co2 | year))
 })
 
@@ -98,7 +98,7 @@ d <- ldply(dfList) %>%
   mutate(year = factor(year, levels = paste0("Year", 0:3)))
 
 dodgeval <- .4
-p <- ggplot(ci_dd, aes(x = year, y = rlsmean, fill = co2, group = co2)) +
+fig_pfgprop <- ggplot(ci_dd, aes(x = year, y = rlsmean, fill = co2, group = co2)) +
   facet_wrap(~ .id, scales = "free_y", ncol = 1) +
   
   geom_errorbar(aes(ymin = rlowerCL, ymax = rupperCL), width = 0, 
@@ -122,7 +122,7 @@ p <- ggplot(ci_dd, aes(x = year, y = rlsmean, fill = co2, group = co2)) +
         strip.text.x    = element_text(size = 8)) +
  
   labs(y = expression("Adjusted proportion"))
-p
+fig_pfgprop
 
 ggsavePP(filename = "output/figs/adjusted_PFG_proportion", width = 3, height = 6,
-         plot = p)
+         plot = fig_pfgprop)

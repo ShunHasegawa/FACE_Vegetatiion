@@ -22,14 +22,14 @@ d_ply(dominentsp_year0, .(variable),
 d_ply(dominentsp_year0, .(variable), 
       function(x) plot(value ~ value0, data = x, pch = 19, col = factor(year), main = "raw"))  
 
-m_list <- dlply(dominentsp_year0, .(variable), function(x){
+dom_m_list <- dlply(dominentsp_year0, .(variable), function(x){
   m1 <- lmer(logit(value) ~ co2 * year + logitv0 + (1|block) + (1|ring) + (1|id), data = x)
   m2 <- update(m1, ~ . - (1|block))
   if (AICc(m1) >= AICc(m2)) return(m2) else return(m1)
 })
 
 # compute 95 CI and post-hoc test
-lsmeans_list <- llply(m_list, function(x) {
+lsmeans_list <- llply(dom_m_list, function(x) {
   summary(lsmeans::lsmeans(x, pairwise ~ co2 | year))
 })
 
@@ -69,7 +69,7 @@ d <- dominentsp %>%
 
 # fig
 dodgeval <- .4
-p <- ggplot(ci_dd, aes(x = year, y = rlsmean, fill = co2, group = co2)) +
+fig_domspp <- ggplot(ci_dd, aes(x = year, y = rlsmean, fill = co2, group = co2)) +
   
   geom_errorbar(aes(ymin = rlowerCL, ymax = rupperCL), width = 0, 
                 position = position_dodge(width = dodgeval)) +
@@ -95,7 +95,7 @@ p <- ggplot(ci_dd, aes(x = year, y = rlsmean, fill = co2, group = co2)) +
   
   facet_wrap( ~ .id) +
   labs(y = expression(Abundance~(Counts~m^'-1')))
-p
+fig_domspp
 
 ggsavePP(filename = "output/figs/adjusted_abundance_dominenetSPP", 
-         plot = p2, width = 5, height = 4)
+         plot = fig_domspp, width = 5, height = 4)

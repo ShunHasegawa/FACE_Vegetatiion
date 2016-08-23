@@ -1,9 +1,33 @@
 
 # prepare data frames -----------------------------------------------------
 
+# Move Year0 value to a new column to be used as covariate for the analysis
+DivDF_year0_list <- llply(DivDF_list, function(x){
+  
+  DivDF_mlt <- gather(x, variable, value, H, S, J)
+  
+  DivDF_year0 <- DivDF_mlt %>% # Year0
+    filter(year == "Year0") %>%
+    select(id, value, variable) %>%
+    rename(value0 = value) %>% 
+    left_join(filter(DivDF_mlt, year != "Year0"), by = c("id", "variable")) %>% 
+    filter(!is.na(value))
+  
+  return(DivDF_year0)
+})
 
-# create models to be tests
-m_list <- llply(DivDF_year0_list, function(x){
+par(mfrow = c(3, 3), mar = c(4, 4, 2, 1))
+
+l_ply(names(DivDF_year0_list), function(x){
+  d_ply(DivDF_year0_list[[x]], .(variable), function(y){
+    figtitle <- paste(x, unique(y$variable), sep = "-")
+    plot(value ~ value0, pch = 19, col = year, data = y, main = figtitle)
+  })
+})
+
+
+# create models to be tested
+div_m_list <- llply(DivDF_year0_list, function(x){
   dlply(x, .(variable), function(y){
     m1 <- lmer(value ~ co2 * year + value0 + (1|block) + (1|ring) + (1|id), data = y)
     m2 <- update(m1, ~ . - (1|block))
@@ -11,11 +35,11 @@ m_list <- llply(DivDF_year0_list, function(x){
     })
   })
 
-m_list <- unlist(m_list, recursive = FALSE)
-summary(m_list)  
+div_m_list <- unlist(div_m_list, recursive = FALSE)
+summary(div_m_list)  
 
 # compute 95 CI and post-hoc test
-lsmeans_list <- llply(m_list, function(x) {
+lsmeans_list <- llply(div_m_list, function(x) {
   summary(lsmeans::lsmeans(x, pairwise ~ co2 | year))
   })
 

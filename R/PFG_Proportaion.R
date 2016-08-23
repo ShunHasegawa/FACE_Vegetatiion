@@ -37,12 +37,7 @@ m1 <- lmer(logit(grass_prop) ~ co2 * year + logitv0 + (1|block) + (1|ring) + (1|
            data = PropDF_year0)
 m2 <- update(m1, ~ . - (1|block))
 AICc(m1, m2)
-
-Anova(m2, test.statistic = "F")
-
-plot(m2)
-qqnorm(resid(m2))  
-qqline(resid(m2))  
+grassprop_m <- m2
 
 # compute 95 CI and post-hoc test
 lsmeans_dd <- summary(lsmeans::lsmeans(m2, pairwise ~ co2 | year))
@@ -81,7 +76,7 @@ d <- PropDF %>%
 
 # fig
 dodgeval <- .4
-p <- ggplot(ci_dd, aes(x = year, y = rlsmean, fill = co2, group = co2)) +
+fig_grassprop <- ggplot(ci_dd, aes(x = year, y = rlsmean, fill = co2, group = co2)) +
   
   geom_errorbar(aes(ymin = rlowerCL, ymax = rupperCL), width = 0, 
                 position = position_dodge(width = dodgeval)) +
@@ -112,6 +107,6 @@ p <- ggplot(ci_dd, aes(x = year, y = rlsmean, fill = co2, group = co2)) +
          col      = guide_legend(order = 2)) +
   
   labs(y = "Adjusted proportion (Grass | Forb)")
-p
+fig_grassprop
 ggsavePP(filename = "output/figs/adjusted_Grass-Forb_proportion",
-         plot = p, width = 4, height = 3)
+         plot = fig_grassprop, width = 4, height = 3)
