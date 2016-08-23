@@ -1,0 +1,98 @@
+---
+title: "EucFACE understorey vegetation -Summary of stats-"
+author: "Shun Hasegawa"
+date: "23 August 2016"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(pander)
+library(ggplot2)
+library(grid)
+knitr::opts_chunk$set(echo = TRUE)
+load("../output/Data/summary_analysis.RData")
+theme_set(theme_bw() + 
+            theme(panel.grid.major = element_blank(), 
+                  panel.grid.minor = element_blank()))
+
+```
+
+## Reanalysis using Year0 as a covariate, namely ANCOVA
+
+Here, I reanalysed understorey vegetation data, performing ANCOVA using Year0 values as a covariate. I analysed the following variables:
+
+* Diversity indices
+    + Diversity (*H'*)
+    + Evenness (*J'*)
+    + Species richness (*S*)
+* Dominent species
+    + _Commelina cyanea_
+    + _Cynodon dactylon_
+    + _Microlaena stipoides_
+    + _Pratia purpurascens_
+* Proportion of plant functional groups
+    + Grass *vs.* Forb
+    + C~3\_grass~ *vs.* C~4\_grass~
+    + Legume *vs.* Non-legume
+    + (Native *vs.* Introduced)
+
+Diversity indices were anlysed for all species tother, grass species only, and form species only. 
+
+### Diversity indices
+
+```{r div_stats, echo=FALSE, warning=FALSE}
+pcol <- grep("_P$", names(div_tbl))
+d <- div_tbl
+d[, pcol] <- apply(d[, pcol], 2, as.numeric)
+d[is.na(d)] <- 0
+
+emphasize.italics.cols(pcol)
+emphasize.strong.cells(which(d <= .1, arr.ind = TRUE))
+
+pander(div_tbl, caption = "Diversity indices", justify = "right", split.table = Inf, keep.line.breaks = TRUE)
+```
+
+```{r div_plot, echo=FALSE, fig.cap="Fig.1 Diversity indices"}
+grid.draw(div_plot_merged)
+```
+
+## Dominent species
+
+```{r dom_stats, echo=FALSE, warning=FALSE}
+pcol <- grep("_P$", names(dom_tbl))
+d <- dom_tbl
+d[, pcol] <- apply(d[, pcol], 2, as.numeric)
+d[is.na(d)] <- 0
+emphasize.italics.cols(pcol)
+emphasize.strong.cells(which(d <= .1, arr.ind = TRUE))
+
+pander(dom_tbl, caption = "Dominent species", justify = "right", split.table = Inf, keep.line.breaks = TRUE)
+```
+
+```{r dom_plot, echo=FALSE, fig.cap="Fig.2 Dominent species"}
+fig_domspp
+```
+
+## Proportions of plant functional groups
+
+```{r pfgprop_stat, echo=FALSE, warning=FALSE}
+pcol <- grep("_P$", names(pfg_tbl))
+d <- pfg_tbl
+d[, pcol] <- apply(d[, pcol], 2, as.numeric)
+d[is.na(d)] <- 0
+emphasize.italics.cols(pcol)
+emphasize.strong.cells(which(d <= .1, arr.ind = TRUE))
+
+pander(pfg_tbl, caption = "Dominent species", justify = "right", split.table = Inf, keep.line.breaks = TRUE)
+
+```
+
+```{r grassprop_plot, echo=FALSE, fig.height=3, fig.width=4}
+fig_grassprop
+```
+
+```{r pfgprop_plot, echo=FALSE, fig.height=6, fig.width=4}
+fig_pfgprop
+```
+
+
