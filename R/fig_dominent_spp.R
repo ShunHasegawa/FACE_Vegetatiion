@@ -46,7 +46,12 @@ contrast_dd <- ldply(lsmeans_list, function(x) data.frame(x$contrast)) %>%
 
 # merge
 ci_dd <- left_join(CI_dd, contrast_dd, by = c(".id", "year", "co2")) %>% 
-  mutate(year = factor(year, levels = paste0("Year", 0:3)))
+  mutate(year = factor(year, levels = paste0("Year", 0:3)),
+         rlsmean = boot::inv.logit(lsmean) * 25, # reverse transform and standardise for 1mx1m plot
+         rlowerCL = boot::inv.logit(lower.CL) * 25,
+         rupperCL = boot::inv.logit(upper.CL) * 25,
+         .id = gsub("[.]", " ", .id),
+         year = factor(year, levels = paste0("Year", 0:3)))
 ci_dd$star[is.na(ci_dd$star)] <- ""
 
 
@@ -56,37 +61,23 @@ ci_dd$star[is.na(ci_dd$star)] <- ""
 # df for Year0
 d <- dominentsp %>%
   filter(year == "Year0") %>% 
+  group_by(year, co2, ring, variable) %>% 
+  summarise(N = sum(!is.na(value)), value = mean(value)) %>% 
+  ungroup() %>% 
   mutate(year = factor(year, levels = paste0("Year", 0:3)),
          value = value/4, # standardise for 1mx1m plot
          .id = gsub("[.]", " ", variable))
 
-# df for median of Year0
-d_med <- d %>%  
-  group_by(.id) %>% 
-  summarise(M = median(value)) %>% 
-  mutate(Med = "Md[Year0]")
-
-
-ci_dd <- ci_dd %>% 
-  mutate(rlsmean = boot::inv.logit(lsmean) * 25, # reverse transform and standardise for 1mx1m plot
-         rlowerCL = boot::inv.logit(lower.CL) * 25,
-         rupperCL = boot::inv.logit(upper.CL) * 25,
-         .id = gsub("[.]", " ", .id),
-         year = factor(year, levels = paste0("Year", 0:3)))
-
 # fig
 dodgeval <- .4
-p <- ggplot(ci_dd, aes(x = year, y = rlsmean, fill = co2, group = co2))
-p2 <- p +
+p <- ggplot(ci_dd, aes(x = year, y = rlsmean, fill = co2, group = co2)) +
   
   geom_errorbar(aes(ymin = rlowerCL, ymax = rupperCL), width = 0, 
                 position = position_dodge(width = dodgeval)) +
   geom_line(aes(linetype = co2), position = position_dodge(width = dodgeval)) +
-  geom_boxplot(data = d, aes(x = year, y = value),  alpha = .6, 
-               position = position_dodge(.7), outlier.shape = 21, width = .7, 
-               show.legend = FALSE) +
+  geom_point(data = d, aes(x = year, y = value),  alpha = .7, shape = 21, size = 3,
+               position = position_dodge(dodgeval), show.legend = FALSE) +
   geom_point(shape = 21, size = 3, position = position_dodge(width = dodgeval)) +
-  geom_hline(data = d_med, aes(yintercept = M, col = Med), alpha = .8) +
   geom_vline(xintercept = 1.5, linetype = "dashed") +
   geom_text(aes(label = star, y = rupperCL), fontface = "bold", vjust = 0) +
   
@@ -102,14 +93,10 @@ p2 <- p +
   theme(legend.position = c(.87, .91),
         legend.margin = unit(-.5, "line"),
         strip.text.x = element_text(face = "italic")) +
-  guides(linetype = guide_legend(order = 1),
-         fill     = guide_legend(order = 1),
-         col      = guide_legend(order = 2)) +
-  
   
   facet_wrap( ~ .id) +
   labs(y = expression(Abundance~(Counts~m^'-1')))
-p2
+p
 
 ggsavePP(filename = "output/figs/adjusted_abundance_dominenetSPP", 
          plot = p2, width = 5, height = 4)

@@ -73,12 +73,11 @@ ci_dd$star[is.na(ci_dd$star)] <- ""
 # df for Year0
 d <- PropDF %>%
   filter(year == "Year0") %>% 
-  mutate(year = factor(year, levels = paste0("Year", 0:3)))
-
-# df for median of Year0
-d_med <- d %>%  
-  summarise(M = median(grass_prop)) %>% 
-  mutate(Med = "Md[Year0]")
+  group_by(year, co2, ring) %>% 
+  summarise_each(funs(sum), Forb, Grass) %>% 
+  ungroup() %>% 
+  mutate(grass_prop = Grass / (Grass + Forb),
+         year = factor(year, levels = paste0("Year", 0:3)))
 
 # fig
 dodgeval <- .4
@@ -87,11 +86,9 @@ p <- ggplot(ci_dd, aes(x = year, y = rlsmean, fill = co2, group = co2)) +
   geom_errorbar(aes(ymin = rlowerCL, ymax = rupperCL), width = 0, 
                 position = position_dodge(width = dodgeval)) +
   geom_line(aes(linetype = co2), position = position_dodge(width = dodgeval)) +
-  geom_boxplot(data = d, aes(x = year, y = grass_prop),  alpha = .6, 
-               position = position_dodge(.7), outlier.shape = 21, width = .7, 
-               show.legend = FALSE) +
+  geom_point(data = d, aes(x = year, y = grass_prop),  size = 3, shape = 21, 
+             alpha = .7, position = position_dodge(dodgeval), show.legend = FALSE) +
   geom_point(shape = 21, size = 3, position = position_dodge(width = dodgeval)) +
-  geom_hline(data = d_med, aes(yintercept = M, col = Med), alpha = .8) +
   geom_vline(xintercept = 1.5, linetype = "dashed") +
   geom_text(aes(label = star, y = rupperCL), fontface = "bold", vjust = 0) +
   
@@ -115,6 +112,6 @@ p <- ggplot(ci_dd, aes(x = year, y = rlsmean, fill = co2, group = co2)) +
          col      = guide_legend(order = 2)) +
   
   labs(y = "Adjusted proportion (Grass | Forb)")
-
+p
 ggsavePP(filename = "output/figs/adjusted_Grass-Forb_proportion",
          plot = p, width = 4, height = 3)

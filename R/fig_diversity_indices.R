@@ -38,9 +38,12 @@ ci_dd <- left_join(CI_dd, contrast_dd, by = c(".id", "year", "co2")) %>%
          year = factor(year, levels = paste0("Year", 0:3)))
 ci_dd$star[is.na(ci_dd$star)] <- ""
          
-# Year0 vlaue to create a box-whisker plot
+# Year0 vlaue in each ring
 div_Year0_dd <- ldply(DivDF_list) %>% 
   filter(year == "Year0") %>% 
+  group_by(.id, year, co2, ring) %>% 
+  summarise_each(funs(mean), H, S, J) %>% 
+  ungroup() %>% 
   mutate(year = factor(year, levels = paste0("Year", 0:3)), 
          .id = factor(.id, labels = c("All", "Forb", "Grass"))) %>% 
   rename(Type = .id) %>% 
@@ -56,12 +59,6 @@ div_plots <- dlply(ci_dd, .(variable), function(x){
   d <- div_Year0_dd %>%
     filter(variable == unique(x$variable))
     
-  # df for median of Year0
-  d_med <- d %>%  
-    group_by(Type) %>% 
-    summarise(M = median(value)) %>% 
-    mutate(Med = "Md[Year0]")
-  
   # fig
   dodgeval <- .4
   p <- ggplot(x, aes(x = year, y = lsmean, fill = co2, group = co2))
@@ -70,11 +67,9 @@ div_plots <- dlply(ci_dd, .(variable), function(x){
     geom_errorbar(aes(ymin = lower.CL, ymax = upper.CL), width = 0, 
                   position = position_dodge(width = dodgeval)) +
     geom_line(aes(linetype = co2), position = position_dodge(width = dodgeval)) +
-    geom_boxplot(data = d, aes(x = year, y = value), alpha = .6, 
-                 position = position_dodge(.7),  outlier.shape = 21, width = .7, 
-                 show.legend = FALSE) +
+    geom_point(data = d, aes(x = year, y = value), size = 3, shape = 21, alpha = .7,
+                 position = position_dodge(dodgeval), show.legend = FALSE) +
     geom_point(shape = 21, size = 3, position = position_dodge(width = dodgeval)) +
-    geom_hline(data = d_med, aes(yintercept = M, col = Med), alpha = .8) +
     geom_vline(xintercept = 1.5, linetype = "dashed") +
     
     scale_fill_manual(values = c("black", "white"), 
@@ -83,14 +78,10 @@ div_plots <- dlply(ci_dd, .(variable), function(x){
                           labels = c("Ambient", expression(eCO[2]))) +
     scale_color_manual(values = "grey50", labels = expression(Md[Year0])) +
     scale_x_discrete("", labels = NULL, drop = FALSE) +
-    geom_text(aes(label = star), fontface = "bold", vjust = -1) +
+    geom_text(aes(y = upper.CL, label = star), fontface = "bold", vjust = -.1) +
     
     science_theme +
-    theme(legend.position = c(.88, .82),
-          legend.margin = unit(-.5, "line")) +
-    guides(linetype = guide_legend(order = 1),
-           fill     = guide_legend(order = 1),
-           col      = guide_legend(order = 2)) +
+    theme(legend.position = c(.88, .9)) +
     
     facet_grid(. ~ Type)
   
