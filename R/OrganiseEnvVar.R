@@ -241,27 +241,15 @@ SoilMTdf_Ring <- ddply(SoilMTdf, .(year, ring), function(x) colMeans(x[, Probes]
 
 # > light -----------------------------------------------------------------
 
-#########
-# light #
-#########
-load("output//Data/FACE_Light_DayMean.RData")
-head(FACE_Light_DayMean)
-  # understorey and canopy PAR is highly correlated so just use understorey
-  # October 2012 values are little bit weird. It goes up in a sudden.
-  # Just use Nov-Dec for the time being cause measurements in these months are
-  # complete in all the three years.
-LightNovDec <- subsetD(FACE_Light_DayMean, month(Date) %in% c(11, 12))
-LightNovDec$year <- factor(year(LightNovDec$Date), labels = paste0("Year", 0:3))
 
-FlorLight_Ring <- ddply(LightNovDec, .(year, ring), summarise, 
-                        FloorPAR = mean(FloorPAR, na.rm = TRUE))
+# canopy transmittance data from Durrsma et al. 2016 (GCB)
+
+# source("R/PrcssLight.R")
+load("output//Data/FACE_canopy_transmittance.RData")
 
 
 # > IEM ---------------------------------------------------------------------
 
-#######
-# IEM #
-#######
 load("Data/SoilVariables/FACE_IEM.RData")
 
 # use only Nov-Jan
@@ -338,17 +326,16 @@ xtabs(~ Y + M, data = tdfS)
 
 # > Combine all -----------------------------------------------------------
 
-###############
-# Combine all #
-###############
 EnvVarDF <- Reduce(function(...) merge(..., by = c("year", "ring"), all.x = TRUE), 
                    list(SoilDf, TcnDF_Ring, phDF_ring, SoilChemDF_ring, 
-                        SoilMTdf_Ring, FlorLight_Ring, iem_ring, Extract_ring, 
+                        SoilMTdf_Ring, light_dd, iem_ring, Extract_ring, 
                         Mineralisation_ring))
+
+
 EnvVarDF <- within(EnvVarDF, {
-  year <- factor(year)
-  ring <- factor(ring)
-  co2 <- factor(ifelse(ring %in% c(1, 4, 5), "elev", "amb"))
+  year   <- factor(year)
+  ring   <- factor(ring)
+  co2    <- factor(ifelse(ring %in% c(1, 4, 5), "elev", "amb"))
   TotalP <- NULL
 })
 
@@ -357,26 +344,23 @@ save(EnvVarDF, file = "output/Data/FACE_EnvironmenVars.RData")
 
 # > Sumamry ---------------------------------------------------------------
 
-#######################################################
-# Sumamry and simple stats on environmental variables #
-#######################################################
-# only use totalC, moist, ph, depth of HL, Par and temp
+# Sumamry and simple stats on environmental variables. Only use totalC, moist,
+# ph, depth of HL, canopy transmittance and temp
+
 names(EnvVarDF)
 
-envDF <- EnvVarDF[, c("year", "ring", "co2","TotalC", 
-                      "moist", "Drysoil_ph", "Depth_HL", 
-                      "FloorPAR", "temp")]
+envDF <- EnvVarDF[, c("year", "ring", "co2","TotalC", "moist", "Drysoil_ph", 
+                      "Depth_HL", "gapfraction", "temp")]
 envDF$moist <- envDF$moist * 100
+
 # Treatment mean and SE
 envDF_mlt <- melt(envDF, id = c("year", "ring", "co2"))
 TreatSummary <- ddply(envDF_mlt, .(year, co2, variable), summarise,  
                       Mean = mean(value), 
                       SE = ci(value)[4], 
                       N = sum(!is.na(value)))
-TreatSummary$value <- with(TreatSummary, paste0(round(Mean, 2), 
-                                                "(",
-                                                round(SE, 2),
-                                                ")"))
+TreatSummary$value <- with(TreatSummary,
+                           paste0(round(Mean, 2), "(", round(SE, 2),")"))
 TreatSummary_cst <- dcast(variable ~ year + co2, data = TreatSummary)
 
 
@@ -425,10 +409,10 @@ AnvF_HL <- summary.aov(m1)
 AnvF_HL
 
 
-# . understorey PAR ---------------------------------------------------------
+# . canopy transmittance ---------------------------------------------------------
 
-bxplts(value = "FloorPAR", xval = "co2", data = envDF)
-m1 <- lmer(FloorPAR ~ co2 * year + (1|ring), data = envDF)
+bxplts(value = "gapfraction", xval = "co2", data = envDF)
+m1 <- lmer(gapfraction ~ co2 * year + (1|ring), data = envDF)
 m2 <- stepLmer(m1)
 plot(m2)
 qqnorm(resid(m2))

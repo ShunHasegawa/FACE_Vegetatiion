@@ -5,7 +5,6 @@
   load("output//Data/FACE_EnvironmenVars.RData")
   
   names(EnvVarDF)
-  EnvVarDF$year <- factor(EnvVarDF$year, labels = paste0("Year", 0:3))
 
 # remove all minor metals
   rmMetal  <- c("Silver", "Arsenic", "Lead", "Cadmium", "Chromium", "Copper", 
@@ -59,7 +58,7 @@
 # RDA ---------------------------------------------------------------------
   
   # possible explanatory variables
-  expl <- c("co2",  "TotalC", "moist", "Drysoil_ph", "Depth_HL", "FloorPAR", "temp")
+  expl <- c("co2",  "TotalC", "moist", "Drysoil_ph", "Depth_HL", "gapfraction", "temp")
   
   # All species
   source("R/Stats_RDA_AllSpp.R")
