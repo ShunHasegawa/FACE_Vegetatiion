@@ -54,59 +54,20 @@ contrast_dd <- data.frame(lsmeans_dd$contrast) %>%
   select(year, co2, p.value, star)
 
 # merge
-ci_dd <- left_join(CI_dd, contrast_dd, by = c("year", "co2")) %>% 
+grassprop_ci_dd <- left_join(CI_dd, contrast_dd, by = c("year", "co2")) %>% 
   mutate(year = factor(year, levels = paste0("Year", 0:3)),
          rlsmean = boot::inv.logit(lsmean), # reverse transform
          rlowerCL = boot::inv.logit(lower.CL),
          rupperCL = boot::inv.logit(upper.CL),
          year = factor(year, levels = paste0("Year", 0:3)),
          form = "Grass")
-ci_dd$star[is.na(ci_dd$star)] <- ""
-
-# Create fig --------------------------------------------------------------
+grassprop_ci_dd$star[is.na(grassprop_ci_dd$star)] <- ""
 
 # df for Year0
-d <- PropDF %>%
+grassprop_d <- PropDF %>%
   filter(year == "Year0") %>% 
   group_by(year, co2, ring) %>% 
   summarise_each(funs(sum), Forb, Grass) %>% 
   ungroup() %>% 
   mutate(grass_prop = Grass / (Grass + Forb),
          year = factor(year, levels = paste0("Year", 0:3)))
-
-# fig
-dodgeval <- .4
-fig_grassprop <- ggplot(ci_dd, aes(x = year, y = rlsmean, fill = co2, group = co2)) +
-  
-  geom_errorbar(aes(ymin = rlowerCL, ymax = rupperCL), width = 0, 
-                position = position_dodge(width = dodgeval)) +
-  geom_line(aes(linetype = co2), position = position_dodge(width = dodgeval)) +
-  geom_point(data = d, aes(x = year, y = grass_prop),  size = 3, shape = 21, 
-             alpha = .7, position = position_dodge(dodgeval), show.legend = FALSE) +
-  geom_point(shape = 21, size = 3, position = position_dodge(width = dodgeval)) +
-  geom_vline(xintercept = 1.5, linetype = "dashed") +
-  geom_text(aes(label = star, y = rupperCL), fontface = "bold", vjust = 0) +
-  
-  scale_fill_manual(values = c("black", "white"), 
-                    labels = c("Ambient", expression(eCO[2]))) +
-  scale_linetype_manual(values = c("solid", "dashed"), 
-                        labels = c("Ambient", expression(eCO[2]))) +
-  scale_color_manual(values = "grey50", labels = expression(Md[Year0])) +
-  scale_x_discrete("Year", labels = 0:4, drop = FALSE) +
-  scale_y_continuous(breaks = seq(.3, .9, by = .1), 
-                     labels = paste(seq(.3, .9, by = .1), 
-                                    1 - seq(.3, .9, by = .1),
-                                    sep = " | ")) +
-  
-  science_theme +
-  theme(legend.position = c(.8, .85),
-        legend.margin = unit(-.5, "line"),
-        strip.text.x = element_text(face = "italic")) +
-  guides(linetype = guide_legend(order = 1),
-         fill     = guide_legend(order = 1),
-         col      = guide_legend(order = 2)) +
-  
-  labs(y = "Adjusted proportion (Grass | Forb)")
-fig_grassprop
-ggsavePP(filename = "output/figs/adjusted_Grass-Forb_proportion",
-         plot = fig_grassprop, width = 4, height = 3)

@@ -52,7 +52,7 @@ emphasize.strong.cells(which(d <= .1, arr.ind = TRUE))
 pander(div_tbl, caption = "Diversity indices", justify = "right", split.table = Inf, keep.line.breaks = TRUE)
 ```
 
-```{r div_plot, echo=FALSE, fig.cap="Fig.1 Diversity indices"}
+```{r div_plot, echo=FALSE, fig.cap="Fig.1 Diversity indices", fig.height=6, fig.width=6}
 grid.draw(div_plot_merged)
 ```
 
@@ -69,7 +69,7 @@ emphasize.strong.cells(which(d <= .1, arr.ind = TRUE))
 pander(dom_tbl, caption = "Dominent species", justify = "right", split.table = Inf, keep.line.breaks = TRUE)
 ```
 
-```{r dom_plot, echo=FALSE, fig.cap="Fig.2 Dominent species"}
+```{r dom_plot, echo=FALSE, fig.cap="Fig.2 Dominent species", fig.height=4, fig.width=5}
 fig_domspp
 ```
 
@@ -87,11 +87,8 @@ pander(pfg_tbl, caption = "Dominent species", justify = "right", split.table = I
 
 ```
 
-```{r grassprop_plot, echo=FALSE, fig.height=3, fig.width=4}
-fig_grassprop
-```
 
-```{r pfgprop_plot, echo=FALSE, fig.height=6, fig.width=4}
+```{r pfgprop_plot, echo=FALSE, fig.cap="Fig.3 PFG proportion",fig.height=4, fig.width=5}
 fig_pfgprop
 ```
 

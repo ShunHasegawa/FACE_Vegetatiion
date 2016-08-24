@@ -79,17 +79,15 @@ contrast_dd <- ldply(lsmeans_list, function(x) data.frame(x$contrast)) %>%
   select(.id, year, co2, p.value, star)
 
 # merge
-ci_dd <- left_join(CI_dd, contrast_dd, by = c(".id", "year", "co2")) %>% 
+pfgprop_ci_dd <- left_join(CI_dd, contrast_dd, by = c(".id", "year", "co2")) %>% 
   mutate(year = factor(year, levels = paste0("Year", 0:3)),
          rlsmean = boot::inv.logit(lsmean), # reverse transform and standardise for 1mx1m plot
          rlowerCL = boot::inv.logit(lower.CL),
          rupperCL = boot::inv.logit(upper.CL))
-ci_dd$star[is.na(ci_dd$star)] <- ""
-
-# fig ---------------------------------------------------------------------
+pfgprop_ci_dd$star[is.na(pfgprop_ci_dd$star)] <- ""
 
 # df for Year0
-d <- ldply(dfList) %>%
+pfgprop_d <- ldply(dfList) %>%
   filter(year == "Year0") %>% 
   group_by(year, .id, co2, block, ring) %>%
   summarise(Total = sum(value),
@@ -97,32 +95,3 @@ d <- ldply(dfList) %>%
   ungroup() %>% # grouping informaiton is not required later
   mutate(year = factor(year, levels = paste0("Year", 0:3)))
 
-dodgeval <- .4
-fig_pfgprop <- ggplot(ci_dd, aes(x = year, y = rlsmean, fill = co2, group = co2)) +
-  facet_wrap(~ .id, scales = "free_y", ncol = 1) +
-  
-  geom_errorbar(aes(ymin = rlowerCL, ymax = rupperCL), width = 0, 
-                position = position_dodge(width = dodgeval)) +
-  geom_line(aes(linetype = co2), position = position_dodge(width = dodgeval)) +
-  geom_point(data = d, aes(x = year, y = ratios),  alpha = .7, shape = 21, size = 3,
-             position = position_dodge(dodgeval), show.legend = FALSE) +
-  geom_point(shape = 21, size = 3, position = position_dodge(width = dodgeval)) +
-  geom_vline(xintercept = 1.5, linetype = "dashed") +
-  geom_text(aes(label = star, y = rupperCL), fontface = "bold", vjust = .4) +
-  
-  scale_fill_manual(values = c("black", "white"), 
-                    labels = c("Ambient", expression(eCO[2]))) +
-  scale_linetype_manual(values = c("solid", "dashed"), 
-                        labels = c("Ambient", expression(eCO[2]))) +
-  scale_color_manual(values = "grey50", labels = expression(Md[Year0])) +
-  scale_x_discrete("Year", labels = 0:4, drop = FALSE) +
-  
-  science_theme +
-  theme(legend.position = c(.7, .75),
-        strip.text.x    = element_text(size = 8)) +
- 
-  labs(y = expression("Adjusted proportion"))
-fig_pfgprop
-
-ggsavePP(filename = "output/figs/adjusted_PFG_proportion", width = 3, height = 6,
-         plot = fig_pfgprop)

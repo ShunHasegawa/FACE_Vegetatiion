@@ -100,6 +100,7 @@ source("R/fig_diversity_indices.R") # diversity indices
 source("R/fig_dominent_spp.R")      # dominent spp
 source("R/Stats_C3_4_Grass.R")      # C3vsC4, LegvsNonLeg, NativevsIntro
 source("R/PFG_Proportaion.R")       # Grass vs Forb
+source("R/fig_pfg_propotion.R")     # combine grassn and PFG proportino results to create a figure
 source("R/analysis_summary.R")      # summarise all analyses
 
 # figs --------------------------------------------------------------------
