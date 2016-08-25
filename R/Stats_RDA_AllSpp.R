@@ -28,12 +28,9 @@ summary(seDFs)
 
 # R2adj for each single term
 
-single_adj_r2 <- ldply(seDF_list, function(x){
-  ddply(x, .(year), function(x){
-    get_adjR_singl(x, ignoredd = TRUE, SiteName_rda = SiteName_rda, expl = expl)
-  })
-},
-.id = "Form")
+single_adj_r2 <- ldply(seDFs, function(x){
+  get_adjR_singl(x, ignoredd = TRUE, SiteName_rda = SiteName_rda, expl = expl)
+})
 
 # terms with positive adjR2
 pos_adjr <- filter(single_adj_r2, adjR > 0)
@@ -44,7 +41,7 @@ pos_adjr <- filter(single_adj_r2, adjR > 0)
 
 # create combinations of 1-4 terms and make formulas to be tested
 full_formulas <- llply(1:4, function(x){
-  dlply(pos_adjr, .(Form, year), function(y) {
+  dlply(pos_adjr, .(.id), function(y) {
     get_full_formula(y$variable, n = x)
   })
 })  
@@ -68,10 +65,10 @@ for(i in termn){  # for each number of terms (i.e. 1-4)
   }
 }
 
-names(f_df_list)
 
 # rda summary
 rda_summary <- ldply(f_df_list, function(x) do.call("get_rda_summary", args = x))
+
 
 # acceptable models
 rda_accept <- rda_summary %>% 
@@ -89,7 +86,8 @@ rda_accept <- rda_summary %>%
 # model simplification --------------------------------------------------
 
 
-models_to_simplify <- mlply(rda_accept[, c(".id", "f_id")],  
+# get model formulas and associated dataframe to be simplified
+models_to_simplify <- mlply(rda_accept[, c(".id", "f_id")],  # form.year and formula  
                             function(.id, f_id) {
                               f  <- f_df_list[[.id]]$formula_list[f_id]
                               df <- f_df_list[[.id]]$df
@@ -101,7 +99,7 @@ names(models_to_simplify) <- rda_accept$.id
 
 
 simple_rdas <- llply(models_to_simplify, function(x) do.call("get_simple_rda", x))   
-
+llply(simple_rdas, function(x) summary(x)$call)
 
 # . 1st year --------------------------------------------------------------
 
