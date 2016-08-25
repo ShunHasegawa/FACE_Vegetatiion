@@ -246,7 +246,7 @@ SoilMTdf_Ring <- ddply(SoilMTdf, .(year, ring), function(x) colMeans(x[, Probes]
 
 # source("R/PrcssLight.R")
 load("output//Data/FACE_canopy_transmittance.RData")
-
+light_dd <- select(light_dd, -N)
 
 # > IEM ---------------------------------------------------------------------
 
