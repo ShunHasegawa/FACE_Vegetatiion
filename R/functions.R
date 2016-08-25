@@ -660,3 +660,155 @@ save_Rdata_csv <- function(filename, ...){
   save(..., file = paste0(filename, ".RData"))
   write.csv(..., file = paste0(filename, ".csv"), row.names = FALSE)
 }
+
+
+# functions for RDA -------------------------------------------------------
+
+
+is_exist_spdd <- function(ignoredd = FALSE){
+  
+  # this function checks if dd and spdd exsit as they will be overwritten when
+  # performing rda using the functions below
+  
+  if(ignoredd) {
+    
+    
+    # return warning message if they exist but to be ignored
+    if(any(exists("dd"), exists("spdd")))
+      warning("dd or spdd have been overwritten...")  
+    
+    
+  } else {
+    
+    
+    # stop if they aren't ignored
+    if(any(exists("dd"), exists("spdd")))
+      stop("dd and spdd exist...\nuse ignoredd = TRUE to overwrite")   
+    
+    
+  }
+}
+
+
+
+
+get_adjR_singl <- function(x,                # df containing environmental variables and site 
+                           ignoredd = FALSE, # ignore dd and spdd
+                           expl,             # encironmental variables
+                           SiteName_rda      # site
+) {
+  
+  
+  # check object names
+  is_exist_spdd(ignoredd = ignoredd)
+  
+  
+  # prepare data frames (dd and spdd)
+  dd <<-  x                                       # df for environmental variables
+  spdd <<- select(dd, -one_of(expl, SiteName_rda)) # df for spp
+  
+  # formula for each variable
+  singl_fmls        <- llply(paste("log(spdd + 1) ~", expl), as.formula)
+  names(singl_fmls) <- expl
+  
+  # run rda and compute R2
+  r2 <- ldply(singl_fmls, 
+              function(y) {
+                adjR <- RsquareAdj(rda(y, data = dd))$adj.r.squared
+                return(data.frame(adjR))
+              },
+              .id = "variable")
+  
+  rm(dd, spdd, envir = .GlobalEnv) # remove dd and spdd from global env
+  return(r2)
+}
+
+
+
+
+get_full_formula <- function(x, 
+                             n_term = 4 # number of terms to make combination
+                             ){
+  
+  if(length(x) >= n_term) { # when there are >n_term(4 as default) terms
+    comb_exp <- matrix(combn(x, n_term), nrow = n_term) 
+  } else {             # when there are <n_term
+    comb_exp <- matrix(combn(x, length(x)), nrow = length(x))
+  }
+  
+  # create formula
+  expl_fml <- apply(comb_exp, 2, function(y) paste(y, collapse = "+"))
+  
+  return(expl_fml)
+}
+
+
+
+
+get_rda_summary <- function(formula_list, df, expl, SiteName_rda){
+  
+  # check object names
+  is_exist_spdd(ignoredd = TRUE)
+  
+  # create formulas
+  f <- llply(paste("log(spdd + 1) ~", formula_list), as.formula)
+  names(f) <- 1:length(f)
+  
+  
+  # prepare df for rda
+  dd <<-  df # df needs to be assigned to global environment
+  spdd <<- select(dd, -one_of(expl, SiteName_rda))
+  r <- llply(f, function(x) rda(x, data = dd))
+  
+  
+  # generate summary results of rda
+  r_summary <- ldply(r, function(x){
+    
+    # vif
+    v <- vif.cca(x)
+    vdfd <- data.frame(as.list(v))
+    
+    # adjusted R2
+    adjr <- RsquareAdj(x)$adj.r.squared
+    
+    # permutation anova
+    ar      <- anova(x, permutations = allPerms(6))
+    p_value <- tidy(ar)$p.value[1]
+    
+    return(cbind(vdfd, adjr, vif_less10 = !any(v > 10), p_value))
+  }, 
+  .id = "f_id") %>%  # organise df
+    select(-adjr, -vif_less10, -p_value, everything()) %>% 
+    mutate(f_id = as.numeric(f_id)) %>% 
+    arrange(-vif_less10, -adjr)
+  
+  rm(dd, spdd, envir = .GlobalEnv)
+  return(r_summary)
+  
+}
+
+
+
+
+get_simple_rda <- function(f, df, expl, SiteName_rda){
+  
+  
+  # check object names
+  is_exist_spdd(ignoredd = TRUE)
+  
+  
+  # prepare df for rda
+  dd <<-  df # df needs to be assigned to global environment
+  spdd <<- select(dd, -one_of(expl, SiteName_rda))
+  
+  
+  # make rda models
+  rr1 <- rda(as.formula(paste("log(spdd + 1) ~", f)), data = dd)                            # full model determined by adjusted R2 and P value
+  rr2 <- rda(log(spdd + 1) ~ 1, data = dd)                                                  # null model
+  rr3 <- ordiR2step(rr2, rr1, permutations = allPerms(6), direction = "forward", Pin = .1)  # forward model simplification
+  
+  
+  rm(dd, spdd, envir = .GlobalEnv) # remove dd and spdd from the global environment
+  return(rr3)
+  
+}

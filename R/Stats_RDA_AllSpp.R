@@ -1,77 +1,125 @@
-###############
-# All species #
-###############
+
+# prepare df --------------------------------------------------------------
 
 
-# Each year separately ----------------------------------------------------
+# combine environment and spp df, then split df for each year
 
-  # combine environment and spp df
-  seDF <- merge(RingSumVeg, EnvDF_3df, by = c("year", "ring", "block", "co2"))
+SiteName_rda <- c("year", "ring", "block", "co2")
+
+seDFs <- llply(list('all' = SppName, 'grass' = SppName_grass, 'forb' = SppName_forb),
+               function(x) {
+                 
+                 # df for each form
+                 d <- RingSumVeg %>% 
+                   select(one_of(x, SiteName_rda)) %>% 
+                   left_join(EnvDF_3df, by = SiteName_rda)
+                 
+                 # split df by year
+                 split(d, d$year)
+                 
+               })
+llply(seDFs, summary)
+seDFs <- unlist(seDFs, recursive = FALSE)
+summary(seDFs)
+
   
-  
-# . Single term -----------------------------------------------------------
+# single term -----------------------------------------------------------
 
-  # R2adj for each single term
+
+# R2adj for each single term
+
+single_adj_r2 <- ldply(seDF_list, function(x){
+  ddply(x, .(year), function(x){
+    get_adjR_singl(x, ignoredd = TRUE, SiteName_rda = SiteName_rda, expl = expl)
+  })
+},
+.id = "Form")
+
+# terms with positive adjR2
+pos_adjr <- filter(single_adj_r2, adjR > 0)
   
-  adjR_singl_Lst <- list()
-  for (i in 1:4) {
-    dd                  <- subsetD(seDF, year == levels(seDF$year)[i])
-    spdd                <- dd[ , SppName]
-    # formula for each variable
-    singl_fmls          <- llply(paste("log(spdd + 1) ~", expl), as.formula)
-    names(singl_fmls)   <- expl
-    adjR_singl          <- ldply(singl_fmls, 
-                                 function(y) {
-                                   RsquareAdj(rda(y, data = dd))$adj.r.squared
-                                   },
-                                 .id = "variable"
-                                 )
-    adjR_singl_Lst[[i]] <- adjR_singl
-    rm(dd, spdd, singl_fmls, adjR_singl)
+
+# full models -----------------------------------------------------------
+
+
+# create combinations of 1-4 terms and make formulas to be tested
+full_formulas <- llply(1:4, function(x){
+  dlply(pos_adjr, .(Form, year), function(y) {
+    get_full_formula(y$variable, n = x)
+  })
+})  
+names(full_formulas) <- paste0("term_n", 1:4)  # number of terms used in models
+summary(full_formulas)
+
+
+# combind formulas, df, environmental vars (expl) and site (SiteName_rda)
+
+termn <- names(full_formulas)               # number of terms
+fy    <- names(full_formulas[['term_n1']])  # form.year
+
+f_df_list <- list()
+for(i in termn){  # for each number of terms (i.e. 1-4)
+  for(j in fy){   # for each form by year
+    l <- paste(i, j, sep = ".")
+    f_df_list[[l]] <- list(formula_list = full_formulas[[i]][[j]],
+                           df           = seDFs[[j]],
+                           expl         = expl,
+                           SiteName_rda = SiteName_rda)
   }
-  
-  names(adjR_singl_Lst) <- paste0("Year", 0:3)
-  
-  # Get variables with positive R2adj
-  PosAdjR <- llply(adjR_singl_Lst, function(x) as.character(x$variable[x$V1 > 0]))
-  
-  # Formula for full models
-  FullFormula <- llply(PosAdjR, 
-                       function(x) {
-                          comb_exp <- combn(x, 4) # combination of four
-                          expl_fml <- apply(comb_exp, 
-                                            2, 
-                                            function(x) paste(x, collapse = "+")
-                                            )
-                          return(expl_fml)
-                          }
-                       )
-  
-  # Y matric (lefthand part)
-  LH   <- list("log(df2013[ , SppName] + 1) ~",
-               "log(df2014[ , SppName] + 1) ~",
-               "log(df2015[ , SppName] + 1) ~", 
-               "log(df2016[ , SppName] + 1) ~" )
-  fmls <- llply(list(Year0 = 1, Year1 = 2, Year2 = 3, Year3 = 4), 
-                function(x) llply(paste(LH[[x]], FullFormula[[x]]), as.formula))
+}
+
+names(f_df_list)
+
+# rda summary
+rda_summary <- ldply(f_df_list, function(x) do.call("get_rda_summary", args = x))
+
+# acceptable models
+rda_accept <- rda_summary %>% 
+  filter(vif_less10, p_value < .1) %>% 
+  group_by(.id) %>%
+  filter(adjr == max(adjr)) %>%                                # choose the one with the largest adjr
+  ungroup() %>% 
+  mutate(term_n  = as.numeric(tstrsplit(.id, "_n|[.]")[[2]]),  # number of terms
+         dataset = gsub(".*_n.[.]", "", .id)) %>%              # form by year
+  group_by(dataset) %>%
+  filter(term_n == max(term_n)) %>%                            # choose the one with largest number of terms
+  arrange(dataset)
+    
+
+# model simplification --------------------------------------------------
+
+
+models_to_simplify <- mlply(rda_accept[, c(".id", "f_id")],  
+                            function(.id, f_id) {
+                              f  <- f_df_list[[.id]]$formula_list[f_id]
+                              df <- f_df_list[[.id]]$df
+                              return(list(f = f, df = df, expl = expl, 
+                                          SiteName_rda = SiteName_rda))
+                            })
+
+names(models_to_simplify) <- rda_accept$.id
+
+
+simple_rdas <- llply(models_to_simplify, function(x) do.call("get_simple_rda", x))   
 
 
 # . 1st year --------------------------------------------------------------
 
-  df2013 <- subsetD(seDF, year == "Year0")
+
+  df_Year0 <- subsetD(seDF, year == "Year0")
   
   # There are too many environmental variables to fit. so choose four which showed
   # highest R2adj 
   # adjusted R2
-  adjR <- ldply(fmls$Year0, function(x) RsquareAdj(rda(x, data = df2013))$adj.r.squared)
+  adjR <- ldply(fmls$Year0, function(x) RsquareAdj(rda(x, data = df_Year0))$adj.r.squared)
   
   # highest R2
-  rr <- rda(fmls$Year0[[which(max(adjR) == adjR)]], df2013)
+  rr <- rda(fmls$Year0[[which(max(adjR) == adjR)]], df_Year0)
   
   # check multicollinearity
   vif.cca(rr)
   anova(rr, permutations = allPerms(6))
-  rr2 <- rda(log(df2013[ , SppName] + 1) ~ 1, df2013)
+  rr2 <- rda(log(df_Year0[ , SppName] + 1) ~ 1, df_Year0)
   rr3 <- ordiR2step(rr2, rr, permutations = allPerms(6), direction = "forward", Pin = .1)
   summary(rr3)
   
@@ -81,13 +129,13 @@
   
 # . 2nd year --------------------------------------------------------------
 
-  df2014 <- subsetD(seDF, year == "Year1")
+  df_Year1 <- subsetD(seDF, year == "Year1")
   
   # adjusted R2
-  adjR <- laply(fmls$Year1, function(x) RsquareAdj(rda(x, data = df2014))$adj.r.squared)
+  adjR <- laply(fmls$Year1, function(x) RsquareAdj(rda(x, data = df_Year1))$adj.r.squared)
   
   # highest R2
-  rr <- rda(fmls$Year1[[which(max(adjR) == adjR)]], df2014)
+  rr <- rda(fmls$Year1[[which(max(adjR) == adjR)]], df_Year1)
   
   # check multicolliniarity using vif
   vif.cca(rr)
@@ -97,14 +145,14 @@
   # choose only three terms
   comb_exp <- combn(PosAdjR$Year1, 3)
   expl_fml <-apply(comb_exp, 2, function(x) paste(x, collapse = "+"))
-  fmls_3 <- llply(paste("log(df2014[ , SppName] + 1) ~", expl_fml), as.formula)
+  fmls_3 <- llply(paste("log(df_Year1[ , SppName] + 1) ~", expl_fml), as.formula)
   
-  adjR <- laply(fmls_3, function(x) RsquareAdj(rda(x, data = df2014))$adj.r.squared)
-  rr <- rda(fmls_3[[which(max(adjR) == adjR)]], df2014)
+  adjR <- laply(fmls_3, function(x) RsquareAdj(rda(x, data = df_Year1))$adj.r.squared)
+  rr <- rda(fmls_3[[which(max(adjR) == adjR)]], df_Year1)
   vif.cca(rr)
   anova(rr, permutations = allPerms(6))
   # good
-  rr2 <- rda(log(df2014[ , SppName] + 1) ~ 1, df2014)
+  rr2 <- rda(log(df_Year1[ , SppName] + 1) ~ 1, df_Year1)
   rr3 <- ordiR2step(rr2, rr, permutations = allPerms(6), direction = "forward", Pin = .1)
   
   # summary result
@@ -113,31 +161,38 @@
 
 # . 3rd year --------------------------------------------------------------
 
-  df2015 <- subsetD(seDF, year == "Year2")
+  df_Year2 <- subsetD(seDF, year == "Year2")
   
   # adjusted R2
-  adjR <- laply(fmls$Year2, function(x) RsquareAdj(rda(x, data = df2015))$adj.r.squared)
+  adjR <- laply(fmls$Year2, function(x) RsquareAdj(rda(x, data = df_Year2))$adj.r.squared)
   
   # highest R2
-  rr <- rda(fmls$Year2[[which(max(adjR) == adjR)]], df2015)
+  rr <- rda(fmls$Year2[[which(max(adjR) == adjR)]], df_Year2)
   
   # check multicollinearity
   vif.cca(rr)
   # TotalC >10. 
   
-  # There are only four terms for this year, so use three terms
+  # Other R2
+  rr_Year2_list <- list()
+  for (i in 1:5){
+    rr_Year2_list[[i]] <- rda(fmls$Year2[[order(adjR, decreasing = TRUE)[i]]], df_Year2)
+  }
+  llply(rr_Year2_list, vif.cca)
+  # none meets VIF < 10, so use 3 terms
+  
   comb_exp <- combn(PosAdjR$Year2, 3)
   expl_fml <-apply(comb_exp, 2, function(x) paste(x, collapse = "+"))
-  fmls_3 <- llply(paste("log(df2015[ , SppName] + 1) ~", expl_fml), as.formula)
+  fmls_3 <- llply(paste("log(df_Year2[ , SppName] + 1) ~", expl_fml), as.formula)
   
-  adjR <- laply(fmls_3, function(x) RsquareAdj(rda(x, data = df2015))$adj.r.squared)
-  rr <- rda(fmls_3[[which(max(adjR, na.rm = TRUE) == adjR)]], df2015)
+  adjR <- laply(fmls_3, function(x) RsquareAdj(rda(x, data = df_Year2))$adj.r.squared)
+  rr <- rda(fmls_3[[which(max(adjR, na.rm = TRUE) == adjR)]], df_Year2)
   
   vif.cca(rr)
   anova(rr, permutations = allPerms(6))
   # good
   
-  rr2 <- rda(log(df2015[ , SppName] + 1) ~ 1, df2015)
+  rr2 <- rda(log(df_Year2[ , SppName] + 1) ~ 1, df_Year2)
   rr3 <- ordiR2step(rr2, rr, permutations = allPerms(6), direction = "forward", Pin = .1)
   
   # summary result
@@ -147,13 +202,13 @@
 
 # . 4th year --------------------------------------------------------------
 
-  df2016 <- subsetD(seDF, year == "Year3")
+  df_Year3 <- subsetD(seDF, year == "Year3")
   
   # adjusted R2
-  adjR <- laply(fmls$Year3, function(x) RsquareAdj(rda(x, data = df2016))$adj.r.squared)
+  adjR <- laply(fmls$Year3, function(x) RsquareAdj(rda(x, data = df_Year3))$adj.r.squared)
   
   # highest R2
-  rr <- rda(fmls$Year3[[which(max(adjR) == adjR)]], df2016)
+  rr <- rda(fmls$Year3[[which(max(adjR) == adjR)]], df_Year3)
   
   # check multicollinearity
   vif.cca(rr)
@@ -163,15 +218,15 @@
   # choose only three terms
   comb_exp <- combn(PosAdjR$Year3, 3)
   expl_fml <- apply(comb_exp, 2, function(x) paste(x, collapse = "+"))
-  fmls_3   <- llply(paste("log(df2016[ , SppName] + 1) ~", expl_fml), as.formula)
+  fmls_3   <- llply(paste("log(df_Year3[ , SppName] + 1) ~", expl_fml), as.formula)
   adjR     <- laply(fmls_3, function(x)
-                      RsquareAdj(rda(x, data = df2016))$adj.r.squared)
-  rr       <- rda(fmls_3[[which(max(adjR, na.rm = TRUE) == adjR)]], df2016)
+                      RsquareAdj(rda(x, data = df_Year3))$adj.r.squared)
+  rr       <- rda(fmls_3[[which(max(adjR, na.rm = TRUE) == adjR)]], df_Year3)
   vif.cca(rr)
   anova(rr, permutations = allPerms(6))
   # good
   
-  rr2 <- rda(log(df2016[ , SppName] + 1) ~ 1, df2016)
+  rr2 <- rda(log(df_Year3[ , SppName] + 1) ~ 1, df_Year3)
   rr3 <- ordiR2step(rr2, rr, permutations = allPerms(6), direction = "forward", Pin = .1)
   
   # summary result
