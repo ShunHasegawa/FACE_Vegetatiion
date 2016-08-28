@@ -615,6 +615,18 @@ facet_wrap_labeller <- function(gg.plot,labels=NULL) {
 save_png600 <- function(...) png(..., res = 600, units = "in")
 
 
+# transform P values to star maks
+get_star <- function(pval, dagger = TRUE){
+  
+  # dagger mark for p < 0.1
+  dg <- ifelse(dagger, expression("\u2020"), ".")
+  
+  cut(pval, right = FALSE,
+      breaks = c(0, .1, .05, .01, .001, 1),  
+      labels = c("***", "**", "*", dg, ""))
+}
+
+
 # ggplot theme setting ----------------------------------------------------
 
 theme_set(theme_bw() + 
@@ -808,7 +820,10 @@ get_simple_rda <- function(f, df, expl, SiteName_rda){
   rr3 <- ordiR2step(rr2, rr1, permutations = allPerms(6), direction = "forward", Pin = .1)  # forward model simplification
   
   
+  # get F and P value for each term in the final model (rr3)
+  anova_rr3 <- anova(rr3, permutations = allPerms(6), by = "margin")
+  
   rm(dd, spdd, envir = .GlobalEnv) # remove dd and spdd from the global environment
-  return(rr3)
+  return(list(full_mod = rr1, final_mod = rr3, anova_final_mod = anova_rr3))
   
 }
