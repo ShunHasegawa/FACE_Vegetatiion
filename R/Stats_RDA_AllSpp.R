@@ -2,6 +2,49 @@
 # prepare df --------------------------------------------------------------
 
 
+# . transformation --------------------------------------------------------
+# try transfomation as species abundance data are highly skewed
+
+
+# raw
+pdf(file = "output/figs/histgram_all_spp.pdf", onefile = TRUE, width = 6, height = 6)
+par(mfrow = c(3, 3))
+l_ply(SppName, function(x) hist(RingSumVeg[, x], main = x))
+dev.off()
+
+
+# log
+pdf(file = "output/figs/histgram_all_spp_log.pdf", onefile = TRUE, width = 6, height = 6)
+par(mfrow = c(3, 3))
+l_ply(SppName, function(x) hist(log(RingSumVeg[, x] + 1), main = x))
+dev.off()
+
+
+# log but return 0 for 0
+log2_d <- decostand(RingSumVeg[, SppName], method = "log", logbase = 10)
+pdf(file = "output/figs/histgram_all_spp_logAnderson.pdf", onefile = TRUE, width = 6, height = 6)
+par(mfrow = c(3, 3))
+l_ply(SppName, function(x) hist(log2_d[, x], main = x))
+dev.off()
+
+
+# hellinger
+d_hel <- decostand(RingSumVeg[, SppName], method = "hellinger")
+pdf(file = "output/figs/histgram_all_spp_hellinger.pdf", onefile = TRUE, width = 6, height = 6)
+par(mfrow = c(3, 3))
+l_ply(SppName, function(x) hist(d_hel[, x], main = x))
+dev.off()
+
+
+# after visual inspection of histgram hellinger seems bettter, especially for
+# abundant spp
+tRingSumVeg <- RingSumVeg
+tRingSumVeg[, SppName] <- decostand(RingSumVeg[, SppName], method = "hellinger")
+
+
+# . combine with environmental vars ---------------------------------------
+
+
 # combine environment and spp df, then split df for each year
 
 SiteName_rda <- c("year", "ring", "block", "co2")
@@ -10,17 +53,42 @@ seDFs <- llply(list('all' = SppName, 'grass' = SppName_grass, 'forb' = SppName_f
                function(x) {
                  
                  # df for each form
-                 d <- RingSumVeg %>% 
-                   select(one_of(x, SiteName_rda)) %>% 
-                   left_join(EnvDF_3df, by = SiteName_rda)
+                 d <- RingSumVeg[, c(x, SiteName_rda)]
                  
-                 # split df by year
-                 split(d, d$year)
+                 # split by year
+                 dy <- split(d, d$year)
+                 
+                 # remove un-observed spp and transform data
+                 new_d_list <- llply(dy, function(y){
+                   
+                   # sp sum
+                   spsum <- colSums(y[, x])                             
+                   
+                   # spp to be used
+                   sp_to_use <- names(spsum)[spsum != 0]   
+                   
+                   # subset spp to be used
+                   new_d <- y[, c(sp_to_use, SiteName_rda)]
+                   
+                   # transform using hellinger 
+                   new_d[, sp_to_use] <- decostand(new_d[, sp_to_use], method = "hellinger")
+                   
+                   # merge with environmental variables
+                   new_d_merge <- left_join(new_d, EnvDF_3df, by = SiteName_rda)
+                   
+                   
+                   return(new_d_merge)
+                 })
+                 
+                 return(new_d_list)
                  
                })
+
 llply(seDFs, summary)
 seDFs <- unlist(seDFs, recursive = FALSE)
 summary(seDFs)
+
+
 
   
 # single term -----------------------------------------------------------
@@ -35,6 +103,8 @@ single_adj_r2 <- ldply(seDFs, function(x){
 # terms with positive adjR2
 pos_adjr <- filter(single_adj_r2, adjR > 0)
   
+
+
 
 # full models -----------------------------------------------------------
 
@@ -83,6 +153,8 @@ rda_accept <- rda_summary %>%
   arrange(dataset)
     
 
+
+
 # model simplification --------------------------------------------------
 
 
@@ -99,223 +171,139 @@ names(models_to_simplify) <- rda_accept$.id
 
 
 simple_rdas <- llply(models_to_simplify, function(x) do.call("get_simple_rda", x))   
-llply(simple_rdas, function(x) summary(x)$call)
-
-# . 1st year --------------------------------------------------------------
+llply(simple_rdas, summary)
 
 
-  df_Year0 <- subsetD(seDF, year == "Year0")
-  
-  # There are too many environmental variables to fit. so choose four which showed
-  # highest R2adj 
-  # adjusted R2
-  adjR <- ldply(fmls$Year0, function(x) RsquareAdj(rda(x, data = df_Year0))$adj.r.squared)
-  
-  # highest R2
-  rr <- rda(fmls$Year0[[which(max(adjR) == adjR)]], df_Year0)
-  
-  # check multicollinearity
-  vif.cca(rr)
-  anova(rr, permutations = allPerms(6))
-  rr2 <- rda(log(df_Year0[ , SppName] + 1) ~ 1, df_Year0)
-  rr3 <- ordiR2step(rr2, rr, permutations = allPerms(6), direction = "forward", Pin = .1)
-  summary(rr3)
-  
-  # summary result
-  rda2013 <- list(IniRda = rr, FinRda = rr3)
 
-  
-# . 2nd year --------------------------------------------------------------
-
-  df_Year1 <- subsetD(seDF, year == "Year1")
-  
-  # adjusted R2
-  adjR <- laply(fmls$Year1, function(x) RsquareAdj(rda(x, data = df_Year1))$adj.r.squared)
-  
-  # highest R2
-  rr <- rda(fmls$Year1[[which(max(adjR) == adjR)]], df_Year1)
-  
-  # check multicolliniarity using vif
-  vif.cca(rr)
-  anova(rr, permutations = allPerms(6))
-  # not significant
-  
-  # choose only three terms
-  comb_exp <- combn(PosAdjR$Year1, 3)
-  expl_fml <-apply(comb_exp, 2, function(x) paste(x, collapse = "+"))
-  fmls_3 <- llply(paste("log(df_Year1[ , SppName] + 1) ~", expl_fml), as.formula)
-  
-  adjR <- laply(fmls_3, function(x) RsquareAdj(rda(x, data = df_Year1))$adj.r.squared)
-  rr <- rda(fmls_3[[which(max(adjR) == adjR)]], df_Year1)
-  vif.cca(rr)
-  anova(rr, permutations = allPerms(6))
-  # good
-  rr2 <- rda(log(df_Year1[ , SppName] + 1) ~ 1, df_Year1)
-  rr3 <- ordiR2step(rr2, rr, permutations = allPerms(6), direction = "forward", Pin = .1)
-  
-  # summary result
-  rda2014 <- list(IniRda = rr, FinRda = rr3)
-
-
-# . 3rd year --------------------------------------------------------------
-
-  df_Year2 <- subsetD(seDF, year == "Year2")
-  
-  # adjusted R2
-  adjR <- laply(fmls$Year2, function(x) RsquareAdj(rda(x, data = df_Year2))$adj.r.squared)
-  
-  # highest R2
-  rr <- rda(fmls$Year2[[which(max(adjR) == adjR)]], df_Year2)
-  
-  # check multicollinearity
-  vif.cca(rr)
-  # TotalC >10. 
-  
-  # Other R2
-  rr_Year2_list <- list()
-  for (i in 1:5){
-    rr_Year2_list[[i]] <- rda(fmls$Year2[[order(adjR, decreasing = TRUE)[i]]], df_Year2)
-  }
-  llply(rr_Year2_list, vif.cca)
-  # none meets VIF < 10, so use 3 terms
-  
-  comb_exp <- combn(PosAdjR$Year2, 3)
-  expl_fml <-apply(comb_exp, 2, function(x) paste(x, collapse = "+"))
-  fmls_3 <- llply(paste("log(df_Year2[ , SppName] + 1) ~", expl_fml), as.formula)
-  
-  adjR <- laply(fmls_3, function(x) RsquareAdj(rda(x, data = df_Year2))$adj.r.squared)
-  rr <- rda(fmls_3[[which(max(adjR, na.rm = TRUE) == adjR)]], df_Year2)
-  
-  vif.cca(rr)
-  anova(rr, permutations = allPerms(6))
-  # good
-  
-  rr2 <- rda(log(df_Year2[ , SppName] + 1) ~ 1, df_Year2)
-  rr3 <- ordiR2step(rr2, rr, permutations = allPerms(6), direction = "forward", Pin = .1)
-  
-  # summary result
-  rda2015 <- list(IniRda = rr, FinRda = rr3)
-
-  
-
-# . 4th year --------------------------------------------------------------
-
-  df_Year3 <- subsetD(seDF, year == "Year3")
-  
-  # adjusted R2
-  adjR <- laply(fmls$Year3, function(x) RsquareAdj(rda(x, data = df_Year3))$adj.r.squared)
-  
-  # highest R2
-  rr <- rda(fmls$Year3[[which(max(adjR) == adjR)]], df_Year3)
-  
-  # check multicollinearity
-  vif.cca(rr)
-  anova(rr, permutations = allPerms(6))
-    # not significant
-  
-  # choose only three terms
-  comb_exp <- combn(PosAdjR$Year3, 3)
-  expl_fml <- apply(comb_exp, 2, function(x) paste(x, collapse = "+"))
-  fmls_3   <- llply(paste("log(df_Year3[ , SppName] + 1) ~", expl_fml), as.formula)
-  adjR     <- laply(fmls_3, function(x)
-                      RsquareAdj(rda(x, data = df_Year3))$adj.r.squared)
-  rr       <- rda(fmls_3[[which(max(adjR, na.rm = TRUE) == adjR)]], df_Year3)
-  vif.cca(rr)
-  anova(rr, permutations = allPerms(6))
-  # good
-  
-  rr2 <- rda(log(df_Year3[ , SppName] + 1) ~ 1, df_Year3)
-  rr3 <- ordiR2step(rr2, rr, permutations = allPerms(6), direction = "forward", Pin = .1)
-  
-  # summary result
-  rda2016 <- list(IniRda = rr, FinRda = rr3)
-  
 
 # Summary ---------------------------------------------------------------
 
-  # Adjusted R2 for each term
-  AdjTbl        <- dcast(variable ~ .id, 
-                         data      = ldply(adjR_singl_Lst), 
-                         value.var = "V1")
-  AdjTbl[, 2:5] <- round(AdjTbl[, 2:5], 3)
-  # replace negative values with <0
-  AdjTbl[AdjTbl < 0] <- "<0" 
-    
-  ## Results of anova for full/parsimonious models ##
-  ## R2adj for initial full model ##
-  RdaLst     <- list(Year0 = rda2013, 
-                     Year1 = rda2014, 
-                     Year2 = rda2015, 
-                     Year3 = rda2016)
+
+
+# . Summary of each term in RDA -------------------------------------------
+
+
+# get P and F for each term in the final model
+rda_margin_term <- ldply(simple_rdas, function(x) tidy(x$anova_final_mod)) %>% 
+  mutate(.id = gsub("term_n.[.]", "", .id)) %>% 
+  group_by(.id) %>%  # degree of freedom for denominator for each id 
+  mutate(DFden     = df[term == "Residual"],
+         df        = df[term != "Residual"][1],
+         statistic = round(statistic, 3),
+         p.value   = get_star(p.value, dagger = FALSE)) %>%   
+  ungroup() %>%
+  filter(!term %in% c("Residual", "Model")) %>% 
+  mutate(Fdf       = paste0("F(", df, ", ", DFden, ")=", statistic, p.value)) %>% 
+  select(-df, -DFden, -Variance, -statistic, -p.value) %>% 
+  rename(variable = term)
+
+
+# get full and final models from the list
+rda_mods <- llply(simple_rdas, function(x) {
+  x$anova_final_mod <- NULL
+  x
+})
+
+
+# get terms removed by model simplificaiton
+rm_terms_dd <- ldply(rda_mods, function(x){
+  t1 <- attr(terms(x$full_mod), "term.labels")   # terms in the full model
+  t2 <- attr(terms(x$final_mod), "term.labels")  # terms in the final model
   
-  # FinRDA in Year1 doesn't have any explanatory variable so remove
-  RdaLst$Year1$FinRda <- NULL
+  rmval <- setdiff(t1, t2)
   
-  # AdjustedR2 and P values for each model
-  Extract_Adj_P <- function(x) {
-                   data.frame(AdjR = RsquareAdj(x)$adj.r.squared, 
-                              Pr   = anova(x, 
-                                           permutations = allPerms(6))$Pr[1])
-                   }
+  if(length(rmval) > 0){ # where no term was removed, return NA
+    removed <- TRUE  
+  } else {
+    rmval   <- NA
+    removed <- NA
+  }  
+  
+  data.frame(variable = rmval, removed = removed)
+}) %>% 
+  mutate(.id = gsub("term_n.[.]", "", .id)) %>% 
+  filter(!is.na(variable))
+
+
+# merge single term R2, terms in tha final model, and removed terms by simplificaiton
+all_model_results <- Reduce(function(...) merge(..., by = c(".id", "variable"), all = TRUE),
+                            list(single_adj_r2, rda_margin_term, rm_terms_dd))
+all_model_results_tbl <- all_model_results %>% 
+  mutate(Form      = tstrsplit(.id, split = "[.]")[[1]],
+         Year      = tstrsplit(.id, split = "[.]")[[2]],
+         adjR      = ifelse(adjR < 0, "<0", round(adjR, 3)),
+         removed   = as.logical(removed),
+         Fdf       = ifelse((is.na(Fdf) & is.na(removed)), "-", 
+                            ifelse(is.na(removed), Fdf, "rm")),
+         Term      = factor(variable, 
+                            levels = c("co2", "TotalC", "moist", "Drysoil_ph", 
+                                       "Depth_HL", "gapfraction", "temp"),
+                            labels = c("CO2", "Total C", "Moist", "pH", "HL depth", 
+                                       "Canopy transmittance", "Temp"))) %>% 
+  select(-.id, -removed, -variable) %>%
+  gather(variable, value, adjR, Fdf) %>% 
+  mutate(Year_var = paste(Year, variable, sep = "_")) %>% 
+  select(-Year, -variable) %>% 
+  spread(key = Year_var, value) %>% 
+  select(Form, Term, everything()) %>% 
+  arrange(Form, Term)
+
+
+write.csv(file = "output/table/RDA_result_table2.csv", 
+          all_model_results_tbl, row.names = FALSE)
 
 
 
-  FuladjR_pv <- ldply(RdaLst, 
-                      function(x) ldply(x, Extract_Adj_P, .id = "Model"),
-                      .id = "year")
-  
-  FuladjR_pv_tbl <- dcast(variable ~ year + Model, 
-                          data = melt(FuladjR_pv, id = c("year", "Model")))
-  FuladjR_pv_tbl[ , 2:8] <- round(FuladjR_pv_tbl[ , 2:8], 4)
-  
-  # F and P values for each term in parsimonious models
-  rda_anova <- ldply(RdaLst[-2], 
-                     function(x) {
-                     a <- anova(x$FinRda, 
-                                permutations = allPerms(6), 
-                                by           = "margin")
-                     ad <- data.frame(term = row.names(a), 
-                                      a[c(1, 3, 4)])
-                     ad[, 2:4] <- round(ad[, 2:4], 3)
-                     return(ad)
-                     },
-                     .id = "year")
-  rda_anova$term <- factor(rda_anova$term, 
-                           levels = c("TotalC", "moist", "Residual"))
-  rda_anova_tbl <- dcast(term ~ year + variable, 
-                         data = melt(rda_anova, id = c("year", "term")))
 
-  # save
-  wb <- createWorkbook()
-  sheet1 <- createSheet(wb, sheetName = "adjustedR2")
-  addDataFrame(AdjTbl, 
-               sheet1, 
-               showNA      = TRUE, 
-               row.names   = FALSE,
-               characterNA = "NA")
-  sheet2 <- createSheet(wb, sheetName = "summary_models")
-  addDataFrame(FuladjR_pv_tbl, 
-               sheet2, 
-               showNA      = TRUE, 
-               row.names   = FALSE, 
-               characterNA = "NA")
-  sheet3 <- createSheet(wb, sheetName = "F_P_values_parsimonious_model")
-  addDataFrame(rda_anova_tbl, 
-               sheet3, 
-               showNA      = TRUE, 
-               row.names   = FALSE, 
-               characterNA = "NA")
-  saveWorkbook(wb, "output/table/RDA_Restuls_AllSpp.xlsx")
+# . Results of anova for full/final models -------------------------
+
+
+# get model summary
+rda_model_summary <- ldply(unlist(rda_mods, recursive = FALSE), get_rda_model_summary) %>% 
+  mutate(.id = gsub("term_n.[.]", "", .id))
+
+
+# format the summary
+rda_model_tbl <- rda_model_summary %>%
+  mutate(Form     = tstrsplit(.id, split = "[.]")[[1]],
+         Year     = tstrsplit(.id, split = "[.]")[[2]],
+         Mod      = tstrsplit(.id, split = "[.]")[[3]],
+         Year_Mod = paste(Year, Mod, sep = "_"),
+         mod_p    = get_star(mod_p, dagger = FALSE),
+         mod_adjr = paste0(round(mod_adjr, 3), mod_p)) %>% 
+  select(-.id, -Year, -Mod, -mod_p) %>% 
+  spread(key = Year_Mod, value = mod_adjr) %>% 
+  select(Form,  # re-ordering columns 
+         Year0_full_mod, Year0_final_mod, 
+         Year1_full_mod, Year1_final_mod,
+         Year3_full_mod, Year3_final_mod)
+
+write.csv(file = "output/table/RDA_model_summary.csv", rda_model_tbl, row.names = FALSE)
   
 
 
 # 4-year data set ---------------------------------------------------------
 
-  # From the above analysis, moist and TotalC are determied to be imporatnt
-  # driver
+# From the above analysis, moist and temp are determied to be imporatnt
+# driver
+
+# list of dfs for 4-year data
+seDF_4y_list <- llply(list('all' = SppName, 'grass' = SppName_grass, 'forb' = SppName_forb),
+                      function(x) {
+                        tRingSumVeg %>% 
+                          select(one_of(x, SiteName_rda)) %>% 
+                          left_join(EnvDF_3df, by = SiteName_rda)
+                      })
+
+rda_4y_list <- llply(seDF_4y_list, function(x) rda(log(seDF[, SppName] + 1) ~  moist + temp + year, x))
+
+
   
-  rda_all <- rda(log(seDF[, SppName] + 1) ~ TotalC + moist + year, seDF)
-  rda_all <- rda(log(seDF[, SppName] + 1) ~ TotalC + moist + as.numeric(year), seDF)
+rda_all <- 
+
+
+
+rda_all <- rda(log(seDF[, SppName] + 1) ~ TotalC + moist + as.numeric(year), seDF)
   
   # can't run anova as it is. cause different perumutation units need to be
   # defined for year and co2. so anyway create a triplot and see the pattern.
