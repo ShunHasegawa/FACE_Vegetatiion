@@ -86,7 +86,9 @@ seDFs <- llply(list('all' = SppName, 'grass' = SppName_grass, 'forb' = SppName_f
 
 llply(seDFs, summary)
 seDFs <- unlist(seDFs, recursive = FALSE)
+seDFs <- new_d_list
 summary(seDFs)
+llply(seDFs, names)
 
 
 
@@ -249,7 +251,7 @@ all_model_results_tbl <- all_model_results %>%
   arrange(Form, Term)
 
 
-write.csv(file = "output/table/RDA_result_table2.csv", 
+write.csv(file = "output/table/RDA_result_table.csv", 
           all_model_results_tbl, row.names = FALSE)
 
 
