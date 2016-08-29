@@ -29,7 +29,8 @@
                  "OrganicC", "OrganicC", "TotalP_CM", 
                  "Theta5", "Theta30", "Theta75", "EC", 
                  "T5", "T10", "T20", "T30", "T50", "T100", 
-                 "TotalN", "Phosphorus", "nitrification")
+                 "TotalN", "Phosphorus", "nitrification",
+                 "ThetaHL")
   EnvVarDF  <- EnvVarDF[, !names(EnvVarDF) %in% RmVar]
   CorMatrix <- cor(Rm_ymc(EnvVarDF), use = "pairwise.complete.obs")
   
