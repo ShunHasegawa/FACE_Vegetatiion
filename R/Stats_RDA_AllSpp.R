@@ -3,6 +3,8 @@
 
 
 # . transformation --------------------------------------------------------
+
+
 # try transfomation as species abundance data are highly skewed
 
 
@@ -38,61 +40,41 @@ dev.off()
 
 # after visual inspection of histgram hellinger seems bettter, especially for
 # abundant spp
-tRingSumVeg <- RingSumVeg
-tRingSumVeg[, SppName] <- decostand(RingSumVeg[, SppName], method = "hellinger")
+
+
 
 
 # . combine with environmental vars ---------------------------------------
 
 
-# combine environment and spp df, then split df for each year
-
+# combine environment and spp df, then split df for each year for each form
 SiteName_rda <- c("year", "ring", "block", "co2")
+seDF_b_year <- llply(list('all' = SppName, 'grass' = SppName_grass, 'forb' = SppName_forb),
+                     function(x) {
+                       d <- RingSumVeg %>%                        # df for each form 
+                         select(one_of(x, SiteName_rda)) %>% 
+                         left_join(EnvDF_3df, by = SiteName_rda)
+                       d <- split(d, d$year)                      # split by year
+                       return(d)
+                     })
 
-seDFs <- llply(list('all' = SppName, 'grass' = SppName_grass, 'forb' = SppName_forb),
-               function(x) {
-                 
-                 # df for each form
-                 d <- RingSumVeg[, c(x, SiteName_rda)]
-                 
-                 # split by year
-                 dy <- split(d, d$year)
-                 
-                 # remove un-observed spp and transform data
-                 new_d_list <- llply(dy, function(y){
-                   
-                   # sp sum
-                   spsum <- colSums(y[, x])                             
-                   
-                   # spp to be used
-                   sp_to_use <- names(spsum)[spsum != 0]   
-                   
-                   # subset spp to be used
-                   new_d <- y[, c(sp_to_use, SiteName_rda)]
-                   
-                   # transform using hellinger 
-                   new_d[, sp_to_use] <- decostand(new_d[, sp_to_use], method = "hellinger")
-                   
-                   # merge with environmental variables
-                   new_d_merge <- left_join(new_d, EnvDF_3df, by = SiteName_rda)
-                   
-                   
-                   return(new_d_merge)
-                 })
-                 
-                 return(new_d_list)
-                 
-               })
+seDF_b_year <- unlist(seDF_b_year, recursive = FALSE)
 
-llply(seDFs, summary)
-seDFs <- unlist(seDFs, recursive = FALSE)
-seDFs <- new_d_list
+
+# remove un-observed spp and transform data
+seDFs <- llply(seDF_b_year, function(x){
+  spsum     <- summarise_each(x, funs(sum), -one_of(SiteName_rda, expl))     # sp sum
+  sp_to_use <- names(spsum)[spsum != 0]                                      # spp to be used
+  new_d     <- select(x, one_of(sp_to_use, SiteName_rda, expl))              # subset spp to be used
+  new_d[, sp_to_use] <- decostand(new_d[, sp_to_use], method = "hellinger")  # transform using hellinger
+  return(new_d)
+})
 summary(seDFs)
 llply(seDFs, names)
 
 
 
-  
+
 # single term -----------------------------------------------------------
 
 
@@ -251,8 +233,8 @@ all_model_results_tbl <- all_model_results %>%
   arrange(Form, Term)
 
 
-write.csv(file = "output/table/RDA_result_table.csv", 
-          all_model_results_tbl, row.names = FALSE)
+write.csv(file = "output/table/RDA_result_table.csv", all_model_results_tbl, 
+          row.names = FALSE)
 
 
 
@@ -277,7 +259,7 @@ rda_model_tbl <- rda_model_summary %>%
   spread(key = Year_Mod, value = mod_adjr) %>% 
   select(Form,  # re-ordering columns 
          Year0_full_mod, Year0_final_mod, 
-         Year1_full_mod, Year1_final_mod,
+         Year2_full_mod, Year2_final_mod,
          Year3_full_mod, Year3_final_mod)
 
 write.csv(file = "output/table/RDA_model_summary.csv", rda_model_tbl, row.names = FALSE)
@@ -286,82 +268,93 @@ write.csv(file = "output/table/RDA_model_summary.csv", rda_model_tbl, row.names 
 
 # 4-year data set ---------------------------------------------------------
 
-# From the above analysis, moist and temp are determied to be imporatnt
-# driver
+# From the above analysis, the following variables will be fitted for each form
+# All: moist, Drysoil_ph
+# Forb: TotalC, moist
+# Grass: Drysoil_pH
 
-# list of dfs for 4-year data
+# renemae env variable for plotting purposes
+EnvDF_3df2 <- rename(EnvDF_3df, Moist = moist, pH = Drysoil_ph, Total_C = TotalC)
+
+# list of df for each form
 seDF_4y_list <- llply(list('all' = SppName, 'grass' = SppName_grass, 'forb' = SppName_forb),
                       function(x) {
-                        tRingSumVeg %>% 
-                          select(one_of(x, SiteName_rda)) %>% 
-                          left_join(EnvDF_3df, by = SiteName_rda)
+                        d <- RingSumVeg %>% 
+                          select(one_of(x, SiteName_rda)) %>%              # select spp for each form
+                          left_join(EnvDF_3df2, by = SiteName_rda)         # merge with environmental variables
+                        d[, x] <- decostand(d[, x], method = "hellinger")  # transform
+                        return(d)
                       })
 
-rda_4y_list <- llply(seDF_4y_list, function(x) rda(log(seDF[, SppName] + 1) ~  moist + temp + year, x))
+all_4y_d   <- seDF_4y_list[["all"]]
+forb_4y_d  <- seDF_4y_list[["forb"]]
+grass_4y_d <- seDF_4y_list[["grass"]]
 
+
+# rda for each form
+r_all   <- rda(all_4y_d[, SppName] ~ year + Moist + pH, data = all_4y_d)
+r_forb  <- rda(forb_4y_d[, SppName_forb] ~ year + Total_C + Moist, data = forb_4y_d)
+r_grass <- rda(all_4y_d[, SppName_grass] ~ year + Moist + pH, data = all_4y_d)
+
+rda_4y <- list('All' = r_all, 'Forb' = r_forb, 'Grass' = r_grass)
+par(mfrow = c(2, 2))
+l_ply(rda_4y, plot)
 
   
-rda_all <- 
-
-
-
-rda_all <- rda(log(seDF[, SppName] + 1) ~ TotalC + moist + as.numeric(year), seDF)
   
-  # can't run anova as it is. cause different perumutation units need to be
-  # defined for year and co2. so anyway create a triplot and see the pattern.
-  rda_all
   
-  # plot
-  p <- TriPlot(MultValRes = rda_all, env = seDF, yaxis = "RDA axis", axispos = c(1, 2, 3), centcons = 2)
-  ggsavePP(filename = "output//figs/FACE_RDA_EnvVar_Year0_3", plot = p, width = 6, height = 6)
-
-
 # Fig for thesis ----------------------------------------------------------
 
-  RdaAllRes <- summary(rda_all)
-  seDF$year <- factor(seDF$year, labels = paste0("Year", 0:3))
-  sitedd <- data.frame(RdaAllRes$site, seDF)
-  
-  bipldd <- data.frame(RdaAllRes$biplot, co2 = "amb", year = "Year0", 
-                       variable = row.names(RdaAllRes$biplot))
-  bipldd <- subsetD(bipldd, variable %in% c("TotalC", "moist", "as.numeric(year)"))
-  bipldd$variable <- factor(bipldd$variable,
-                            levels = c("TotalC", "moist", "as.numeric(year)"),
-                            labels = c("Moist", "Total C", "Year"))
-  
-  VarProp <- RdaAllRes$cont$importance["Eigenvalue",] / RdaAllRes$tot.chi
-  axislabs <- paste0(c("RDA1", "RDA2"), "(", round(VarProp[c(1, 2)] * 100, 2), "%)")
-  
-  # make a plot
-  p <- ggplot(data = sitedd, aes(x = RDA1, y = RDA2, shape = year))
-  p2 <- p + 
-    geom_path(aes(group = ring), col = "black") +
-    geom_point(aes(fill = co2), size = 4) + 
-    scale_fill_manual(values = c("black", "white"), 
-                      labels = c("Ambient", expression(eCO[2])),
-                      guide = guide_legend(override.aes = list(shape = 21))) +
-    # need to add overrisde here to make white circle in the legend with shape of
-    # 21
-    scale_shape_manual(values = c(21, 22, 23, 24)) + 
-    geom_segment(data = bipldd,
-                 aes(x = 0, y = 0, xend = RDA1 * 2, yend = RDA2 * 2), 
-                 arrow = arrow(length = unit(.2, "cm")), 
-                 color = "red") +
-    geom_text(data = bipldd, 
-              aes(x = RDA1 * 2.3 , y = RDA2 * 2.3, label = variable), 
-              lineheight = .7, 
-              color = "red", size = 4, 
-              fontface = "bold") +
-    geom_hline(yintercept = 0, linetype = "dashed") +
-    geom_vline(xintercept = 0, linetype = "dashed") +
-    science_theme +
-    theme(legend.position = c(.17, .15), 
-          legend.box = "horizontal", 
-          legend.box.just = "top") +
-    labs(x = axislabs[1], y = axislabs[2])
-  RDA_Plot_AllSpp <- p2
-  RDA_Plot_AllSpp
-  ggsavePP(plot     = RDA_Plot_AllSpp, 
-           filename = "output/figs/Fig_Thesis/RDA_3yr_AllSpp", 
-           width    = 6, 
-           height   = 4)
+
+# list of rda scores to create plots
+rda_plot_par <- llply(rda_4y, get_rda_scores)
+
+
+# add plant forms and constant for rescaling predictors on triplot
+bc_cons <- data.frame(form   = c("All", "Forb", "Grass"),
+                      b_cons = c(.7, .6, .6),              # constant for biplot
+                      c_cons = c(7, 1.5, 3))               # constant for centroid
+
+rda_plot_par <- mlply(bc_cons, function(form, b_cons, c_cons){
+  l <- rda_plot_par[[form]]
+  l$sitedd <- mutate(l$sitedd, Form = form)
+  l$bipldd <- mutate(l$bipldd, Form = form)
+  l$centdd <- mutate(l$centdd, Form = form)
+  l$b_cons <- b_cons
+  l$c_cons <- c_cons
+  return(l)
+})
+names(rda_plot_par) <- bc_cons$form
+llply(rda_plot_par, summary)
+
+
+# create plots
+rda_plots <- llply(rda_plot_par, function(x) do.call("create_rda_plots", x))
+
+
+rda_plots[[1]] <- rda_plots[[1]] +
+  theme(legend.position = c(.75, .84),
+        legend.text.align = 0,
+        legend.box.just = "top",
+        legend.box = "horizontal",
+        legend.margin = unit(-.9, "line"),
+        legend.text = element_text(size = 6),
+        legend.key.height = unit(.13, "in"),
+        legend.key.width = unit(.3, "in"))
+rda_plots[[1]] 
+
+
+rda_plots2 <- llply(rda_plots, function(x) x + 
+                      theme(axis.title = element_text(size = 8),
+                            axis.text  = element_text(size = 6)))
+
+# merge plots
+rda_plot_merged <- cbind(ggplotGrob(rda_plots2[[1]]), ggplotGrob(rda_plots2[[2]]), 
+                         ggplotGrob(rda_plots2[[3]]), size = "last")
+
+
+grid.newpage()
+grid.draw(rda_plot_merged)
+
+ggsavePP(filename = "output/figs/RDA_3forms", plot = rda_plot_merged,
+         width = 8, height = 3)

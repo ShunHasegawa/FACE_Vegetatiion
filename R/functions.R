@@ -720,7 +720,7 @@ get_adjR_singl <- function(x,                # df containing environmental varia
   spdd <<- select(dd, -one_of(expl, SiteName_rda)) # df for spp
   
   # formula for each variable
-  singl_fmls        <- llply(paste("log(spdd + 1) ~", expl), as.formula)
+  singl_fmls        <- llply(paste("spdd ~", expl), as.formula)
   names(singl_fmls) <- expl
   
   # run rda and compute R2
@@ -763,7 +763,7 @@ get_rda_summary <- function(formula_list, df, expl, SiteName_rda){
   is_exist_spdd(ignoredd = TRUE)
   
   # create formulas
-  f <- llply(paste("log(spdd + 1) ~", formula_list), as.formula)
+  f <- llply(paste("spdd ~", formula_list), as.formula)
   names(f) <- 1:length(f)
   
   
@@ -815,8 +815,8 @@ get_simple_rda <- function(f, df, expl, SiteName_rda){
   
   
   # make rda models
-  rr1 <- rda(as.formula(paste("log(spdd + 1) ~", f)), data = dd)                            # full model determined by adjusted R2 and P value
-  rr2 <- rda(log(spdd + 1) ~ 1, data = dd)                                                  # null model
+  rr1 <- rda(as.formula(paste("spdd ~", f)), data = dd)                            # full model determined by adjusted R2 and P value
+  rr2 <- rda(spdd ~ 1, data = dd)                                                  # null model
   rr3 <- ordiR2step(rr2, rr1, permutations = allPerms(6), direction = "forward", Pin = .1)  # forward model simplification
   
   
@@ -826,4 +826,99 @@ get_simple_rda <- function(f, df, expl, SiteName_rda){
   rm(dd, spdd, envir = .GlobalEnv) # remove dd and spdd from the global environment
   return(list(full_mod = rr1, final_mod = rr3, anova_final_mod = anova_rr3))
   
+}
+
+
+
+
+get_rda_model_summary <- function(x){
+  mod_adjr <- RsquareAdj(x)$adj.r.squared
+  if(length(mod_adjr) == 0) mod_adjr <- NA
+  
+  mod_p    <- anova(x, permutations = allPerms(6))$'Pr(>F)'[1]
+  return(data.frame(mod_adjr, mod_p))
+}
+
+
+
+
+get_rda_scores <- function(x){ # x:  RDA results
+  
+  RdaAllRes <- summary(x)                                                              # rda summary
+  sitedd   <- data.frame(RdaAllRes$site, all_4y_d[, SiteName_rda])                     # site score + site variables
+  bipldd   <- data.frame(RdaAllRes$biplot, co2 = "amb", year = "Year0",                # scores for numeric predictor
+                         variable = row.names(RdaAllRes$biplot)) %>% 
+    filter(!grepl("^year", variable))
+  centdd   <- data.frame(RdaAllRes$centroids, co2 = "amb",
+                         year = gsub("year", "", row.names(RdaAllRes$centroids)))
+  VarProp  <- RdaAllRes$cont$importance["Eigenvalue",] / RdaAllRes$tot.chi             # proportion of variablce explained by RDA1 and RDA2
+  axislabs <- paste0(c("RDA1", "RDA2"), "(", round(VarProp[c(1, 2)] * 100, 2), "%)")
+  
+  return(list(sitedd = sitedd, bipldd = bipldd, centdd = centdd, VarProp = VarProp,
+              axislabs = axislabs))
+  
+}
+
+
+
+
+create_rda_plots <- function(sitedd,    # site score
+                             bipldd,    # biplot score (numeric predictor) 
+                             centdd,    # cetroid (categorical predictor)
+                             VarProp,   # variance propotion explained by RDA1 and 2
+                             axislabs,  # axis labels
+                             b_cons,    # constant values for rescaling biplot
+                             c_cons     # constant values for rescaling centroid
+                             ){
+  # Arguments are inhereted from get_rda_scores
+  
+  p <- ggplot(data = sitedd, aes(x = RDA1, y = RDA2, shape = year)) +
+    
+    # base lines and faceting (only for making top label)
+    geom_hline(yintercept = 0, linetype = "dashed") +
+    geom_vline(xintercept = 0, linetype = "dashed") +
+    facet_wrap(~ Form) +
+    
+    
+    geom_path(aes(group = ring), col = "black") +
+    geom_point(aes(fill = co2, col = ring), size = 2) +
+    
+    
+    # numeric predictor
+    geom_segment(data  = bipldd, 
+                 aes(x = 0, y = 0, xend = RDA1 * b_cons, yend = RDA2 * b_cons), 
+                 arrow = arrow(length = unit(.2, "cm")), 
+                 color = "red") +
+    geom_text(data = bipldd, 
+              aes(x = RDA1 * b_cons, y = RDA2 * b_cons, label = variable), 
+              lineheight = .7, 
+              color = "red", size = 2, 
+              fontface = "bold") +
+    
+    
+    # categorical prdictor (Year)
+    geom_segment(data  = centdd, 
+                 aes(x = 0, y = 0, xend = RDA1 * c_cons, yend = RDA2* c_cons), 
+                 arrow = arrow(length = unit(.2, "cm")), 
+                 color = "blue") +
+    geom_text(data = centdd, 
+              aes(x = RDA1 * c_cons, y = RDA2 * c_cons, label = year), 
+              lineheight = .7, 
+              color = "blue", size = 2, 
+              fontface = "bold") +
+    
+    
+    # scales
+    scale_fill_manual(values = c("grey40", "white"), 
+                      labels = c("Ambient", expression(eCO[2])),
+                      guide  = guide_legend(override.aes = list(shape = 21))) +
+    scale_shape_manual(values = c(21, 22, 23, 24)) +
+    scale_colour_brewer(palette = "Set1",
+                        guide = guide_legend(override.aes = list(shape = 21, fill = "white"))) +
+    science_theme +
+    theme(legend.position = "none") +
+    labs(x = axislabs[1], y = axislabs[2])
+  
+  
+  return(p)
 }
