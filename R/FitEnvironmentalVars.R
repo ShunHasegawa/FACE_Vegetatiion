@@ -25,12 +25,9 @@
 
 # some values are really redundant so remove. Also some of them are hard to
 # interpret so remove. e.g. EC, Theta75
-  RmVar     <- c("sand", "silt", "clay", "OrganicMatter",
-                 "OrganicC", "OrganicC", "TotalP_CM", 
-                 "Theta5", "Theta30", "Theta75", "EC", 
-                 "T5", "T10", "T20", "T30", "T50", "T100", 
-                 "TotalN", "Phosphorus", "nitrification",
-                 "ThetaHL")
+  RmVar     <- c("sand", "silt", "clay", "OrganicMatter", "OrganicC", "TotalP_CM", 
+                 "Theta5", "Theta30", "Theta75", "EC", "T5", "T10", "T20", "T30", 
+                 "T50", "T100", "TotalN", "Phosphorus", "nitrification", "ThetaHL")
   EnvVarDF  <- EnvVarDF[, !names(EnvVarDF) %in% RmVar]
   CorMatrix <- cor(Rm_ymc(EnvVarDF), use = "pairwise.complete.obs")
   
