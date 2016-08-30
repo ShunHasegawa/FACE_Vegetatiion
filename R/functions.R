@@ -844,31 +844,26 @@ get_rda_model_summary <- function(x){
 
 get_rda_scores <- function(x){ # x:  RDA results
   
-  RdaAllRes <- summary(x)                                                              # rda summary
-  sitedd   <- data.frame(RdaAllRes$site, all_4y_d[, SiteName_rda])                     # site score + site variables
-  bipldd   <- data.frame(RdaAllRes$biplot, co2 = "amb", year = "Year0",                # scores for numeric predictor
-                         variable = row.names(RdaAllRes$biplot)) %>% 
-    filter(!grepl("^year", variable))
-  centdd   <- data.frame(RdaAllRes$centroids, co2 = "amb",
-                         year = gsub("year", "", row.names(RdaAllRes$centroids)))
-  VarProp  <- RdaAllRes$cont$importance["Eigenvalue",] / RdaAllRes$tot.chi             # proportion of variablce explained by RDA1 and RDA2
+  RdaAllRes <- summary(x)                                                         # rda summary
+  sitedd   <- data.frame(RdaAllRes$site, all_4y_d[, SiteName_rda])                # site score + site variables
+  bipldd   <- data.frame(RdaAllRes$biplot, co2 = "amb", year = "Year0",           # scores for numeric predictor
+                         variable = row.names(RdaAllRes$biplot)) %>%            
+    mutate(variable = ifelse(variable == "as.numeric(year)", "Year", 
+                             as.character(variable)))                             # re-label
+  VarProp  <- RdaAllRes$cont$importance["Eigenvalue",] / RdaAllRes$tot.chi             
+  # proportion of variablce explained by RDA1 and RDA2
   axislabs <- paste0(c("RDA1", "RDA2"), "(", round(VarProp[c(1, 2)] * 100, 2), "%)")
   
-  return(list(sitedd = sitedd, bipldd = bipldd, centdd = centdd, VarProp = VarProp,
-              axislabs = axislabs))
+  return(list(sitedd = sitedd, bipldd = bipldd, VarProp = VarProp, axislabs = axislabs))
   
 }
 
 
-
-
 create_rda_plots <- function(sitedd,    # site score
                              bipldd,    # biplot score (numeric predictor) 
-                             centdd,    # cetroid (categorical predictor)
                              VarProp,   # variance propotion explained by RDA1 and 2
                              axislabs,  # axis labels
-                             b_cons,    # constant values for rescaling biplot
-                             c_cons     # constant values for rescaling centroid
+                             b_cons    # constant values for rescaling biplot
                              ){
   # Arguments are inhereted from get_rda_scores
   
@@ -881,30 +876,17 @@ create_rda_plots <- function(sitedd,    # site score
     
     
     geom_path(aes(group = ring), col = "black") +
-    geom_point(aes(fill = co2, col = ring), size = 2) +
+    geom_point(aes(fill = co2, col = ring), size = 2, alpha = .7) +
     
     
     # numeric predictor
     geom_segment(data  = bipldd, 
                  aes(x = 0, y = 0, xend = RDA1 * b_cons, yend = RDA2 * b_cons), 
-                 arrow = arrow(length = unit(.2, "cm")), 
-                 color = "red") +
+                 arrow = arrow(length = unit(.2, "cm")),  color = "red", alpha = .7) +
     geom_text(data = bipldd, 
               aes(x = RDA1 * b_cons, y = RDA2 * b_cons, label = variable), 
               lineheight = .7, 
               color = "red", size = 2, 
-              fontface = "bold") +
-    
-    
-    # categorical prdictor (Year)
-    geom_segment(data  = centdd, 
-                 aes(x = 0, y = 0, xend = RDA1 * c_cons, yend = RDA2* c_cons), 
-                 arrow = arrow(length = unit(.2, "cm")), 
-                 color = "blue") +
-    geom_text(data = centdd, 
-              aes(x = RDA1 * c_cons, y = RDA2 * c_cons, label = year), 
-              lineheight = .7, 
-              color = "blue", size = 2, 
               fontface = "bold") +
     
     
