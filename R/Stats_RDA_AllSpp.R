@@ -257,8 +257,10 @@ rda_model_tbl <- rda_model_summary %>%
          mod_adjr = paste0(round(mod_adjr, 3), mod_p)) %>% 
   select(-.id, -Year, -Mod, -mod_p) %>% 
   spread(key = Year_Mod, value = mod_adjr) %>% 
-  select(Form,  # re-ordering columns 
+  mutate(Year1_full_mod = NA, Year1_final_mod = NA) %>% 
+  select(Form,                                              # re-ordering columns 
          Year0_full_mod, Year0_final_mod, 
+         Year1_full_mod, Year1_final_mod, 
          Year2_full_mod, Year2_final_mod,
          Year3_full_mod, Year3_final_mod)
 
