@@ -331,14 +331,10 @@ rda_plots <- llply(rda_plot_par, function(x) do.call("create_rda_plots", x))
 
 
 rda_plots[[3]] <- rda_plots[[3]] +
-  theme(legend.title      = element_text(size = 7),
+  theme(legend.title      = element_text(size = 10),
         legend.position   = c(1.5, .6),
         legend.text.align = 0,
-        legend.box.just   = "left",
-        legend.margin     = unit(-.1, "line"),
-        legend.text       = element_text(size = 7),
-        legend.key.height = unit(.13, "in"),
-        legend.key.width  = unit(.3, "in"))
+        legend.box.just   = "left")
 
 
 rda_plots2 <- llply(rda_plots, function(x) x + 
