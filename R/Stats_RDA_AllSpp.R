@@ -360,3 +360,7 @@ grid.draw(rda_plot_merged)
 
 ggsavePP(filename = "output/figs/RDA_3forms", plot = rda_plot_merged,
          width = 6.5, height = 6)
+
+
+# save object
+save.image(file = "output/Data/summary_rda.RData")
