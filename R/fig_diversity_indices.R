@@ -147,11 +147,12 @@ for (i in 2:3) {
 # x lab for the bottom plot
 div_plots[[3]] <- div_plots[[3]] + scale_x_discrete("Year", labels = c(0:3))
 
-# add legend in the bottom plot
-div_plots[[3]] <- div_plots[[3]] + theme(legend.position = c(.9, .8),
+# add legend in the top plot
+div_plots[[1]] <- div_plots[[1]] + theme(legend.position = "top",
+                                         legend.box        = "horizontal", 
+                                         legend.direction  = "vertical", 
                                          legend.text.align = 0,
-                                         legend.box.just = "left",
-                                         legend.margin = unit(-.8, "line"),
+                                         legend.margin     = unit(0, "line"),
                                          legend.text = element_text(size = 8))
 
 
