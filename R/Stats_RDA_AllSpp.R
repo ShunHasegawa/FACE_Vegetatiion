@@ -332,29 +332,37 @@ llply(rda_plot_par, summary)
 rda_plots <- llply(rda_plot_par, function(x) do.call("create_rda_plots", x))
 
 
-rda_plots[[1]] <- rda_plots[[1]] +
-  theme(legend.position = c(.75, .84),
+rda_plots[[3]] <- rda_plots[[3]] +
+  theme(legend.title    = element_text(size = 7),
+        legend.position    = c(1.5, .6),
         legend.text.align = 0,
-        legend.box.just = "top",
-        legend.box = "horizontal",
-        legend.margin = unit(-.9, "line"),
-        legend.text = element_text(size = 6),
+        legend.box.just   = "left",
+        legend.margin     = unit(-.1, "line"),
+        legend.text       = element_text(size = 7),
         legend.key.height = unit(.13, "in"),
-        legend.key.width = unit(.3, "in"))
-rda_plots[[1]] 
+        legend.key.width  = unit(.3, "in"))
 
 
 rda_plots2 <- llply(rda_plots, function(x) x + 
                       theme(axis.title = element_text(size = 8),
                             axis.text  = element_text(size = 6)))
 
+# blank plot
+bp <- ggplot(rda_plot_par$All$sitedd, aes(x = RDA1, y = RDA2)) +
+  geom_blank(inherit.aes = FALSE) +
+  labs(x = " ", y = " ") +
+  theme(panel.border     = element_blank(),
+        strip.background = element_blank(),
+        strip.text       = element_blank()) +
+  facet_wrap(~Form)
+
+
 # merge plots
-rda_plot_merged <- cbind(ggplotGrob(rda_plots2[[1]]), ggplotGrob(rda_plots2[[2]]), 
-                         ggplotGrob(rda_plots2[[3]]), size = "last")
+rda_plot_merged <- rbind(cbind(ggplotGrob(rda_plots2[[1]]), ggplotGrob(rda_plots2[[2]])), 
+                         cbind(ggplotGrob(rda_plots2[[3]]), ggplotGrob(bp)), size = "last")
 
-
-grid.newpage()
-grid.draw(rda_plot_merged)
+# grid.newpage()
+# grid.draw(rda_plot_merged)
 
 ggsavePP(filename = "output/figs/RDA_3forms", plot = rda_plot_merged,
-         width = 8, height = 3)
+         width = 6.5, height = 6)

@@ -909,12 +909,15 @@ create_rda_plots <- function(sitedd,    # site score
     
     
     # scales
-    scale_fill_manual(values = c("grey40", "white"), 
+    scale_fill_manual(name   = expression(CO[2]),
+                      values = c("grey40", "white"), 
                       labels = c("Ambient", expression(eCO[2])),
                       guide  = guide_legend(override.aes = list(shape = 21))) +
-    scale_shape_manual(values = c(21, 22, 23, 24)) +
-    scale_colour_brewer(palette = "Set1",
-                        guide = guide_legend(override.aes = list(shape = 21, fill = "white"))) +
+    scale_shape_manual(name   = "Year",
+                       values = c(21, 22, 23, 24)) +
+    scale_colour_brewer(name    = "Ring",
+                        palette = "Set1",
+                        guide   = guide_legend(override.aes = list(shape = 21, fill = "white"))) +
     science_theme +
     theme(legend.position = "none") +
     labs(x = axislabs[1], y = axislabs[2])
