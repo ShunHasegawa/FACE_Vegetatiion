@@ -3,14 +3,16 @@
 # 95% CI
 all_pfg_prop_ci_dd <- grassprop_ci_dd %>% 
   rename(.id = form) %>% 
-  bind_rows(pfgprop_ci_dd)
+  bind_rows(pfgprop_ci_dd) %>% 
+  mutate(value_type = "adjusted")
 
-# Year0
+# observed values
 all_pfg_d <- grassprop_d %>%
   rename(ratios = grass_prop) %>% 
   mutate(.id = "Grass") %>% 
   bind_rows(pfgprop_d) %>% 
-  select(.id, year, co2, ratios)
+  select(.id, year, co2, ratios) %>% 
+  mutate(value_type = "observed")
 
 # create a fig
 
@@ -28,32 +30,48 @@ all_pfg_d$.id <- factor(all_pfg_d$.id,
                         labels = facet_labels)
 
 # create fig
-dodgeval <- .4
-fig_pfgprop <- ggplot(all_pfg_prop_ci_dd, aes(x = year, y = rlsmean, fill = co2, group = co2)) +
+dodgeval <- .3
+fig_pfgprop <- ggplot(all_pfg_prop_ci_dd, 
+                      aes(x = year, y = rlsmean, shape = co2, group = co2, 
+                          col = value_type)) +
   facet_wrap(~ .id, scales = "free_y", ncol = 2, labeller = label_parsed) +
+  geom_vline(xintercept = 1.5, linetype = "dashed") +
 
+  
+  # observed values
+  geom_point(data = all_pfg_d, aes(x = year, y = ratios),  fill = "grey80", size = 2,
+             position = position_dodge(dodgeval)) +
+  
+  
+  # adjusted values
   geom_errorbar(aes(ymin = rlowerCL, ymax = rupperCL), width = 0,
                 position = position_dodge(width = dodgeval)) +
   geom_line(aes(linetype = co2), position = position_dodge(width = dodgeval)) +
-  geom_point(data = all_pfg_d, aes(x = year, y = ratios),  alpha = .7, shape = 21, size = 3,
-             position = position_dodge(dodgeval), show.legend = FALSE) +
-  geom_point(shape = 21, size = 3, position = position_dodge(width = dodgeval)) +
-  geom_vline(xintercept = 1.5, linetype = "dashed") +
+  geom_point(size = 2.5, position = position_dodge(width = dodgeval)) +
   geom_text(aes(label = star, y = rupperCL), fontface = "bold", vjust = .4) +
 
-  scale_fill_manual(values = c("black", "white"),
+  
+  # scaling
+  scale_shape_manual(values = c(16, 17),
                     labels = c("Ambient", expression(eCO[2]))) +
   scale_linetype_manual(values = c("solid", "dashed"),
                         labels = c("Ambient", expression(eCO[2]))) +
-  scale_color_manual(values = "grey50", labels = expression(Md[Year0])) +
+  scale_color_manual(values = c("black", "grey80"),
+                     guide  = guide_legend(override.aes = list(linetype = "blank",
+                                                               size     = 2))) +
   scale_x_discrete("Year", labels = 0:4, drop = FALSE) +
 
+  
+  # legend and theme
   science_theme +
-  theme(legend.position = c(.3, .95),
-        strip.text.x    = element_text(size = 8)) +
+  theme(legend.position   = "top",
+        legend.box        = "horizontal", 
+        legend.direction  = "vertical", 
+        legend.text.align = 0,
+        strip.text.x      = element_text(size = 8)) +
 
-  labs(y = expression("Adjusted proportion"))
+  labs(y = expression("Proportion"))
 fig_pfgprop
 
-ggsavePP(filename = "output/figs/adjusted_PFG_proportion", width = 6, height = 5,
+ggsavePP(filename = "output/figs/adjusted_PFG_proportion", width = 5, height = 5.5,
          plot = fig_pfgprop)

@@ -72,23 +72,20 @@ CI_dd <- ldply(lsmeans_list, function(x) data.frame(x$lsmeans))
 
 # post-hoc test
 contrast_dd <- ldply(lsmeans_list, function(x) data.frame(x$contrast)) %>% 
-  mutate(co2 = factor("elev", levels = c("amb", "elev")),
-         star = cut(p.value, right = FALSE,
-                    breaks = c(0, .1, .05, .01, .001, 1),  
-                    labels = c("***", "**", "*", "\u2020", ""))) %>% 
+  mutate(co2  = factor("elev", levels = c("amb", "elev")),
+         star = get_star(p.value)) %>% 
   select(.id, year, co2, p.value, star)
 
 # merge
 pfgprop_ci_dd <- left_join(CI_dd, contrast_dd, by = c(".id", "year", "co2")) %>% 
-  mutate(year = factor(year, levels = paste0("Year", 0:3)),
-         rlsmean = boot::inv.logit(lsmean), # reverse transform and standardise for 1mx1m plot
+  mutate(year     = factor(year, levels = paste0("Year", 0:3)),
+         rlsmean  = boot::inv.logit(lsmean), # reverse transform and standardise for 1mx1m plot
          rlowerCL = boot::inv.logit(lower.CL),
          rupperCL = boot::inv.logit(upper.CL))
 pfgprop_ci_dd$star[is.na(pfgprop_ci_dd$star)] <- ""
 
-# df for Year0
+# df for observed values
 pfgprop_d <- ldply(dfList) %>%
-  filter(year == "Year0") %>% 
   group_by(year, .id, co2, block, ring) %>%
   summarise(Total = sum(value),
             ratios = sum(value[yval == "p"]/Total)) %>%

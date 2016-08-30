@@ -50,52 +50,67 @@ ci_dd <- left_join(CI_dd, contrast_dd, by = c(".id", "year", "co2")) %>%
          rlsmean = boot::inv.logit(lsmean) * 25, # reverse transform and standardise for 1mx1m plot
          rlowerCL = boot::inv.logit(lower.CL) * 25,
          rupperCL = boot::inv.logit(upper.CL) * 25,
-         .id = gsub("[.]", " ", .id))
+         .id = gsub("[.]", " ", .id),
+         value_type = "adjusted")
 ci_dd$star[is.na(ci_dd$star)] <- ""
 
 
 # create fig --------------------------------------------------------------
 
 
-# df for Year0
+# df for observed vlaues
 d <- dominentsp %>%
-  filter(year == "Year0") %>% 
   group_by(year, co2, ring, variable) %>% 
   summarise(N = sum(!is.na(value)), value = mean(value)) %>% 
   ungroup() %>% 
   mutate(year = factor(year, levels = paste0("Year", 0:3)),
-         value = value/4, # standardise for 1mx1m plot
-         .id = gsub("[.]", " ", variable))
+         value = value/4,                                    # standardise for 1mx1m plot
+         .id = gsub("[.]", " ", variable),
+         value_type = "observed")
 
 # fig
-dodgeval <- .4
-fig_domspp <- ggplot(ci_dd, aes(x = year, y = rlsmean, fill = co2, group = co2)) +
+dodgeval <- .3
+fig_domspp <- ggplot(ci_dd, aes(x = year, y = rlsmean, shape = co2, group = co2, 
+                                col = value_type)) +
   
+  geom_vline(xintercept = 1.5, linetype = "dashed") +
+  facet_wrap( ~ .id) +
+  
+  
+  # observed
+  geom_point(data = d, aes(x = year, y = value),  size = 2, fill = "grey80",
+               position = position_dodge(dodgeval)) +
+  
+  
+  # adjusted
   geom_errorbar(aes(ymin = rlowerCL, ymax = rupperCL), width = 0, 
                 position = position_dodge(width = dodgeval)) +
   geom_line(aes(linetype = co2), position = position_dodge(width = dodgeval)) +
-  geom_point(data = d, aes(x = year, y = value),  alpha = .7, shape = 21, size = 3,
-               position = position_dodge(dodgeval), show.legend = FALSE) +
-  geom_point(shape = 21, size = 3, position = position_dodge(width = dodgeval)) +
-  geom_vline(xintercept = 1.5, linetype = "dashed") +
+  geom_point(size = 2.5, position = position_dodge(width = dodgeval)) +
   geom_text(aes(label = star, y = rupperCL), fontface = "bold", vjust = 0) +
   
-  scale_fill_manual(values = c("black", "white"), 
+  
+  # scaling
+  scale_shape_manual(values = c(16, 17), 
                     labels = c("Ambient", expression(eCO[2]))) +
   scale_linetype_manual(values = c("solid", "dashed"), 
                         labels = c("Ambient", expression(eCO[2]))) +
-  scale_color_manual(values = "grey50", labels = expression(Md[Year0])) +
+  scale_color_manual(values = c("black", "grey80"),
+                     guide = guide_legend(override.aes = list(linetype = "blank",size = 2))) +
   scale_y_continuous(limits = c(0, 25)) +
   scale_x_discrete("Year", labels = 0:4, drop = FALSE) +
   
-  science_theme +
-  theme(legend.position = c(.87, .91),
-        legend.margin = unit(-.5, "line"),
-        strip.text.x = element_text(face = "italic")) +
   
-  facet_wrap( ~ .id) +
+  # theme and legend
+  science_theme +
+  theme(legend.position   = "top",
+        legend.box        = "horizontal", 
+        legend.direction  = "vertical", 
+        legend.text.align = 0, 
+        strip.text.x      = element_text(face = "italic")) +
+  
   labs(y = expression(Abundance~(Counts~m^'-1')))
 fig_domspp
 
 ggsavePP(filename = "output/figs/adjusted_abundance_dominenetSPP", 
-         plot = fig_domspp, width = 5, height = 4)
+         plot = fig_domspp, width = 5, height = 5.5)

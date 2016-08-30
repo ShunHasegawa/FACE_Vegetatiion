@@ -47,10 +47,8 @@ CI_dd <- data.frame(lsmeans_dd$lsmeans)
 
 # post-hoc test
 contrast_dd <- data.frame(lsmeans_dd$contrast) %>% 
-  mutate(co2 = factor("amb", levels = c("amb", "elev")),
-         star = cut(p.value, right = FALSE,
-                    breaks = c(0, .1, .05, .01, .001, 1),  
-                    labels = c("***", "**", "*", "\u2020", ""))) %>% 
+  mutate(co2  = factor("amb", levels = c("amb", "elev")),
+         star = get_star(p.value)) %>% 
   select(year, co2, p.value, star)
 
 # merge
@@ -63,9 +61,8 @@ grassprop_ci_dd <- left_join(CI_dd, contrast_dd, by = c("year", "co2")) %>%
          form = "Grass")
 grassprop_ci_dd$star[is.na(grassprop_ci_dd$star)] <- ""
 
-# df for Year0
+# df for observed values
 grassprop_d <- PropDF %>%
-  filter(year == "Year0") %>% 
   group_by(year, co2, ring) %>% 
   summarise_each(funs(sum), Forb, Grass) %>% 
   ungroup() %>% 

@@ -49,27 +49,25 @@ CI_dd <- ldply(lsmeans_list, function(x) data.frame(x$lsmeans))
 # post-hoc test
 contrast_dd <- ldply(lsmeans_list, function(x) data.frame(x$contrast)) %>% 
   mutate(co2 = factor("amb", levels = c("amb", "elev")),
-         star = cut(p.value, right = FALSE,
-                    breaks = c(0, .1, .05, .01, .001, 1),  
-                    labels = c("***", "**", "*", "\u2020", ""))) %>% 
+         star = get_star(p.value)) %>% 
   select(.id, year, co2, p.value, star)
 
 # merge
 ci_dd <- left_join(CI_dd, contrast_dd, by = c(".id", "year", "co2")) %>% 
-  mutate(Type = tstrsplit(.id, "[.]")[[1]], 
-         variable = tstrsplit(.id, "[.]")[[2]],
-         Type = factor(Type, labels = c("All", "Forb", "Grass")),
-         year = factor(year, levels = paste0("Year", 0:3)))
+  mutate(Type       = tstrsplit(.id, "[.]")[[1]], 
+         variable   = tstrsplit(.id, "[.]")[[2]],
+         Type       = factor(Type, labels = c("All", "Forb", "Grass")),
+         year       = factor(year, levels = paste0("Year", 0:3)),
+         value_type = "adjusted")
 ci_dd$star[is.na(ci_dd$star)] <- ""
          
-# Year0 vlaue in each ring
-div_Year0_dd <- ldply(DivDF_list) %>% 
-  filter(year == "Year0") %>% 
+# Observed vlaues for each variable
+div_obs_dd <- ldply(DivDF_list) %>% 
   group_by(.id, year, co2, ring) %>% 
   summarise_each(funs(mean), H, S, J) %>% 
   ungroup() %>% 
-  mutate(year = factor(year, levels = paste0("Year", 0:3)), 
-         .id = factor(.id, labels = c("All", "Forb", "Grass"))) %>% 
+  mutate(.id        = factor(.id, labels = c("All", "Forb", "Grass")),
+         value_type = "observed") %>% 
   rename(Type = .id) %>% 
   gather(variable, value, H, S, J)
 
@@ -79,37 +77,48 @@ div_Year0_dd <- ldply(DivDF_list) %>%
 
 div_plots <- dlply(ci_dd, .(variable), function(x){
   
-  # df for Year0
-  d <- div_Year0_dd %>%
+  # df for observed values
+  d <- div_obs_dd %>%
     filter(variable == unique(x$variable))
     
   # fig
   dodgeval <- .4
-  p <- ggplot(x, aes(x = year, y = lsmean, fill = co2, group = co2))
-  p2 <- p +
+  p <- ggplot(x, aes(x = year, y = lsmean, shape = co2, group = co2, col = value_type)) +
+    
+    
+    geom_vline(xintercept = 1.5, linetype = "dashed") +
+    facet_grid(. ~ Type) +
    
+    
+    # observed
+    geom_point(data = d, aes(x = year, y = value), size = 2, fill = "grey80", 
+               position = position_dodge(dodgeval)) +
+    
+    
+    # adjusted
+    geom_line(aes(linetype = co2), position = position_dodge(width = dodgeval)) +
     geom_errorbar(aes(ymin = lower.CL, ymax = upper.CL), width = 0, 
                   position = position_dodge(width = dodgeval)) +
-    geom_line(aes(linetype = co2), position = position_dodge(width = dodgeval)) +
-    geom_point(data = d, aes(x = year, y = value), size = 3, shape = 21, alpha = .7,
-                 position = position_dodge(dodgeval), show.legend = FALSE) +
-    geom_point(shape = 21, size = 3, position = position_dodge(width = dodgeval)) +
-    geom_vline(xintercept = 1.5, linetype = "dashed") +
-    
-    scale_fill_manual(values = c("black", "white"), 
-                      labels = c("Ambient", expression(eCO[2]))) +
-    scale_linetype_manual(values = c("solid", "dashed"), 
-                          labels = c("Ambient", expression(eCO[2]))) +
-    scale_color_manual(values = "grey50", labels = expression(Md[Year0])) +
-    scale_x_discrete("", labels = NULL, drop = FALSE) +
+    geom_point(size = 2.5, position = position_dodge(width = dodgeval)) +
     geom_text(aes(y = upper.CL, label = star), fontface = "bold", vjust = -.1) +
     
-    science_theme +
-    theme(legend.position = c(.88, .9)) +
     
-    facet_grid(. ~ Type)
+    # scaaling
+    scale_shape_manual(values = c(16, 17), 
+                       labels = c("Ambient", expression(eCO[2]))) +
+    scale_linetype_manual(values = c("solid", "dashed"), 
+                          labels = c("Ambient", expression(eCO[2]))) +
+    scale_color_manual(values = c("black", "grey80"),
+                       guide = guide_legend(override.aes = list(linetype = "blank",size = 2))) +
+    scale_x_discrete("", labels = NULL, drop = FALSE) +
+    
+    
+    # legend and theme
+    science_theme +
+    theme(legend.position = "none")
+    
   
-  return(p2)
+  return(p)
   })
 div_plots[[1]]
 
@@ -118,9 +127,9 @@ div_plots[[1]]
 
 
 # add ylabels
-div_ylabs <- c(expression(Adjusted~diversity~(italic("H'"))), 
-               expression(Adjusted~evenness~(italic("J'"))),
-               expression(Adjusted~species~richness~(italic(S))))
+div_ylabs <- c(expression(Diversity~(italic("H'"))), 
+               expression(Evenness~(italic("J'"))),
+               expression(Species~richness~(italic(S))))
 
 
 for (i in 1:3){
@@ -129,15 +138,22 @@ for (i in 1:3){
     theme(axis.title.y = element_text(size = 9))
   }
 
-# remove facet_gird labels and legends from two plots
+# remove facet_gird labels
 for (i in 2:3) {
   div_plots[[i]] <-  div_plots[[i]] + theme(strip.background = element_blank(), 
-                                            strip.text.x = element_blank(), 
-                                            legend.position="none")
+                                            strip.text.x = element_blank())
   }
 
 # x lab for the bottom plot
 div_plots[[3]] <- div_plots[[3]] + scale_x_discrete("Year", labels = c(0:3))
+
+# add legend in the bottom plot
+div_plots[[3]] <- div_plots[[3]] + theme(legend.position = c(.9, .8),
+                                         legend.text.align = 0,
+                                         legend.box.just = "left",
+                                         legend.margin = unit(-.8, "line"),
+                                         legend.text = element_text(size = 8))
+
 
 # set margins
 div_margins <- llply(list(c(1, 1, 0, 0), c(0, 1, 0, 0), c(0, 1, 0, 0)),
