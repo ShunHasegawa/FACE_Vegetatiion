@@ -876,7 +876,7 @@ create_rda_plots <- function(sitedd,    # site score
     
     
     geom_path(aes(group = ring), col = "black") +
-    geom_point(aes(fill = co2, col = ring), size = 2, alpha = .7) +
+    geom_point(aes(fill = co2), size = 2, alpha = .7) +
     
     
     # numeric predictor
@@ -885,9 +885,13 @@ create_rda_plots <- function(sitedd,    # site score
                  arrow = arrow(length = unit(.2, "cm")),  color = "red", alpha = .7) +
     geom_text(data = bipldd, 
               aes(x = RDA1 * b_cons, y = RDA2 * b_cons, label = variable), 
-              lineheight = .7, 
-              color = "red", size = 2, 
+              color = "red", size = 3, 
               fontface = "bold") +
+    
+    # ring id
+    geom_text(data = filter(sitedd, year == "Year0"), 
+              aes(label = ring), size = 3, hjust = 1, 
+              fontface = "italic") +
     
     
     # scales
@@ -897,9 +901,6 @@ create_rda_plots <- function(sitedd,    # site score
                       guide  = guide_legend(override.aes = list(shape = 21))) +
     scale_shape_manual(name   = "Year",
                        values = c(21, 22, 23, 24)) +
-    scale_colour_brewer(name    = "Ring",
-                        palette = "Set1",
-                        guide   = guide_legend(override.aes = list(shape = 21, fill = "white"))) +
     science_theme +
     theme(legend.position = "none") +
     labs(x = axislabs[1], y = axislabs[2])
