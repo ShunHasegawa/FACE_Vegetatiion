@@ -292,18 +292,19 @@ grass_4y_d <- seDF_4y_list[["grass"]]
 
 
 # rda for each form
-r_all   <- rda(all_4y_d[, SppName] ~ year + Moist + pH, data = all_4y_d)
-r_forb  <- rda(forb_4y_d[, SppName_forb] ~ year + Total_C + Moist, data = forb_4y_d)
-r_grass <- rda(all_4y_d[, SppName_grass] ~ year + Moist + pH, data = all_4y_d)
+r_all   <- rda(all_4y_d[, SppName] ~ as.numeric(year) + Moist + pH, data = all_4y_d)
+r_forb  <- rda(forb_4y_d[, SppName_forb] ~ as.numeric(year) + Total_C + Moist, data = forb_4y_d)
+r_grass <- rda(all_4y_d[, SppName_grass] ~ as.numeric(year) + Moist + pH, data = all_4y_d)
 
 rda_4y <- list('All' = r_all, 'Forb' = r_forb, 'Grass' = r_grass)
 par(mfrow = c(2, 2))
 l_ply(rda_4y, plot)
 
+summary(r_all)$biplot  
   
   
-  
-# Fig for thesis ----------------------------------------------------------
+
+# figure ------------------------------------------------------------------
 
 
 # list of rda scores to create plots
@@ -312,16 +313,13 @@ rda_plot_par <- llply(rda_4y, get_rda_scores)
 
 # add plant forms and constant for rescaling predictors on triplot
 bc_cons <- data.frame(form   = c("All", "Forb", "Grass"),
-                      b_cons = c(.7, .6, .6),              # constant for biplot
-                      c_cons = c(7, 1.5, 3))               # constant for centroid
+                      b_cons = c(.7, .6, .5))              # constant for biplot
 
-rda_plot_par <- mlply(bc_cons, function(form, b_cons, c_cons){
+rda_plot_par <- mlply(bc_cons, function(form, b_cons){
   l <- rda_plot_par[[form]]
   l$sitedd <- mutate(l$sitedd, Form = form)
   l$bipldd <- mutate(l$bipldd, Form = form)
-  l$centdd <- mutate(l$centdd, Form = form)
   l$b_cons <- b_cons
-  l$c_cons <- c_cons
   return(l)
 })
 names(rda_plot_par) <- bc_cons$form
@@ -333,8 +331,8 @@ rda_plots <- llply(rda_plot_par, function(x) do.call("create_rda_plots", x))
 
 
 rda_plots[[3]] <- rda_plots[[3]] +
-  theme(legend.title    = element_text(size = 7),
-        legend.position    = c(1.5, .6),
+  theme(legend.title      = element_text(size = 7),
+        legend.position   = c(1.5, .6),
         legend.text.align = 0,
         legend.box.just   = "left",
         legend.margin     = unit(-.1, "line"),
@@ -361,8 +359,8 @@ bp <- ggplot(rda_plot_par$All$sitedd, aes(x = RDA1, y = RDA2)) +
 rda_plot_merged <- rbind(cbind(ggplotGrob(rda_plots2[[1]]), ggplotGrob(rda_plots2[[2]])), 
                          cbind(ggplotGrob(rda_plots2[[3]]), ggplotGrob(bp)), size = "last")
 
-# grid.newpage()
-# grid.draw(rda_plot_merged)
+grid.newpage()
+grid.draw(rda_plot_merged)
 
 ggsavePP(filename = "output/figs/RDA_3forms", plot = rda_plot_merged,
          width = 6.5, height = 6)
