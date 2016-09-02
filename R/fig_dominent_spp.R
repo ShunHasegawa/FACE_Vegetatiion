@@ -13,28 +13,82 @@ dominentsp_year0 <- dominentsp %>%
   select(id, value, variable) %>%
   rename(value0 = value) %>% 
   left_join(filter(dominentsp, year != "Year0"), by = c("id", "variable")) %>% 
-  mutate(logitv = logit(value), 
-         logitv0 = logit(value0))
+  mutate(logitv  = logit(value), 
+         logitv0 = logit(value0),
+         logv0   = log(value0 + 1),
+         sqrtv0  = sqrt(value0))
 
+
+
+
+# analysis ----------------------------------------------------------------
+
+
+# independent variable transformation
 par(mfrow = c(2, 4), mar = c(2, 2, 1, 1))
+
+# raw
 d_ply(dominentsp_year0, .(variable), 
-      function(x) plot(logit(value) ~ logitv0, data = x, pch = 19, col = factor(year), main = "logit"))  
+      function(x) plot(logit(value) ~ value0, data = x, pch = 19, col = factor(year), 
+                       main = "raw"))  
+
+# sqrt
 d_ply(dominentsp_year0, .(variable), 
-      function(x) plot(value ~ value0, data = x, pch = 19, col = factor(year), main = "raw"))  
+      function(x) plot(logit(value) ~ sqrtv0, data = x, pch = 19, col = factor(year), 
+                       main = "sqrt"))  
+
+# log
+d_ply(dominentsp_year0, .(variable), 
+      function(x) plot(logit(value) ~ logv0, data = x, pch = 19, col = factor(year), 
+                       main = "log"))  
+
+# logit
+d_ply(dominentsp_year0, .(variable), 
+      function(x) plot(logit(value) ~ logitv0, data = x, pch = 19, col = factor(year), 
+                       main = "logit"))  
+
 
 dom_m_list <- dlply(dominentsp_year0, .(variable), function(x){
-  m1 <- lmer(logit(value) ~ co2 * year + logitv0 + (1|block) + (1|ring) + (1|id), data = x)
-  m2 <- update(m1, ~ . - (1|block))
-  if (AICc(m1) >= AICc(m2)) return(m2) else return(m1)
+  m1 <- lmer(logit(value) ~ co2 * year + value0  + (1|block) + (1|ring) + (1|id), data = x)
+  m2 <- lmer(logit(value) ~ co2 * year + sqrtv0  + (1|block) + (1|ring) + (1|id), data = x)
+  m3 <- lmer(logit(value) ~ co2 * year + logv0   + (1|block) + (1|ring) + (1|id), data = x)
+  m4 <- lmer(logit(value) ~ co2 * year + logitv0 + (1|block) + (1|ring) + (1|id), data = x)
+  ml <- list(m1, m2, m3, m4)
+  bm <- ml[[which.min(AICc(m1, m2, m3, m4)$AICc)]]
+  m2 <- update(bm, ~ . - (1|block))
+  if (AICc(bm) >= AICc(m2)) return(m2) else return(m1)
 })
+
+
+
+
+# model diagnosis ---------------------------------------------------------
+
+pdf("output/figs/mod_diag_domspp.pdf", onefile = TRUE, width = 4, height = 4)
+l_ply(names(dom_m_list), function(x){
+  m <- dom_m_list[[x]]
+  print(plot(m, main = x))
+  qqnorm(resid(m, main = x))
+  qqline(resid(m, main = x))
+})
+dev.off()
+
+
+
+
+
+# CI and post-hoc test ----------------------------------------------------
+
 
 # compute 95 CI and post-hoc test
 lsmeans_list <- llply(dom_m_list, function(x) {
   summary(lsmeans::lsmeans(x, pairwise ~ co2 | year))
 })
 
+
 # 95% CI
 CI_dd <- ldply(lsmeans_list, function(x) data.frame(x$lsmeans)) 
+
 
 # post-hoc test
 contrast_dd <- ldply(lsmeans_list, function(x) data.frame(x$contrast)) %>% 
@@ -43,6 +97,7 @@ contrast_dd <- ldply(lsmeans_list, function(x) data.frame(x$contrast)) %>%
                     breaks = c(0, .1, .05, .01, .001, 1),  
                     labels = c("***", "**", "*", "\u2020", ""))) %>% 
   select(.id, year, co2, p.value, star)
+
 
 # merge
 ci_dd <- left_join(CI_dd, contrast_dd, by = c(".id", "year", "co2")) %>% 

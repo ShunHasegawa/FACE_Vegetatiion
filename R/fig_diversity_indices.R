@@ -11,19 +11,27 @@ DivDF_year0_list <- llply(DivDF_list, function(x){
     select(id, value, variable) %>%
     rename(value0 = value) %>% 
     left_join(filter(DivDF_mlt, year != "Year0"), by = c("id", "variable")) %>% 
-    filter(!is.na(value))
+    filter(!is.na(value)) %>% 
+    mutate(value0_log  = log(value0 + 1),
+           value0_sqrt = sqrt(value0))
   
   return(DivDF_year0)
 })
 
 par(mfrow = c(3, 3), mar = c(4, 4, 2, 1))
 
+# scatter plot agianst Year0
 l_ply(names(DivDF_year0_list), function(x){
   d_ply(DivDF_year0_list[[x]], .(variable), function(y){
     figtitle <- paste(x, unique(y$variable), sep = "-")
     plot(value ~ value0, pch = 19, col = year, data = y, main = figtitle)
   })
 })
+
+
+
+
+# analysis ----------------------------------------------------------------
 
 
 # create models to be tested
@@ -37,6 +45,41 @@ div_m_list <- llply(DivDF_year0_list, function(x){
 
 div_m_list <- unlist(div_m_list, recursive = FALSE)
 summary(div_m_list)  
+
+
+
+# . model diagnosis -------------------------------------------------------
+
+
+# diagnosing plot
+pdf("output/figs/mod_diag_divind.pdf", onefile = TRUE, width = 4, height = 4)
+l_ply(names(div_m_list), function(x){
+  m <- div_m_list[[x]]
+  print(plot(m, main = x))
+  qqnorm(resid(m, main = x))
+  qqline(resid(m, main = x))
+})
+dev.off()
+
+
+# inspect grass_spp.J
+div_m_list[["grass_spp.J"]]
+d_gsj <- filter(DivDF_year0_list[["grass_spp"]], variable == "J")
+m1 <- lmer(value ~ co2 * year + value0 + (1|ring) + (1|id), data = d_gsj)
+which.min(resid(m1))
+m2 <- update(m1, subset = -8)
+plot(m2)
+# model is improved
+llply(list(m1, m2), function(x) Anova(x, test.statistic = "F"))
+# co2 x time interaction seems to be driven by outlier so remove
+
+div_m_list[["grass_spp.J"]] <- m2
+
+
+
+
+# CI and post-hoc test ----------------------------------------------------
+
 
 # compute 95 CI and post-hoc test
 lsmeans_list <- llply(div_m_list, function(x) {

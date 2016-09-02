@@ -62,6 +62,46 @@ pfgprop_m_list <- llply(PfgRDF_year0, function(x) {
 }
 )
 
+
+
+
+
+# model diagnosis ---------------------------------------------------------
+
+
+pdf("output/figs/mod_diag_PFGprop.pdf", onefile = TRUE, width = 4, height = 4)
+l_ply(names(pfgprop_m_list), function(x){
+  m <- pfgprop_m_list[[x]]
+  print(plot(m, main = x))
+  qqnorm(resid(m, main = x))
+  qqline(resid(m, main = x))
+})
+dev.off()
+
+
+# insepct legume
+d <- PfgRDF_year0[["LegvsNonleg"]]
+m1 <- lmer(logit(ratios) ~ co2 * year + t_value0 + (1|block) + (1|ring) + (1|id), data = d)
+which.min(resid(m1))
+m2 <- update(m1, subset = -6)
+llply(list(m1, m2), function(x) Anova(x, test.statistic = "F"))
+# no difference so leave it as it is
+
+# inspect Native
+d <- PfgRDF_year0[["NatvsIntr"]]
+m1 <- lmer(logit(ratios) ~ co2 * year + t_value0 + (1|block) + (1|ring) + (1|id), data = d)
+which.max(resid(m1))
+m2 <- update(m1, subset = -72)
+plot(m2)
+llply(list(m1, m2), function(x) Anova(x, test.statistic = "F"))
+# not much difference, so leave it as it is
+
+
+
+
+# CI and postdoc test -----------------------------------------------------
+
+
 # compute 95 CI and post-hoc test
 lsmeans_list <- llply(pfgprop_m_list, function(x) {
   summary(lsmeans::lsmeans(x, pairwise ~ co2 | year))

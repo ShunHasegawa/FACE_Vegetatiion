@@ -24,23 +24,53 @@ PropDF_year0 <- PropDF %>%
   select(id, grass_prop) %>%
   rename(value0 = grass_prop) %>%
   left_join(subyear_dd, by = "id") %>% 
-  mutate(logitv0 = logit(value0)) # logit transformation
+  mutate(logitv0 = logit(value0),
+         sqrtv0  = sqrt(value0),
+         logv0   = log(value0 + 1)) # logit transformation
 
 # plot
 par(mfrow = c(1, 2))
 plot(grass_prop ~ value0, pch = 19, col = year, data = PropDF_year0, main = "raw")
 plot(logit(grass_prop) ~ logitv0, pch = 19, col = year, data = PropDF_year0, main = "logit")
 
+
+
+
 # Analysis ----------------------------------------------------------------
 
-m1 <- lmer(logit(grass_prop) ~ co2 * year + logitv0 + (1|block) + (1|ring) + (1|id), 
-           data = PropDF_year0)
-m2 <- update(m1, ~ . - (1|block))
-AICc(m1, m2)
-grassprop_m <- m2
+m1 <- lmer(logit(grass_prop) ~ co2 * year + value0 + (1|block) + (1|ring) + (1|id), data = PropDF_year0)
+m2 <- lmer(logit(grass_prop) ~ co2 * year + logitv0 + (1|block) + (1|ring) + (1|id), data = PropDF_year0)
+m3 <- lmer(logit(grass_prop) ~ co2 * year + sqrtv0 + (1|block) + (1|ring) + (1|id), data = PropDF_year0)
+m4 <- lmer(logit(grass_prop) ~ co2 * year + logv0 + (1|block) + (1|ring) + (1|id), data = PropDF_year0)
+AICc(m1, m2, m3, m4)
+# m4 is slightly better
+
+m5 <- update(m4, ~ . - (1|block))
+AICc(m4, m5)
+
+grassprop_m <- m5
+
+
+
+
+# model diagnosis ---------------------------------------------------------
+
+plot(m5)
+qqnorm(resid(m5))
+qqline(resid(m5))
+
+which.max(resid(m5))
+m6 <- update(m2, subset = -43)
+plot(m6)
+llply(list(m5, m6), function(x) Anova(x, test.statistic = "F"))
+# CO2xYear interaction was driven by outlier so remove
+
+
+# CI and post-hoc ---------------------------------------------------------
+
 
 # compute 95 CI and post-hoc test
-lsmeans_dd <- summary(lsmeans::lsmeans(m2, pairwise ~ co2 | year))
+lsmeans_dd <- summary(lsmeans::lsmeans(m6, pairwise ~ co2 | year))
 
 # 95% CI
 CI_dd <- data.frame(lsmeans_dd$lsmeans)
