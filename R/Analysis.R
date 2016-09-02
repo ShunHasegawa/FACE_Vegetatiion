@@ -1,14 +1,20 @@
 rm(list=ls(all=TRUE))
 
-## ---- LoadData
 source("R/Packages.R")
 source("R/functions.R")
 SiteName <- c("year", "block", "ring", "co2", "plot", "id", "position", "cell")
 
+
+
+
 # Process Data ------------------------------------------------------------
 # source("R/CombineYearlyData.R")
 
+
+
+
 # load data ---------------------------------------------------------------
+
 
 # Raw data for multi variate analysis (matrix)
 load("output//Data/EucFACE_understorey_vegetation_2012-2106_S1.RData")
@@ -20,10 +26,15 @@ summary(veg_FullVdf)
 
 # spp
 SppName <- as.character(unique(veg_FullVdf$variable))
+
+
+
   
 # organise dfs ------------------------------------------------------------
 
+
 # > all species -----------------------------------------------------------
+
 
 # grass and forb spp
 gfspp <- veg_FullVdf %>% 
@@ -33,7 +44,7 @@ gfspp <- veg_FullVdf %>%
   distinct()
 
 SppName_grass <- gfspp[gfspp$form == "Grass", 1]
-SppName_forb <- gfspp[gfspp$form == "Forb", 1]
+SppName_forb  <- gfspp[gfspp$form == "Forb", 1]
 
 # plot sum
 PlotSumVeg <- ddply(FullVdf, .(year, ring, plot, block, co2, id), 
@@ -44,25 +55,33 @@ RingSumVeg <- ddply(PlotSumVeg, .(year, ring, block, co2),
                     function(x) colSums(x[, SppName]))
 
 
+
+
 # > PFG -------------------------------------------------------------------
+
 
 # plot
 PlotSumPFGMatrix <- dcast(year + block + co2 + ring + plot ~ PFG, 
-                          data = subset(veg_FullVdf, !is.na(PFG)), sum)
+                          data = subset(veg_FullVdf, !is.na(PFG)), sum) %>% 
+  mutate(id = ring:plot, yco = year:co2)
+
 PlotSumPFGMatrix %>% 
-  select(-one_of(SiteName)) %>% 
+  select(-one_of(c(SiteName, "id", "yco"))) %>% 
   summarise_each(funs(sum))
 
-# add interaction term
-PlotSumPFGMatrix <- mutate(PlotSumPFGMatrix, id = ring:plot, yco = year:co2)
 
-PFGName <- c("c3", "c4", "fern", "legume", "moss", "Non_legume", "wood")
+PFGName <- setdiff(names(PlotSumPFGMatrix), c(SiteName, "id", "yco")) 
+  
 
 # ring
 RingSumPFGMatrix <- ddply(PlotSumPFGMatrix, .(year, block, ring, co2, yco), 
                           function(x) colSums(x[, PFGName]))
+
+
+
   
 # diversity indices -------------------------------------------------------
+
 
 # Diversity & eveness
 siteDF <- select(PlotSumVeg, -one_of(SppName))
@@ -94,6 +113,8 @@ DmSpp
 sum(SppSum$value[SppSum$Dominant])/sum(SppSum$value)
 
 
+
+
 # analysis and fig --------------------------------------------------------
 
 source("R/fig_diversity_indices.R") # diversity indices
@@ -103,8 +124,13 @@ source("R/PFG_Proportaion.R")       # Grass vs Forb
 source("R/fig_pfg_propotion.R")     # combine grassn and PFG proportino results to create a figure
 source("R/analysis_summary.R")      # summarise all analyses
 
+
+
+
 # figs --------------------------------------------------------------------
 source("R//Figs.R")
+
+
 
 
 # stats -------------------------------------------------------------------
