@@ -48,8 +48,6 @@ AICc(m1, m2, m3, m4)
 m5 <- update(m4, ~ . - (1|block))
 AICc(m4, m5)
 
-grassprop_m <- m5
-
 
 
 
@@ -64,7 +62,7 @@ m6 <- update(m2, subset = -43)
 plot(m6)
 llply(list(m5, m6), function(x) Anova(x, test.statistic = "F"))
 # CO2xYear interaction was driven by outlier so remove
-
+grassprop_m <- m6
 
 # CI and post-hoc ---------------------------------------------------------
 
