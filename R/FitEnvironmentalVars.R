@@ -61,7 +61,3 @@
   # All species
   source("R/Stats_RDA_AllSpp.R")
   
-  # PFG
-  source("R/Stats_RDA_PFG.R")
-
-
