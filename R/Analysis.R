@@ -104,7 +104,7 @@ DivDF_list <- llply(vegDF_list, function(x) {
 SppSum <- ddply(veg_FullVdf, .(variable), summarise, value = sum(value))
 SppSum <- SppSum[order(SppSum$value, decreasing = TRUE),]
 SppSum <- within(SppSum, {
-  Cov <- round(value * 100/sum(value), 3)
+  Cov    <- round(value * 100 / sum(value), 3)
   CumSum <- cumsum(value)
   Dominant <- Cov >= 5 # species with >5 % coverage
 })
