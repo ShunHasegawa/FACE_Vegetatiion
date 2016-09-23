@@ -68,13 +68,13 @@ grassprop_m <- m6
 
 
 # compute 95 CI and post-hoc test
-lsmeans_dd <- summary(lsmeans::lsmeans(m6, pairwise ~ co2 | year))
+lsmeans_dd <- lsmeans::lsmeans(m6, ~ co2 | year)
 
 # 95% CI
-CI_dd <- data.frame(lsmeans_dd$lsmeans)
+CI_dd <- data.frame(summary(lsmeans_dd))
 
 # post-hoc test
-contrast_dd <- data.frame(lsmeans_dd$contrast) %>% 
+contrast_dd <- data.frame(summary(pairs(lsmeans_dd)[1:3], adjust = "fdr")) %>% 
   mutate(co2  = factor("amb", levels = c("amb", "elev")),
          star = get_star(p.value)) %>% 
   select(year, co2, p.value, star)

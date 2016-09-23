@@ -104,14 +104,16 @@ llply(list(m1, m2), function(x) Anova(x, test.statistic = "F"))
 
 # compute 95 CI and post-hoc test
 lsmeans_list <- llply(pfgprop_m_list, function(x) {
-  summary(lsmeans::lsmeans(x, pairwise ~ co2 | year))
+  lsmeans::lsmeans(x, ~ co2 | year)
 })
 
 # 95% CI
-CI_dd <- ldply(lsmeans_list, function(x) data.frame(x$lsmeans)) 
+CI_dd <- ldply(lsmeans_list, function(x) data.frame(summary(x))) 
 
 # post-hoc test
-contrast_dd <- ldply(lsmeans_list, function(x) data.frame(x$contrast)) %>% 
+contrast_dd <- ldply(lsmeans_list, function(x) {
+  data.frame(summary(pairs(x)[1:3], adjust = "fdr"))
+}) %>% 
   mutate(co2  = factor("elev", levels = c("amb", "elev")),
          star = get_star(p.value)) %>% 
   select(.id, year, co2, p.value, star)
