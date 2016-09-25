@@ -116,7 +116,7 @@ ci_dd$star[is.na(ci_dd$star)] <- ""
 
 
 # df for observed vlaues
-d <- dominentsp %>%
+obs_d <- dominentsp %>%
   group_by(year, co2, ring, variable) %>% 
   summarise(N = sum(!is.na(value)), value = mean(value)) %>% 
   ungroup() %>% 
@@ -135,7 +135,7 @@ fig_domspp <- ggplot(ci_dd, aes(x = year, y = rlsmean, shape = co2, group = co2,
   
   
   # observed
-  geom_point(data = d, aes(x = year, y = value),  size = 2, fill = "grey80",
+  geom_point(data = obs_d, aes(x = year, y = value),  size = 2, fill = "grey80",
                position = position_dodge(dodgeval)) +
   
   
@@ -171,3 +171,38 @@ fig_domspp
 
 ggsavePP(filename = "output/figs/adjusted_abundance_dominenetSPP", 
          plot = fig_domspp, width = 5, height = 5.5)
+
+
+# summary table -----------------------------------------------------------
+
+# table for observed values
+obs_tbl <- obs_d %>% 
+  select(.id, year, co2, value_type, ring, value) %>% 
+  group_by(.id, year, co2, value_type) %>% 
+  summarise(M = mean(value))
+
+
+# bind with adjusted values
+domsp_adjMean_tble <- ci_dd %>% 
+  select(.id, co2, year, rlsmean, value_type) %>% 
+  rename(M = rlsmean) %>% 
+  bind_rows(obs_tbl) %>% 
+  mutate(variable = paste(value_type, co2, sep = "_")) %>% 
+  select(-value_type, -co2) %>% 
+  spread(key  = variable, value = M) %>% 
+  mutate(resp = adjusted_elev / adjusted_amb - 1) %>% 
+  group_by(.id, year) %>% 
+  summarise_each(funs(round(., 2)), everything(), -.id) %>% 
+  select(year, starts_with("observed"), starts_with("adjusted"), resp) %>% 
+  ungroup()
+
+
+# split df by .id
+domsp_tbl_l <- dlply(domsp_adjMean_tble, .(.id), function(x) select(x, -.id))
+
+
+# save as excel
+writeWorksheetToFile(file  = "output/table/summary_tbl_dom_spp.xlsx",  # define file name to be saved
+                     data  = domsp_tbl_l,                              # writeWorksheetToFile doesn't take dplyr object so turn them into data frames using as.data.frame
+                     sheet = names(domsp_tbl_l))                       # sheet names in excel are defined by object names a list
+

@@ -1,3 +1,5 @@
+# figure ------------------------------------------------------------------
+
 # merge data frames for grass and pfg proportions
 
 # 95% CI
@@ -75,3 +77,64 @@ fig_pfgprop
 
 ggsavePP(filename = "output/figs/adjusted_PFG_proportion", width = 5, height = 5.5,
          plot = fig_pfgprop)
+
+
+
+
+# summary table -----------------------------------------------------------
+
+
+# . table for observed values ---------------------------------------------
+
+# treatment mean
+
+# grass prop
+grassprop_co2_d <- grassprop_d %>% 
+  group_by(year, co2) %>% 
+  summarise(M  = sum(Grass) / (sum(Grass) + sum(Forb))) %>% 
+  mutate(.id = "GrasvsFor")
+
+# other pfg prop
+pfgprop_co2_d <- pfgprop_d %>% 
+  mutate(pfg_value = Total * ratios) %>%          # get pfg abundance before getting proportion
+  group_by(.id, year, co2) %>% 
+  summarise(M = sum(pfg_value) / sum(Total))
+
+# table
+obs_tbl <- bind_rows(grassprop_co2_d, pfgprop_co2_d) %>%
+  mutate(value_type = "observed")
+
+
+
+# . bind with adjusted values ---------------------------------------------
+
+pfgprop_adjMean_tble <- all_pfg_prop_ci_dd %>% 
+  mutate(.id = factor(.id,                                                        # change .id labels 
+                      levels = c("Grass~(Grass~vs.~Forb)",
+                                 "C[3*'_'*grass]~(C[3*'_'*grass]~vs.~C[4*'_'*grass])", 
+                                 "Legume~(Legume~vs.~Non*-legume)",
+                                 "Native~plant~(Native~vs.~Introduced)"),
+                      labels = c("GrasvsFor", "C3vsC4", "LegvsNonleg", 
+                                 "NatvsIntr"))) %>% 
+  select(.id, co2, year, rlsmean, value_type) %>% 
+  rename(M = rlsmean) %>% 
+  bind_rows(obs_tbl) %>% 
+  mutate(variable = paste(value_type, co2, sep = "_")) %>% 
+  select(-value_type, -co2) %>% 
+  spread(key  = variable, value = M) %>% 
+  mutate(resp = adjusted_elev / adjusted_amb - 1) %>%                             # response ratios
+  group_by(.id, year) %>% 
+  summarise_each(funs(round(., 2)), everything(), -.id) %>% 
+  select(year, starts_with("observed"), starts_with("adjusted"), resp) %>% 
+  ungroup()
+
+
+# split df by .id
+pfgprop_tbl_l <- dlply(pfgprop_adjMean_tble, .(.id), function(x) select(x, -.id))
+
+
+# save as excel
+writeWorksheetToFile(file  = "output/table/summary_tbl_pfg_prop.xlsx",  # define file name to be saved
+                     data  = pfgprop_tbl_l,                             # writeWorksheetToFile doesn't take dplyr object so turn them into data frames using as.data.frame
+                     sheet = names(pfgprop_tbl_l))                      # sheet names in excel are defined by object names a list
+

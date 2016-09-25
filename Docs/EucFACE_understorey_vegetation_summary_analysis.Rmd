@@ -1,7 +1,7 @@
 ---
 title: "EucFACE understorey vegetation -Summary of stats with corrected P-"
 author: "Shun Hasegawa"
-date: "23 September 2016"
+date: "25 September 2016"
 output: html_document
 ---
 
@@ -9,6 +9,7 @@ output: html_document
 library(pander)
 library(ggplot2)
 library(grid)
+library(plyr)
 knitr::opts_chunk$set(echo = TRUE)
 load("../output/Data/summary_analysis.RData")
 load("../output/Data/summary_rda.RData")
@@ -18,7 +19,7 @@ theme_set(theme_bw() +
 
 ```
 
-## Reanalysis
+# Reanalysis
 
 Here, I reanalysed understorey vegetation data, performing ANCOVA using Year0 values as a covariate for univariate analysis and redundancy analysis (RDA) for multivariate analysis. I analysed the following variables for univariate analysis:
 
@@ -39,9 +40,9 @@ Here, I reanalysed understorey vegetation data, performing ANCOVA using Year0 va
 
 Diversity indices and RDA were analysed for all species together, grass species only, and form species only. 
 
-## Univariate analysis (ANCOVA)
+# Univariate analysis (ANCOVA)
 
-### Diversity indices
+## Diversity indices
 
 ```{r div_stats, echo=FALSE, warning=FALSE}
 pcol <- grep("_P$", names(div_tbl))
@@ -55,11 +56,24 @@ emphasize.strong.cells(which(d <= .1, arr.ind = TRUE))
 pander(div_tbl, caption = "Diversity indices", justify = "right", split.table = Inf, keep.line.breaks = TRUE)
 ```
 
+
 ```{r div_plot, echo=FALSE, fig.cap="Fig.1 Diversity indices. Black points depict mean values adjusted by Year0 values with 95% CI. Gray points depict observed values for each FACE ring.", fig.height=6, fig.width=6}
 grid.draw(div_plot_merged)
 ```
 
-### Dominent species
+
+```{r div_tbl, echo=FALSE}
+names(div_tbl_l) <- c("Diversity", "Evenness", "Species richness")
+l <- llply(names(div_tbl_l), function(x) pander(div_tbl_l[[x]], caption = x, justify = "right"))
+l[[1]]
+l[[2]]
+l[[3]]
+```
+
+
+
+
+## Dominent species
 
 ```{r dom_stats, echo=FALSE, warning=FALSE}
 pcol <- grep("_P$", names(dom_tbl))
@@ -76,7 +90,18 @@ pander(dom_tbl, caption = "Dominent species", justify = "right", split.table = I
 fig_domspp
 ```
 
-### Proportions of plant functional groups
+
+```{r dom_tbl, echo=FALSE}
+l <- llply(names(domsp_tbl_l), function(x) pander(domsp_tbl_l[[x]], caption = x, justify = "right"))
+l[[1]]
+l[[2]]
+l[[3]]
+l[[4]]
+```
+
+
+
+## Proportions of plant functional groups
 
 ```{r pfgprop_stat, echo=FALSE, warning=FALSE}
 pcol <- grep("_P$", names(pfg_tbl))
@@ -96,7 +121,19 @@ fig_pfgprop
 ```
 
 
-## Multivariate analysis (RDA)
+```{r pfgprop_tbl, echo=FALSE}
+names(pfgprop_tbl_l) <- c("C3:C4", "Grass:Forb", "Legume:Non-legume", "Natvie:Introduced")
+l <- llply(names(pfgprop_tbl_l), function(x) pander(pfgprop_tbl_l[[x]], caption = x, justify = "right"))
+l[[1]]
+l[[2]]
+l[[3]]
+l[[4]]
+```
+
+
+
+
+# Multivariate analysis (RDA)
 
 Hellinger transformation was applied to species data to improve asymmetric distribution of species abundance.
 

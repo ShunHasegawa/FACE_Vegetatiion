@@ -168,7 +168,7 @@ div_plots <- dlply(ci_dd, .(variable), function(x){
 div_plots[[1]]
 
 
-# fine tuning of figure ---------------------------------------------------
+# . fine tuning of figure ---------------------------------------------------
 
 
 # add ylabels
@@ -220,3 +220,45 @@ grid.draw(div_plot_merged)
 
 ggsavePP(filename = "output/figs/adjusted_diversity_indices", 
          plot = div_plot_merged, width = 6, height  = 6)
+
+
+
+
+# summary table -----------------------------------------------------------
+
+# table for observed values
+obs_tbl <- div_obs_dd %>% 
+  mutate(.id = paste0(tolower(Type), "_spp.", variable)) %>% 
+  select(.id, year, co2, value_type, ring, value) %>% 
+  group_by(.id, year, co2, value_type) %>% 
+  summarise(M = mean(value))
+
+
+# bind with adjusted values
+div_adjMean_tble <- ci_dd %>% 
+  select(.id, co2, year, lsmean, value_type) %>% 
+  rename(M = lsmean) %>% 
+  bind_rows(obs_tbl) %>% 
+  mutate(variable = paste(value_type, co2, sep = "_")) %>% 
+  select(-value_type, -co2) %>% 
+  spread(key = variable, value = M) %>% 
+  mutate(resp     = adjusted_elev / adjusted_amb - 1,
+         Type     = gsub("_.*", "", .id),
+         variable = str_sub(.id, -1, -1)) %>% 
+  group_by(Type, variable, year) %>% 
+  summarise_each(funs(round(., 2)), everything(), -.id) %>% 
+  select(variable, Type, year, starts_with("observed"), starts_with("adjusted"), 
+         resp) %>% 
+  ungroup() %>% 
+  arrange(variable, Type)
+
+
+# split df by variable
+div_tbl_l <- dlply(div_adjMean_tble, .(variable), function(x) select(x, -variable))
+
+
+# save as excel
+writeWorksheetToFile(file  = "output/table/summary_tbl_diversity.xlsx",  # define file name to be saved
+                     data  = div_tbl_l,                                  # writeWorksheetToFile doesn't take dplyr object so turn them into data frames using as.data.frame
+                     sheet = names(div_tbl_l))                           # sheet names in excel are defined by object names a list
+
