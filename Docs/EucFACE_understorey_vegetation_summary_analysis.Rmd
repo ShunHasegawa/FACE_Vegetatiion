@@ -40,6 +40,20 @@ Here, I reanalysed understorey vegetation data, performing ANCOVA using Year0 va
 
 Diversity indices and RDA were analysed for all species together, grass species only, and form species only. 
 
+
+
+
+# Overview of observed species
+
+```{r spp_tbl, echo=FALSE}
+pander(spp_year_summary, caption = "The number of species for each PFG")
+
+
+pander(spp_co2_summary, caption = "The number of species for each CO2 treatment. Total number of species for each treatment (tot_), uniquely found ones (uni_) and commonly found in both CO2 treatments (common)", justify = "right")
+```
+
+
+
 # Univariate analysis (ANCOVA)
 
 ## Diversity indices

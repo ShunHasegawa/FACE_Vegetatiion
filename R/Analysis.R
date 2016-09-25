@@ -115,6 +115,37 @@ sum(SppSum$value[SppSum$Dominant])/sum(SppSum$value)
 
 
 
+# species yearly summary --------------------------------------------------
+
+
+# yearly summary by form
+spp_year_summary <- veg_FullVdf %>% 
+  group_by(year, variable, form) %>% 
+  summarise(value = sum(value)) %>% 
+  group_by(year, form) %>% 
+  summarise(S = sum(value > 0)) %>% 
+  ungroup() %>% 
+  spread(key = form, value = S) %>% 
+  mutate(Total = rowSums(.[, -1]))
+
+
+# yearly summary by co2
+spp_co2_summary <- veg_FullVdf %>% 
+  group_by(year, variable, co2) %>% 
+  summarise(value = sum(value)) %>% 
+  group_by(year, variable) %>% 
+  summarise(uni_amb   = value[co2 == "amb"] > 0  & value[co2 == "elev"] == 0,     # uniqe spp in amb
+            uni_elev  = value[co2 == "amb"] == 0 & value[co2 == "elev"] > 0,      # uniqe spp in elev
+            common    = value[co2 == "amb"] > 0  & value[co2 == "elev"] > 0) %>%  # common spp
+  group_by(year) %>% 
+  summarise_each(funs(sum), -variable) %>%                                        # number of TRUE
+  mutate(tot_amb  = uni_amb + common,
+         tot_elev = uni_elev + common,
+         total    = uni_amb + uni_elev + common)
+
+
+
+
 # analysis and fig --------------------------------------------------------
 
 source("R/fig_diversity_indices.R")  # diversity indices
