@@ -296,7 +296,7 @@ grass_4y_d <- seDF_4y_list[["grass"]]
 # rda for each form
 r_all   <- rda(all_4y_d[, SppName] ~ as.numeric(year) + Moist + pH, data = all_4y_d)
 r_forb  <- rda(forb_4y_d[, SppName_forb] ~ as.numeric(year) + Total_C + Moist, data = forb_4y_d)
-r_grass <- rda(all_4y_d[, SppName_grass] ~ as.numeric(year) + Moist + pH, data = all_4y_d)
+r_grass <- rda(all_4y_d[, SppName_grass] ~ as.numeric(year) + pH, data = all_4y_d)
 
 rda_4y <- list('All' = r_all, 'Forb' = r_forb, 'Grass' = r_grass)
 par(mfrow = c(2, 2))
