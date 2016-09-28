@@ -436,15 +436,15 @@ AnvF_temp
 # . sumamry stats ---------------------------------------------------------
 
 AnvF_Env <- ldply(list(TotalC = AnvF_totalC, moist = AnvF_moist,
-                       temp = AnvF_temp, 
-                       Drysoil_ph = AnvF_ph, FloorPAR = AnvF_par),
+                       temp = AnvF_temp, Drysoil_ph = AnvF_ph, 
+                       gapfraction = AnvF_par),
                   function(x) data.frame(x, term = row.names(x)),
                   .id = "variable")
 AnvF_Env_p <- AnvF_Env[, c("variable", "term", "Pr..F.")]
 names(AnvF_Env_p)[3] <- "Pr"
-AnvF_Env_p <- rbind(AnvF_Env_p, data.frame(variable = "Depth_HL", 
-                                           term = "co2",
-                                           Pr = AnvF_HL[[1]]$Pr[1]))
+AnvF_Env_p <- rbind(AnvF_Env_p, 
+                    data.frame(variable = "Depth_HL", term = "co2", 
+                               Pr = AnvF_HL[[1]]$Pr[1]))
 
 AnvF_Env_p$stats <- cut(AnvF_Env_p$Pr, breaks = c(0, 0.001, 0.01, 0.05, 0.1, 1), 
                         labels = c("***", "**", "*", ".", "ns"))
@@ -455,8 +455,8 @@ AnvF_Env_p_cst[is.na(AnvF_Env_p_cst)] <- "ns"
 
 # combine treatment summary and stats
 Env_summary <- merge(TreatSummary_cst, AnvF_Env_p_cst, by = "variable")
-Env_summary <- Env_summary[match(c("TotalC", "moist", "Drysoil_ph", 
-                                   "Depth_HL", "FloorPAR", "temp"), 
+Env_summary <- Env_summary[match(c("TotalC", "moist", "Drysoil_ph", "Depth_HL", 
+                                   "gapfraction", "temp"), 
                                  Env_summary$variable), ]
 write.csv(Env_summary, file = "output/table/FACE_EnvVarSummary.csv", row.names = FALSE)
 
