@@ -48,11 +48,13 @@ SppName_forb  <- gfspp[gfspp$form == "Forb", 1]
 
 # plot sum
 PlotSumVeg <- ddply(FullVdf, .(year, ring, plot, block, co2, id), 
-                    function(x) colSums(x[, SppName]))
+                    function(x) colSums(x[, SppName])) %>% 
+  arrange(ring, plot, year)
 
 # ring sum
 RingSumVeg <- ddply(PlotSumVeg, .(year, ring, block, co2), 
-                    function(x) colSums(x[, SppName]))
+                    function(x) colSums(x[, SppName])) %>% 
+  arrange(ring, year)
 
 
 

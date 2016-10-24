@@ -45,9 +45,10 @@
   
   naCol_2ndYear
   # these variables may vary year by year. so remove them for the time being
-  EnvDF_3df <- EnvVarDF[, apply(EnvVarDF, 2, function(x) !any(is.na(x)))]
+  EnvDF_3df <- EnvVarDF[, apply(EnvVarDF, 2, function(x) !any(is.na(x)))] %>% 
+    arrange(ring, year)
   
-  EnvDF_3df$block <- recode(EnvDF_3df$ring, "1:2 = 'A'; 3:4 = 'B'; 5:6 = 'C'")
+  EnvDF_3df$block <- car::recode(EnvDF_3df$ring, "1:2 = 'A'; 3:4 = 'B'; 5:6 = 'C'")
   save(EnvDF_3df, file = "output/Data/EucFACE_understorey_env_vars_2012-2016.RData")
   write.csv(EnvDF_3df, file = "output/Data/EucFACE_understorey_env_vars_2012-2016.csv",
             row.names = FALSE)
