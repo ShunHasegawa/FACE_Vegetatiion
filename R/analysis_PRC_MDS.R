@@ -32,13 +32,15 @@ res_prc_site_ring <- res_prc_site %>%
   summarise_each(funs(mean), CAP1, MDS1)
 res_prc_site_co2 <- res_prc_site_ring %>% 
   group_by(year, co2) %>% 
-  summarise_each(funs(mean), CAP1, MDS1)
+  summarise_each(funs(mean), CAP1) %>% 
+  group_by(year) %>% 
+  summarise_each(funs(-diff(.)), CAP1)
 
-fig_prc_site <- ggplot(res_prc_site_ring, aes(x = year, y = CAP1, col = co2)) +
-  geom_hline(yintercept = 0, linetype = "dotted") +
-  geom_point(position = position_dodge(.2)) +
-  geom_line(data = res_prc_site_co2, aes(x = as.numeric(year), y = CAP1, linetype = co2)) +
-  geom_hline(yintercept = 0, linetype = "dotted") +
+
+fig_prc_site <- ggplot(res_prc_site_co2, aes(x = year, y = CAP1)) +
+  geom_hline(yintercept = 0, col = "gray") +
+  geom_point() +
+  geom_line(aes(x = as.numeric(year), y = CAP1)) +
   science_theme
 # +
   # theme(legend.position = "top") +
