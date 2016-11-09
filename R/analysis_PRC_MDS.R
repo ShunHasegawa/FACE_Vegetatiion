@@ -33,11 +33,12 @@ cntr       <- how(within = Within(type = "series"),                             
                   plots = Plots(strata = res_prc_site_ring$ring, type = "free"),
                   nperm = 4999)
 mds_envfit <- envfit(res_prc_site_ring[, c("MDS1", "MDS2")],                      # fit environmental variables
-                     EnvDF_3df[, c("Depth_HL", "TotalC", "Drysoil_ph", "moist")],
+                     EnvDF_3df[, c("Depth_HL", "TotalC", "Drysoil_ph", "moist", 
+                                   "gapfraction", "temp")],
                      permutations = cntr)
-mds_arrw_d <- data.frame(mds_envfit$vectors$arrows) %>%                           # arrows for environmental variables 
+mds_arrw_d <- data.frame(scores(mds_envfit, "vectors")) %>%                           # arrows for environmental variables 
   mutate(env = mapvalues(row.names(.), row.names(.), 
-                         c("Depth HL", "Total C", "pH", "Moist")),
+                         c("Depth HL", "Total C", "pH", "Moist", 'Temp', "Light")),
          co2 = factor("amb", levels = c("amb", "elev")),
          year = factor("Year0", levels = paste0("Year", 0:3)))
 
@@ -56,6 +57,15 @@ res_prc_site_co2  <- res_prc_site_ring %>%                                    # 
 # figure ------------------------------------------------------------------
 
 
+# ggplot theme for prc
+science_theme_prc <- science_theme +
+  theme(legend.title      = element_text(size = 8),
+        legend.text       = element_text(size = 8),
+        legend.key.width  = unit(1.7, "lines"),
+        axis.title        = element_text(size = 9),
+        axis.text         = element_text(size = 8))
+
+
 # . canonical coefficient -------------------------------------------------
 
 
@@ -67,7 +77,7 @@ fig_prc_site <- ggplot(res_prc_site_co2, aes(x = as.numeric(year), y = CAP1,
   geom_line() +
   geom_point(size = 2, shape = 21) +
   
-  science_theme +
+  science_theme_prc +
   theme(legend.position = "none") +
   scale_x_continuous(labels = paste0("Year", 0:3)) +
   scale_fill_manual(values = c("black", "white"),
@@ -169,12 +179,11 @@ fig_prc_spp_byPfg <- ggplot(res_pric_sp_d2, aes(x = type, y = CAP1)) +
   geom_hline(yintercept = 0, linetype = "dotted", size = .5) +
   geom_boxplot(outlier.size = 1, na.rm = TRUE) +
   geom_jitter(aes(size = spprop), alpha = .5, width = .6, col = "gray20") +
-  scale_size_continuous("Proportion\nin Year0", range = c(1, 5), breaks = c(0, 0.05, 0.1, 0.3)) +
-  science_theme +
-  theme(legend.title     = element_text(size = 10),
-        legend.position  = "right",
-        axis.text.x      = element_text(angle = 45, hjust = 1, vjust = 1),
-        legend.key.width = unit(.1, "inches")) +
+  scale_size_continuous("Proportion\nin Year0", range = c(1, 5), 
+                        breaks = c(0, 0.05, 0.1, 0.3)) +
+  science_theme_prc +
+  theme(legend.position  = "right",
+        axis.text.x      = element_text(angle = 45, hjust = 1, vjust = 1, size = 8)) +
   labs(y = "Species weight", x = "") +
   ylim(c(-.5, .5))
 fig_prc_spp_byPfg
@@ -185,9 +194,6 @@ fig_prc_spp_byPfg
 
 # . PCoA (MDS) plot -------------------------------------------------------
 
-mds_arrw_d2 <- mds_arrw_d %>% 
-  mutate(MDS1 = MDS1 * c(.8, .6, .6, .6), 
-         MDS2 = MDS2 * c(.5, .6, .6, .6))
 
 fig_prc_mds <- ggplot(res_prc_site_ring, aes(x = MDS1, y = MDS2, shape = year, 
                                              fill = co2)) +
@@ -200,15 +206,16 @@ fig_prc_mds <- ggplot(res_prc_site_ring, aes(x = MDS1, y = MDS2, shape = year,
   geom_point(size = 2, alpha = .6) +
   
   geom_segment(data = mds_arrw_d,
-               aes(x = 0, y = 0, xend = MDS1 * .55, yend = MDS2 * .55),
+               aes(x = 0, y = 0, xend = MDS1, yend = MDS2),
                arrow = arrow(length = unit(.2, "cm")),  alpha = .7) +
-  geom_text(data = mds_arrw_d2, 
-            aes(x = MDS1, y = MDS2, label = env),  size = 2, 
-            fontface = "bold") +
+  geom_text(data = mds_arrw_d,  aes(x = MDS1, y = MDS2, label = env),  
+            size = 2, fontface = "italic", 
+            hjust = c(rep(-.4, 2),  1, rep(-.4, 3)), 
+            vjust = c(rep(  0, 2), -1, rep(  0, 3))) +
   
-  
-  science_theme +
-  theme(legend.title = element_text(size = 10)) +
+
+  science_theme_prc +
+  theme(legend.position = "right") +
   scale_fill_manual(name   = expression(CO[2]),
                     values = c("black", "white"), 
                     labels = c("Ambient", expression(eCO[2])),
@@ -217,8 +224,7 @@ fig_prc_mds <- ggplot(res_prc_site_ring, aes(x = MDS1, y = MDS2, shape = year,
                      values = c(21, 22, 23, 24)) +
   scale_linetype_manual(name = expression(CO[2]),
                         values = c("solid", "dashed"), 
-                        labels = c("Ambient", expression(eCO[2]))) +
-  theme(legend.position = "right")
+                        labels = c("Ambient", expression(eCO[2])))
 fig_prc_mds
 
 
