@@ -243,79 +243,85 @@ pfg_spp_tbl <- veg_FullVdf %>%
   select(variable, pfgform, origin)
 
 
-## proportion for spp, PFG or origin in Year0
-year0_df        <- PlotSumVeg %>%                                               # df for Year0
+## Treatment difference in Year0
+
+#### df for Year0
+year0_df        <- PlotSumVeg %>%            
   filter(year == "Year0") %>% 
   gather(variable, value, one_of(SppName)) %>% 
-  group_by(variable) %>% 
+  group_by(variable, co2) %>% 
   summarise(value = sum(value)) %>% 
   ungroup() %>% 
-  left_join(pfg_spp_tbl, by = "variable")                                       # merge with PFG and forb table
-year0_sp_prop   <-  transmute(year0_df, variable, spprop = value / sum(value))  # sp proportion in Year0
-year0_pfg_prop  <- year0_df %>%                                                 # PFG proportion in Year0
-  group_by(pfgform) %>%  
-  summarise(value = sum(value)) %>% 
+  left_join(pfg_spp_tbl, by = "variable")
+
+### df for treatment difference for each pfg
+year0_pfg_df <- year0_df %>%
+  group_by(pfgform) %>%
+  summarise(rr = sum(value[co2 == "elev"]) / sum(value[co2 == "amb"]) - 1) %>% 
   ungroup() %>% 
-  transmute(pfgform, pfgprop = value / sum(value))
-year0_orgn_prop <- year0_df %>%                                                 # origin proportion in Year0
-  group_by(origin) %>% 
+  rename(type = pfgform)
+
+
+### df for treatment difference for each origin
+year0_orgn_df <- year0_df %>%
+  group_by(origin) %>%
+  summarise(rr = sum(value[co2 == "elev"]) / sum(value[co2 == "amb"]) - 1) %>% 
+  ungroup() %>% 
   filter(!is.na(origin)) %>% 
-  summarise(value = sum(value)) %>% 
-  ungroup() %>% 
-  transmute(origin, orgnprop = value / sum(value))
+  rename(type = origin)
 
 
-### merge the above dfs
+## merge dfs for initial treatment difference
+year0_rr_df <- bind_rows(year0_orgn_df, year0_pfg_df)
+
+
+### merge species score and pfg and origin table
 res_pric_sp_d <- res_prc_sp %>%
-  left_join(pfg_spp_tbl    , by = "variable") %>% 
-  left_join(year0_sp_prop  , by = "variable") %>% 
-  left_join(year0_pfg_prop , by = "pfgform") %>% 
-  left_join(year0_orgn_prop, by = "origin")
-summary(res_pric_sp_d)
+  left_join(pfg_spp_tbl, by = "variable")
 
 
-### re-order pfgform by median
+### define order of pfgform by median
 pfgform_lev <- res_pric_sp_d %>% 
   group_by(pfgform) %>% 
   summarise(med = median(CAP1)) %>% 
   arrange(-med) %>% 
   .$pfgform
-res_pric_sp_d$pfgform <- factor(res_pric_sp_d$pfgform, levels = pfgform_lev)
 
 
-
-## create a plot
-head(res_pric_sp_d)
-res_pric_sp_d %>% 
-  select(pfgform, pfgprop) %>% 
-  distinct()
-boxplot(CAP1 ~ pfgform, width = unique(res_pric_sp_d$pfgprop), data = res_pric_sp_d)
-hist(log(res_pric_sp_d2$spprop, base = 10))
-hist(res_pric_sp_d2$spprop)
-nrow(res_pric_sp_d)
+## arrange df for plotting and merge with pfg and orgn
 res_pric_sp_d2 <- res_pric_sp_d %>%
   gather(measure, value = type, pfgform, origin) %>% 
-  mutate(measure = factor(measure, levels = c("pfgform", "origin"), labels = c("PFG", "Origin")),
-         type    = factor(type, levels = c(pfgform_lev, "native", "naturalised")),
+  left_join(year0_rr_df, by = "type") %>% 
+  mutate(measure = factor(measure, levels = c("pfgform", "origin"), 
+                          labels = c("PFG", "Origin")),
+         type    = factor(type, levels = c(pfgform_lev, "native", "naturalised")),  # reorder pfgform by median
          type    = mapvalues(type, c(pfgform_lev, "native", "naturalised"),
                              c("C4 grass", "Fern", "C3 grass", "Forb",  "Moss", 
                                "Wood", "Legume", "Native", "Introduced")),
          year    = factor("Year0", levels = paste0("Year", 0:4)),
          co2     = factor("Ambient", levels = c("Ambient", "eCO[2]"))) %>% 
-  filter(!is.na(type))
+  filter(!is.na(type)) 
 
 
+## df for fern and moss; there is only single species for those so they can't
+## generate box-wisker plot
+fm_df <- filter(res_pric_sp_d2, type %in% c("Moss", "Fern"))
 
 
+## create a plot
 fig_prc_spp_byPfg <- ggplot(res_pric_sp_d2, aes(x = type, y = CAP1)) +
   facet_grid(. ~ measure, space = "free_x", scale = "free_x") +
   geom_hline(yintercept = 0, linetype = "dotted", size = .5) +
-  geom_boxplot(outlier.size = 1, na.rm = TRUE) +
-  geom_jitter(aes(size = spprop), alpha = .5, width = .6, col = "gray20") +
-  scale_size_continuous("Proportion\nin Year0", range = c(1, 5), 
-                        breaks = c(0, 0.05, 0.1, 0.3)) +
+  geom_boxplot(aes(fill = rr), outlier.size = 2, na.rm = TRUE) +
+  geom_point(data = fm_df, aes(fill = rr), size = 6, shape = 21) +
+  scale_fill_gradient2("Initial treatment\ndifference\n(Response ratio\nin Year0)\n",
+                       low = 'blue', mid = 'white', high = 'red', midpoint = 0,
+                       limits = c(-.6, .6), breaks = c(-.6, -.3, 0, .3, .6), 
+                       labels = c(expression(italic(Ambient)), -0.3, 0, 0.3, 
+                                  expression(italic(eCO[2])))) +
   science_theme_prc +
   theme(legend.position  = "right",
+        legend.text.align = 0,
         axis.text.x      = element_text(angle = 45, hjust = 1, vjust = 1, size = 8)) +
   labs(y = "Species weight", x = "") +
   ylim(c(-.5, .5))
