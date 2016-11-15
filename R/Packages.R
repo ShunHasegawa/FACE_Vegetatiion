@@ -39,5 +39,6 @@ library(grid)
 library(vegan)
 library(parallel)
 library(foreach)
+library(doParallel)
 
 library(HIEv)
