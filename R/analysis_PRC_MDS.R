@@ -2,16 +2,92 @@
 #  Prepare dataframe ------------------------------------------------------
 
 prc_sp   <- decostand(PlotSumVeg[, SppName], method = "log") # log-transformed sp df
-prc_site <- select(PlotSumVeg, year, ring, plot, co2)        # site df
-
+prc_site <- PlotSumVeg %>%                                   # site df 
+  select(year, ring, plot, co2) %>% 
+  mutate(id = ring:plot)
 
 
 # analysis ----------------------------------------------------------------
 
 
-## Principal response curve anlsyis with bray-curtis dissimilarity
+# > PRC ---------------------------------------------------------------------
+
+
+## principal response curve anlsyis with bray-curtis dissimilarity
+
 prc_all <- capscale(prc_sp ~  year * co2 + Condition(year), data = prc_site, 
                     distance = "bray")
+
+
+
+
+# . permutation test ------------------------------------------------------
+
+
+## define permutation for this experiment; year is nested within plot within
+## ring.
+
+## 1. plot is a random factor, should never be exchanged. 
+## 2. year is a time series measurement. This can be exchanged, but its order 
+## should be kept to take autocorrelation into account (i.e. [1, 2, 3], [2, 3, 
+## 1], [3, 1, 2]). Also this order should be consistent among all plots.
+## 3. ring is an experimental unit so fully exchangable
+
+
+## 1) define permutation for year within each plot
+
+cntrol_year <- how(within = Within(type = "series"),                     # year within plot is a time seiries
+                   plot   = Plots(strata = prc_site$id, type = "none"),  # plot should not be exchanged
+                   nperm = 4999)  
+perm_year   <- shuffleSet(nrow(prc_site), control = cntrol_year)
+nrow(perm_year)
+
+## 2) the above permutation did not exchange between rings. do so as below
+
+perm_year_or <- rbind(1:nrow(prc_site), perm_year)                               # add the original (i.e. 1:96) as this should be also permuted between rings
+perm_ring_l  <- llply(levels(prc_site$ring), function(x) perm_year_or[, prc_site$ring == x])  # split each row of the permutation by ring into a list
+perm6        <- rbind(1:6, allPerms(6))                                          # potential permutation for 6 rings (i.e. 6!)
+perm_by_ring <- alply(perm6, 1, function(x) do.call(cbind, perm_ring_l[x]))      # permute by ring, exchanging perm_year_or between rings (e.g. origin[1, 2, 3, 4, 5, 6], 2nd[1, 2, 3, 4, 6, 5] etc.)
+comp_perm    <- do.call(rbind, perm_by_ring)[-1, ]                               # row bind all results and remove the original
+nrow(comp_perm)
+
+
+## check permutation; ring is freely exchanged. Plot is not exchanged. Year is
+## exchanged within plots, but the order (time series) is preserved
+
+llply(split(comp_perm[sample(nrow(comp_perm), 1), ], prc_site$ring), function(x){
+  m <- matrix(x, ncol = 4)
+  apply(m, c(1, 2),  function(x) paste(prc_site$id, prc_site$year, sep = "-")[x])
+})
+
+
+# run permutation test
+prc_res <- anova(prc_all, permutations = comp_perm[sample(4999), ], by = "axis")
+prc_res <- anova(prc_all, permutations = alperms_bind[sample(4999), ], by = "axis")
+prc_res <- anova(prc_all, permutations = alperms_bind[sample(999), ], by = "axis")
+prc_res
+
+
+class(summary_prc$sites[, "CAP1"])
+
+?anova.cca
+prc_res <- anova(prc_all, permutations = comp_perm[sample(999), ], by = "axis")
+prc_res
+
+EnvDF2 <- ldply(1:4, function(x) data.frame(EnvDF_3df, plot = x)) %>% 
+  arrange(ring, plot, year) %>% 
+  mutate(plot =factor(plot))
+identical(data.frame(prc_site[, c("year","ring", "plot")]), 
+          data.frame(EnvDF2[, c("year", "ring", "plot")]))
+
+envf2 <- envfit(res_prc_site[, c("MDS1", "MDS2")], 
+               EnvDF2[, c("Depth_HL", "TotalC", "Drysoil_ph", "moist", 
+                             "gapfraction", "temp", "sand", "silt", "clay")],
+               permutations = alperms_bind[sample(4999), ])
+envf
+envf2
+?envfit
+# . summarise -------------------------------------------------------------
 
 
 ## prepare df for a figure from the result of prc
@@ -25,7 +101,10 @@ res_prc_site_ring <- res_prc_site %>%                                         # 
   arrange(ring, year)
 
 
-## fit envronmental variable
+
+# . fit envronmental variable ---------------------------------------------
+
+
 load("output/Data/EucFACE_understorey_env_vars_2012-2016.RData")                  # load environmental variables, generated in "R/FitEnvironmentalVars.R"
 identical(EnvDF_3df[, c("year", "ring")],                                         # check EnvDf_3df and species df are in the same order for site
           data.frame(res_prc_site_ring[, c("year", "ring")]))  
@@ -34,14 +113,25 @@ cntr       <- how(within = Within(type = "series"),                             
                   nperm = 4999)
 mds_envfit <- envfit(res_prc_site_ring[, c("MDS1", "MDS2")],                      # fit environmental variables
                      EnvDF_3df[, c("Depth_HL", "TotalC", "Drysoil_ph", "moist", 
-                                   "gapfraction", "temp")],
+                                   "gapfraction", "temp", "sand", "silt", "clay")],
                      permutations = cntr)
-mds_arrw_d <- data.frame(scores(mds_envfit, "vectors")) %>%                           # arrows for environmental variables 
-  mutate(env = mapvalues(row.names(.), row.names(.), 
-                         c("Depth HL", "Total C", "pH", "Moist", 'Temp', "Light")),
-         co2 = factor("amb", levels = c("amb", "elev")),
-         year = factor("Year0", levels = paste0("Year", 0:3)))
 
+
+mds_arrw_d <- data.frame(scores(mds_envfit, "vectors"), 
+                         pval = mds_envfit$vector$pvals) %>%                      # arrows for environmental variables 
+  mutate(env = recode(row.names(.), 
+                      Depth_HL    = "HL", 
+                      TotalC      = "Total C",
+                      Drysoil_ph  = "pH",
+                      moist       = "Moist",
+                      gapfraction = "Light",
+                      temp        = "Temp",
+                      sand        = "Sand",
+                      silt        = "Silt",
+                      clay        = "Clay"),
+         co2 = factor("amb", levels = c("amb", "elev")),
+         year = factor("Year0", levels = paste0("Year", 0:3))) %>% 
+  filter(pval <= 0.1)
 
 res_prc_site_co2  <- res_prc_site_ring %>%                                    # canonical coefficients for CO2 treatment (i.e. treatment difference for each year)
   group_by(year, co2) %>% 
@@ -206,12 +296,10 @@ fig_prc_mds <- ggplot(res_prc_site_ring, aes(x = MDS1, y = MDS2, shape = year,
   geom_point(size = 2, alpha = .6) +
   
   geom_segment(data = mds_arrw_d,
-               aes(x = 0, y = 0, xend = MDS1, yend = MDS2),
+               aes(x = 0, y = 0, xend = MDS1 * .7, yend = MDS2 * .7),
                arrow = arrow(length = unit(.2, "cm")),  alpha = .7) +
-  geom_text(data = mds_arrw_d,  aes(x = MDS1, y = MDS2, label = env),  
-            size = 2, fontface = "italic", 
-            hjust = c(rep(-.4, 2),  1, rep(-.4, 3)), 
-            vjust = c(rep(  0, 2), -1, rep(  0, 3))) +
+  geom_text(data = mds_arrw_d,  aes(x = MDS1 * .8, y = MDS2* .8, label = env),  
+            size = 2, fontface = "italic") +
   
 
   science_theme_prc +
