@@ -21,7 +21,7 @@ prc_all <- capscale(prc_sp ~  year * co2 + Condition(year), data = prc_site,
 
 
 
-# . permutation test ------------------------------------------------------
+# . define permutation ------------------------------------------------------
 
 
 ## define permutation for this experiment; year is nested within plot within
@@ -104,32 +104,17 @@ llply(split(alperms_bind[sample(nrow(alperms_bind), 1), ], prc_site$ring), funct
 })
 
 
-# run permutation test
-prc_res <- anova(prc_all, permutations = alperms_bind[sample(4999), ], by = "axis")
-prc_res <- anova(prc_all, permutations = alperms_bind[sample(4999), ], by = "axis")
-prc_res <- anova(prc_all, permutations = alperms_bind[sample(999), ], by = "axis")
+
+# . run permutation test --------------------------------------------------
+
+allperm_n <- nrow(alperms_bind)  # number of all permutations
+prc_res <- anova(prc_all, permutations = alperms_bind[sample(allperm_n, 9999), ], # randomly select 9999 rows
+                 by = "axis", parallel = 3)
 prc_res
 
 
-class(summary_prc$sites[, "CAP1"])
 
-?anova.cca
-prc_res <- anova(prc_all, permutations = alperms_bind[sample(999), ], by = "axis")
-prc_res
 
-EnvDF2 <- ldply(1:4, function(x) data.frame(EnvDF_3df, plot = x)) %>% 
-  arrange(ring, plot, year) %>% 
-  mutate(plot =factor(plot))
-identical(data.frame(prc_site[, c("year","ring", "plot")]), 
-          data.frame(EnvDF2[, c("year", "ring", "plot")]))
-
-envf2 <- envfit(res_prc_site[, c("MDS1", "MDS2")], 
-               EnvDF2[, c("Depth_HL", "TotalC", "Drysoil_ph", "moist", 
-                             "gapfraction", "temp", "sand", "silt", "clay")],
-               permutations = alperms_bind[sample(4999), ])
-envf
-envf2
-?envfit
 # . summarise -------------------------------------------------------------
 
 
@@ -153,7 +138,7 @@ identical(EnvDF_3df[, c("year", "ring")],                                       
           data.frame(res_prc_site_ring[, c("year", "ring")]))  
 cntr       <- how(within = Within(type = "series"),                               # define permutatoin. ring is exchangable; autocorrelation is taken into consideration by series
                   plots = Plots(strata = res_prc_site_ring$ring, type = "free"),
-                  nperm = 4999)
+                  nperm = 9999)
 mds_envfit <- envfit(res_prc_site_ring[, c("MDS1", "MDS2")],                      # fit environmental variables
                      EnvDF_3df[, c("Depth_HL", "TotalC", "Drysoil_ph", "moist", 
                                    "gapfraction", "temp", "sand", "silt", "clay")],
