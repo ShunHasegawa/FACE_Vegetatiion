@@ -37,5 +37,7 @@ library(pander)
 library(data.table)
 library(grid)
 library(vegan)
+library(parallel)
+library(foreach)
 
 library(HIEv)
