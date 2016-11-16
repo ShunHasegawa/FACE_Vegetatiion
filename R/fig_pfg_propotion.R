@@ -20,7 +20,7 @@ all_pfg_d <- grassprop_d %>%
 # df for plot labels and response ratios
 all_pfg_plab_d <- all_pfg_prop_ci_dd %>% 
   group_by(.id, plot_lab, co2, co2star) %>% 
-  summarise(value = mean(lsmean)) %>% 
+  summarise(value = mean(rlsmean)) %>% 
   group_by(.id, plot_lab, co2star) %>% 
   summarise(rr = value[co2 == "elev"] / value[co2 == "amb"] - 1) %>% 
   mutate(rr = paste0("RR= ", format(rr, digits = 0, nsmall = 2), co2star))

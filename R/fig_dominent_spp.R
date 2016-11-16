@@ -101,15 +101,29 @@ contrast_dd <- ldply(lsmeans_list, function(x) {
   select(.id, year, co2, p.value, star)
 
 
+# CO2 effect
+dom_aov_df <- ldply(dom_m_list, function(x) tidy(Anova(x, test.statistic = "F")),  # Anova result of models
+                    .progress = "text")
+dom_co2_pval <- dom_aov_df %>%                                                     # get p-values for CO2 term
+  filter(term == "co2") %>% 
+  mutate(co2star = get_star(p.value)) %>% 
+  select(variable, co2star) %>% 
+  rename(.id = variable)
+
+
 # merge
 ci_dd <- left_join(CI_dd, contrast_dd, by = c(".id", "year", "co2")) %>% 
   mutate(year = factor(year, levels = paste0("Year", 0:3)),
-         rlsmean = boot::inv.logit(lsmean) * 25, # reverse transform and standardise for 1mx1m plot
+         rlsmean = boot::inv.logit(lsmean) * 25,                                  # reverse transform and standardise for 1mx1m plot
          rlowerCL = boot::inv.logit(lower.CL) * 25,
          rupperCL = boot::inv.logit(upper.CL) * 25,
-         .id = gsub("[.]", " ", .id),
-         value_type = "adjusted")
+         plot_lab   = as.character(factor(.id, labels = paste0("(", letters[1:4], ")"))),  # sub-plot label
+         value_type = "adjusted") %>% 
+  left_join(dom_co2_pval, by = ".id") %>%                                         # merge with pvalues for CO2 term
+  mutate(.id = gsub("[.]", " ", .id))
 ci_dd$star[is.na(ci_dd$star)] <- ""
+
+
 
 
 # create fig --------------------------------------------------------------
@@ -125,25 +139,36 @@ obs_d <- dominentsp %>%
          .id = gsub("[.]", " ", variable),
          value_type = "observed")
 
+
+# df for plot labels and response ratios
+plab_d <- ci_dd %>% 
+  group_by(.id, plot_lab, co2, co2star) %>% 
+  summarise(value = mean(rlsmean)) %>% 
+  group_by(.id, plot_lab, co2star) %>% 
+  summarise(rr = value[co2 == "elev"] / value[co2 == "amb"] - 1) %>% 
+  mutate(rr = paste0("RR= ", format(rr, digits = 0, nsmall = 2), co2star))
+
+
 # fig
 dodgeval <- .3
-fig_domspp <- ggplot(ci_dd, aes(x = year, y = rlsmean, shape = co2, group = co2, 
-                                col = value_type)) +
+fig_domspp <- ggplot(ci_dd, aes(x = year, y = rlsmean)) +
   
   geom_vline(xintercept = 1.5, linetype = "dashed") +
   facet_wrap( ~ .id) +
   
   
   # observed
-  geom_point(data = obs_d, aes(x = year, y = value),  size = 2, fill = "grey80",
-               position = position_dodge(dodgeval)) +
+  geom_point(data = obs_d, 
+             aes(x = year, y = value, shape = co2, group = co2, col = value_type),
+             size = 2, fill = "grey80", position = position_dodge(dodgeval)) +
   
   
   # adjusted
-  geom_errorbar(aes(ymin = rlowerCL, ymax = rupperCL), width = 0, 
-                position = position_dodge(width = dodgeval)) +
-  geom_line(aes(linetype = co2), position = position_dodge(width = dodgeval)) +
-  geom_point(size = 2.5, position = position_dodge(width = dodgeval)) +
+  geom_errorbar(aes(ymin = rlowerCL, ymax = rupperCL, shape = co2, group = co2, col = value_type), 
+                width = 0, position = position_dodge(width = dodgeval)) +
+  geom_line(aes(linetype = co2, shape = co2, group = co2, col = value_type), 
+            position = position_dodge(width = dodgeval)) +
+  geom_point(aes(shape = co2, group = co2, col = value_type),size = 2.5, position = position_dodge(width = dodgeval)) +
   geom_text(aes(label = star, y = rupperCL), fontface = "bold", vjust = 0) +
   
   
@@ -154,7 +179,7 @@ fig_domspp <- ggplot(ci_dd, aes(x = year, y = rlsmean, shape = co2, group = co2,
                         labels = c("Ambient", expression(eCO[2]))) +
   scale_color_manual(values = c("black", "grey80"),
                      guide = guide_legend(override.aes = list(linetype = "blank",size = 2))) +
-  scale_y_continuous(limits = c(0, 25)) +
+  scale_y_continuous(limits = c(0, 26)) +
   scale_x_discrete("Year", labels = 0:4, drop = FALSE) +
   
   
@@ -166,7 +191,12 @@ fig_domspp <- ggplot(ci_dd, aes(x = year, y = rlsmean, shape = co2, group = co2,
         legend.text.align = 0, 
         strip.text.x      = element_text(face = "italic")) +
   
-  labs(y = expression(Abundance~(Counts~m^'-1')))
+  labs(y = expression(Abundance~(Counts~m^'-1'))) +
+  
+  geom_text(data = plab_d, aes(label = plot_lab), x = -Inf, y = Inf, hjust = -.1, vjust = 1.5, size = 3) +
+  geom_text(data = plab_d, aes(label = rr), x =  Inf, y = Inf, hjust = 1.1, vjust = 1.5, size = 3)
+
+
 fig_domspp
 
 ggsavePP(filename = "output/figs/adjusted_abundance_dominenetSPP", 
