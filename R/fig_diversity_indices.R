@@ -97,6 +97,15 @@ contrast_dd <- ldply(lsmeans_list, function(x) {
          star = get_star(p.value)) %>% 
   select(.id, year, co2, p.value, star)
 
+# CO2 effect
+div_aov_df <- ldply(div_m_list, function(x) tidy(Anova(x, test.statistic = "F")),  # Anova result of models
+                    .progress = "text")
+div_co2_pval <- div_aov_df %>%                                                     # get p-values for CO2 term
+  filter(term == "co2") %>% 
+  mutate(co2star = get_star(p.value)) %>% 
+  select(.id, co2star)
+
+
 # merge
 ci_dd <- left_join(CI_dd, contrast_dd, by = c(".id", "year", "co2")) %>% 
   mutate(Type       = tstrsplit(.id, "[.]")[[1]], 
@@ -104,11 +113,11 @@ ci_dd <- left_join(CI_dd, contrast_dd, by = c(".id", "year", "co2")) %>%
          Type       = factor(Type, labels = c("All", "Forb", "Grass")),
          year       = factor(year, levels = paste0("Year", 0:3)),
          value_type = "adjusted",
-         plot_lab   = as.character(factor(.id, labels = paste0("(", letters[1:9], ")")))
+         plot_lab   = as.character(factor(.id, labels = paste0("(", letters[1:9], ")")))  # sub-plot label
          ) %>% 
-  left_join(div_co2_pval, by = ".id")
-ci_dd$star[is.na(ci_dd$star)] <- ""
-ci_dd$star[ci_dd$.id == "all_spp.H"] <- "" # no CO2xTime interaction
+  left_join(div_co2_pval, by = ".id")                                             # merge with pvalues for CO2 term
+ci_dd$star[is.na(ci_dd$star)]        <- ""                                        # turn NA to ""
+ci_dd$star[ci_dd$.id == "all_spp.H"] <- ""                                        # no CO2xTime interaction, so don't show post-hoc results
 
          
 # Observed vlaues for each variable
@@ -132,7 +141,7 @@ div_plots <- dlply(ci_dd, .(variable), function(x){
     filter(variable == unique(x$variable))
     
   
-  # df for plot labels
+  # df for plot labels and response ratios
   plab_d <- x %>% 
     group_by(Type, plot_lab, co2, co2star) %>% 
     summarise(value = mean(lsmean)) %>% 
