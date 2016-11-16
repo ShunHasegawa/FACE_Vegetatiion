@@ -113,7 +113,8 @@ ci_dd <- left_join(CI_dd, contrast_dd, by = c(".id", "year", "co2")) %>%
          Type       = factor(Type, labels = c("All", "Forb", "Grass")),
          year       = factor(year, levels = paste0("Year", 0:3)),
          value_type = "adjusted",
-         plot_lab   = as.character(factor(.id, labels = paste0("(", letters[1:9], ")")))  # sub-plot label
+         plot_lab   = as.character(factor(.id, 
+                                          labels = paste0("(", letters[c(1, 4, 7, 2, 5, 8,3, 6, 9)], ")")))  # sub-plot label
          ) %>% 
   left_join(div_co2_pval, by = ".id")                                             # merge with pvalues for CO2 term
 ci_dd$star[is.na(ci_dd$star)]        <- ""                                        # turn NA to ""
