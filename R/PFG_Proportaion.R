@@ -79,6 +79,11 @@ contrast_dd <- data.frame(summary(pairs(lsmeans_dd)[1:3], adjust = "fdr")) %>%
          star = get_star(p.value)) %>% 
   select(year, co2, p.value, star)
 
+# CO2 effect
+grassprop_aov      <- tidy(Anova(grassprop_m, test.statistic = "F"))
+grassprop_co2_pval <- get_star(grassprop_aov$p.value[grassprop_aov$term == "co2"])  # get p-values for CO2 term
+
+
 # merge
 grassprop_ci_dd <- left_join(CI_dd, contrast_dd, by = c("year", "co2")) %>% 
   mutate(year = factor(year, levels = paste0("Year", 0:3)),
@@ -86,7 +91,8 @@ grassprop_ci_dd <- left_join(CI_dd, contrast_dd, by = c("year", "co2")) %>%
          rlowerCL = boot::inv.logit(lower.CL),
          rupperCL = boot::inv.logit(upper.CL),
          year = factor(year, levels = paste0("Year", 0:3)),
-         form = "Grass")
+         form = "Grass", 
+         co2star = grassprop_co2_pval)
 grassprop_ci_dd$star[is.na(grassprop_ci_dd$star)] <- ""
 
 # df for observed values

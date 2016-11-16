@@ -59,8 +59,7 @@ pfgprop_m_list <- llply(PfgRDF_year0, function(x) {
   m1 <- lmer(logit(ratios) ~ co2 * year + t_value0 + (1|block) + (1|ring) + (1|id), data = x)
   m2 <- update(m1, ~ . - (1|block))
   if (AICc(m1) >= AICc(m2)) return(m2) else return(m1)
-}
-)
+})
 
 
 
@@ -118,12 +117,21 @@ contrast_dd <- ldply(lsmeans_list, function(x) {
          star = get_star(p.value)) %>% 
   select(.id, year, co2, p.value, star)
 
+# CO2 effect
+pfgprop_aov_df <- ldply(pfgprop_m_list, function(x) tidy(Anova(x, test.statistic = "F")),  # Anova result of models
+                    .progress = "text")
+pfgprop_co2_pval <- pfgprop_aov_df %>%                                                     # get p-values for CO2 term
+  filter(term == "co2") %>% 
+  mutate(co2star = get_star(p.value)) %>% 
+  select(.id, co2star)
+
 # merge
 pfgprop_ci_dd <- left_join(CI_dd, contrast_dd, by = c(".id", "year", "co2")) %>% 
   mutate(year     = factor(year, levels = paste0("Year", 0:3)),
-         rlsmean  = boot::inv.logit(lsmean), # reverse transform and standardise for 1mx1m plot
+         rlsmean  = boot::inv.logit(lsmean),                                      # reverse transform and standardise for 1mx1m plot
          rlowerCL = boot::inv.logit(lower.CL),
-         rupperCL = boot::inv.logit(upper.CL))
+         rupperCL = boot::inv.logit(upper.CL)) %>% 
+  left_join(pfgprop_co2_pval, by = ".id")                                         # merge with pvalues for CO2 term
 pfgprop_ci_dd$star[is.na(pfgprop_ci_dd$star)] <- ""
 
 # df for observed values

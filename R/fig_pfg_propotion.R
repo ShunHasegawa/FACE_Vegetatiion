@@ -6,7 +6,8 @@
 all_pfg_prop_ci_dd <- grassprop_ci_dd %>% 
   rename(.id = form) %>% 
   bind_rows(pfgprop_ci_dd) %>% 
-  mutate(value_type = "adjusted")
+  mutate(value_type = "adjusted", 
+         plot_lab   = as.character(factor(.id, labels = paste0("(", letters[1:4], ")"))))  # sub-plot label
 
 # observed values
 all_pfg_d <- grassprop_d %>%
@@ -15,6 +16,15 @@ all_pfg_d <- grassprop_d %>%
   bind_rows(pfgprop_d) %>% 
   select(.id, year, co2, ratios) %>% 
   mutate(value_type = "observed")
+
+# df for plot labels and response ratios
+all_pfg_plab_d <- all_pfg_prop_ci_dd %>% 
+  group_by(.id, plot_lab, co2, co2star) %>% 
+  summarise(value = mean(lsmean)) %>% 
+  group_by(.id, plot_lab, co2star) %>% 
+  summarise(rr = value[co2 == "elev"] / value[co2 == "amb"] - 1) %>% 
+  mutate(rr = paste0("RR= ", format(rr, digits = 0, nsmall = 2), co2star))
+
 
 # create a fig
 
@@ -27,29 +37,37 @@ facet_labels <- c(Grass       = "Grass~(Grass~vs.~Forb)",
 all_pfg_prop_ci_dd$.id <- factor(all_pfg_prop_ci_dd$.id, 
                                  levels = c("Grass", "C3vsC4", "LegvsNonleg", "NatvsIntr"),
                                  labels = facet_labels)
-all_pfg_d$.id <- factor(all_pfg_d$.id, 
-                        levels = c("Grass", "C3vsC4", "LegvsNonleg", "NatvsIntr"),
-                        labels = facet_labels)
+all_pfg_plab_d$.id     <- factor(all_pfg_plab_d$.id, 
+                                 levels = c("Grass", "C3vsC4", "LegvsNonleg", "NatvsIntr"),
+                                 labels = facet_labels)
+all_pfg_d$.id          <- factor(all_pfg_d$.id, 
+                                 levels = c("Grass", "C3vsC4", "LegvsNonleg", "NatvsIntr"),
+                                 labels = facet_labels)
 
 # create fig
 dodgeval <- .3
 fig_pfgprop <- ggplot(all_pfg_prop_ci_dd, 
-                      aes(x = year, y = rlsmean, shape = co2, group = co2, 
-                          col = value_type)) +
+                      aes(x = year, y = rlsmean)) +
   facet_wrap(~ .id, scales = "free_y", ncol = 2, labeller = label_parsed) +
   geom_vline(xintercept = 1.5, linetype = "dashed") +
 
   
   # observed values
-  geom_point(data = all_pfg_d, aes(x = year, y = ratios),  fill = "grey80", size = 2,
+  geom_point(data = all_pfg_d, 
+             aes(x = year, y = ratios, shape = co2, group = co2, col = value_type),  
+             fill = "grey80", size = 2,
              position = position_dodge(dodgeval)) +
   
   
   # adjusted values
-  geom_errorbar(aes(ymin = rlowerCL, ymax = rupperCL), width = 0,
+  geom_errorbar(aes(ymin = rlowerCL, ymax = rupperCL, 
+                    shape = co2, group = co2, col = value_type), 
+                width = 0,
                 position = position_dodge(width = dodgeval)) +
-  geom_line(aes(linetype = co2), position = position_dodge(width = dodgeval)) +
-  geom_point(size = 2.5, position = position_dodge(width = dodgeval)) +
+  geom_line(aes(linetype = co2, shape = co2, group = co2, col = value_type), 
+            position = position_dodge(width = dodgeval)) +
+  geom_point(aes(shape = co2, group = co2, col = value_type), 
+             size = 2.5, position = position_dodge(width = dodgeval)) +
   geom_text(aes(label = star, y = rupperCL), fontface = "bold", vjust = .4) +
 
   
@@ -72,7 +90,9 @@ fig_pfgprop <- ggplot(all_pfg_prop_ci_dd,
         legend.text.align = 0,
         strip.text.x      = element_text(size = 8)) +
 
-  labs(y = expression("Proportion"))
+  labs(y = expression("Proportion")) +
+  geom_text(data = all_pfg_plab_d, aes(label = plot_lab), x = -Inf, y = Inf, hjust = -.1, vjust = 1.5, size = 3) +
+  geom_text(data = all_pfg_plab_d, aes(label = rr), x =  Inf, y = Inf, hjust = 1.1, vjust = 1.5, size = 3)
 fig_pfgprop
 
 ggsavePP(filename = "output/figs/adjusted_PFG_proportion", width = 5, height = 5.5,
