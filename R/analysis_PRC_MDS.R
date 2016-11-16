@@ -103,7 +103,8 @@ llply(split(alperms_bind[sample(nrow(alperms_bind), 1), ], prc_site$ring), funct
   apply(m, c(1, 2),  function(x) paste(prc_site$id, prc_site$year, sep = "-")[x])
 })
 
-
+## also one can check how permutation function generates permutation here
+# source("R/check_permut.R")
 
 # . run permutation test --------------------------------------------------
 
