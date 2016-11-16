@@ -328,7 +328,6 @@ fig_prc_spp_byPfg <- ggplot(res_pric_sp_d2, aes(x = type, y = CAP1)) +
         legend.text.align = 0,
         axis.text.x      = element_text(angle = 45, hjust = 1, vjust = 1, size = 8)) +
   labs(y = "Species weight", x = "") +
-  ylim(c(-.5, .5)) +
   geom_text(data = fig_prc_spp_lab_d, aes(label = plot_lab), x = -Inf, y = Inf, 
             hjust = -.5, vjust = 1)
 fig_prc_spp_byPfg
