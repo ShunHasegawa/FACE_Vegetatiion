@@ -74,7 +74,7 @@ lsmeans_dd <- lsmeans::lsmeans(m6, ~ co2 | year)
 CI_dd <- data.frame(summary(lsmeans_dd))
 
 # post-hoc test
-contrast_dd <- data.frame(summary(pairs(lsmeans_dd)[1:3], adjust = "fdr")) %>% 
+contrast_dd <- data.frame(summary(pairs(lsmeans_dd)[1:3], adjust = "none")) %>% 
   mutate(co2  = factor("amb", levels = c("amb", "elev")),
          star = get_star(p.value)) %>% 
   select(year, co2, p.value, star)

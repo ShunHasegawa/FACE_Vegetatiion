@@ -91,7 +91,7 @@ CI_dd <- ldply(lsmeans_list, function(x) data.frame(summary(x)))
 
 # post-hoc test
 contrast_dd <- ldply(lsmeans_list, function(x) {
-  data.frame(summary(pairs(x)[1:3], adjust = "fdr"))
+  data.frame(summary(pairs(x)[1:3], adjust = "none"))
 }) %>% 
   mutate(co2 = factor("amb", levels = c("amb", "elev")),
          star = get_star(p.value)) %>% 
