@@ -1,8 +1,10 @@
 ---
 title: "EucFACE understorey vegetation -Summary of stats with corrected P-"
 author: "Shun Hasegawa"
-date: "25 September 2016"
-output: html_document
+date: "16 October 2016"
+output:
+  html_document:
+    toc: true
 ---
 
 ```{r setup, include=FALSE}
@@ -12,7 +14,7 @@ library(grid)
 library(plyr)
 knitr::opts_chunk$set(echo = TRUE)
 load("../output/Data/summary_analysis.RData")
-load("../output/Data/summary_rda.RData")
+load("../output/Data/AllObj.RData")
 theme_set(theme_bw() + 
             theme(panel.grid.major = element_blank(), 
                   panel.grid.minor = element_blank()))
@@ -21,7 +23,7 @@ theme_set(theme_bw() +
 
 # Reanalysis
 
-Here, I reanalysed understorey vegetation data, performing ANCOVA using Year0 values as a covariate for univariate analysis and redundancy analysis (RDA) for multivariate analysis. I analysed the following variables for univariate analysis:
+Here, I reanalysed understorey vegetation data, performing ANCOVA using Year0 values as a covariate for univariate analysis and principal response curve (PRC) and MDS for multivariate analysis. I analysed the following variables for univariate analysis:
 
 * Diversity indices
     + Diversity (*H'*)
@@ -149,26 +151,17 @@ l[[4]]
 
 # Multivariate analysis (RDA)
 
-Hellinger transformation was applied to species data to improve asymmetric distribution of species abundance.
+Log transformation was applied to species data to improve asymmetric distribution of species abundance.
 
-```{r rda_mod_table, echo=FALSE}
-pander(rda_model_tbl, justify = "right", split.table = Inf, 
-       caption = "Table 4. RDA models for each plant form (all species, forbs and grasses). Final models were obtained following simplification of full models. The values shown in this table are adjusted R^2 with statistically significant codes: P <.1 (.), <.05([*]), <.01([**]) and <.001([***])")
-
-
-# bold adjusted R2 fro terms used in full model
-fd_col <- grep("_Fdf$", names(all_model_results_tbl))  # col for fd
-d <- all_model_results_tbl
-bold_ind <- which(d != "-", arr.ind = TRUE)            # if fd == "-", the terms are not used in the full model
-bold_ind <- bold_ind[bold_ind[, "col"] %in% fd_col, ]  # index for cells to be bolded
-bold_ind[, "col"] <- bold_ind[, "col"] - 1             # adjrR is placed left of fd
-emphasize.strong.cells(bold_ind)
-
-pander(all_model_results_tbl, justify = "right", split.table = Inf, caption = "Table 5. Summary results of RDA analysys for each plant form (all species, forbs and grasses). Adjusted R^2 for single terms (adjR) are shown in bold for the terms used in the full models. Marginal F values for the terms remained in the parsimonious models after model simplification are shown with associated statistically significant codes (P <.1 (.), <.05([*]), <.01([**]) and <.001([***])). The terms that were removed by model simplification are shown as 'rm'")
-
+```{r fig_prc_mds, echo=FALSE, fig.width = 6.5, fig.height = 6.5, fig.cap="Results of PRC and MDS", warning=FALSE}
+multiplot(plotlist = prc_figs, layout = lo)
 ```
 
-```{r rda_plot, echo=FALSE, fig.cap="Fig.4 Results of RDA analysis. Important predictors identified above were fitted to a whole 4-year dataset for each form. Individual FACE ring is connected with a line over study years. The number alongside the points in Year0 depict FACE ring numbers.", fig.width=6.5, fig.height=6}
-grid.draw(rda_plot_merged)
+
+
+```{r mds_env_tbl, echo=FALSE, results='asis'}
+emphasize.italics.cols(5)
+emphasize.strong.cells(cbind(which(mds_envfit_d$p <= .1), 5))
+pander(mds_envfit_d, caption = "Summary of environmental variables fitted to the first two MDS axes")
 ```
 
