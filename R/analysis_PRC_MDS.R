@@ -202,7 +202,9 @@ fig_prc_site <- ggplot(res_prc_site_co2, aes(x = as.numeric(year), y = CAP1,
   scale_fill_manual(values = c("black", "white"),
                      labels = c("Ambient", expression(CO[2]))) +
   scale_linetype_manual(values = c("solid", "dashed"), 
-                        labels = c("Ambient", expression(CO[2])))
+                        labels = c("Ambient", expression(CO[2]))) +
+  annotate("text", x = -Inf, y = Inf, label = "(a)", hjust = -.5, vjust = 1) +
+  ylim(c(-.67, .05))
 fig_prc_site
 
 
@@ -296,6 +298,13 @@ res_pric_sp_d2 <- res_pric_sp_d %>%
 fm_df <- filter(res_pric_sp_d2, type %in% c("Moss", "Fern"))
 
 
+## df for plot label
+fig_prc_spp_lab_d <- res_pric_sp_d2 %>% 
+  select(measure) %>% 
+  distinct() %>% 
+  mutate(plot_lab = c("(c)", ""))
+
+
 ## create a plot
 fig_prc_spp_byPfg <- ggplot(res_pric_sp_d2, aes(x = type, y = CAP1)) +
   facet_grid(. ~ measure, space = "free_x", scale = "free_x") +
@@ -311,9 +320,10 @@ fig_prc_spp_byPfg <- ggplot(res_pric_sp_d2, aes(x = type, y = CAP1)) +
         legend.text.align = 0,
         axis.text.x      = element_text(angle = 45, hjust = 1, vjust = 1, size = 8)) +
   labs(y = "Species weight", x = "") +
-  ylim(c(-.5, .5))
+  ylim(c(-.5, .5)) +
+  geom_text(data = fig_prc_spp_lab_d, aes(label = plot_lab), x = -Inf, y = Inf, 
+            hjust = -.5, vjust = 1)
 fig_prc_spp_byPfg
-
 
 
 
@@ -348,7 +358,8 @@ fig_prc_mds <- ggplot(res_prc_site_ring, aes(x = MDS1, y = MDS2, shape = year,
                      values = c(21, 22, 23, 24)) +
   scale_linetype_manual(name = expression(CO[2]),
                         values = c("solid", "dashed"), 
-                        labels = c("Ambient", expression(eCO[2])))
+                        labels = c("Ambient", expression(eCO[2]))) +
+  annotate("text", x = -Inf, y = Inf, label = "(b)", hjust = -.5, vjust = 1)
 fig_prc_mds
 
 
