@@ -146,8 +146,8 @@ mds_envfit <- envfit(res_prc_site_ring[, c("MDS1", "MDS2")],                    
                      permutations = cntr)
 
 
-mds_arrw_d <- data.frame(scores(mds_envfit, "vectors"), 
-                         pval = mds_envfit$vector$pvals) %>%                      # arrows for environmental variables 
+mds_arrw_d <-  data.frame(scores(mds_envfit, "vectors"),  # arrows for environmental variables
+                          pval = mds_envfit$vector$pvals) %>% 
   mutate(env = recode(row.names(.), 
                       Depth_HL    = "HL", 
                       TotalC      = "Total C",
@@ -161,6 +161,14 @@ mds_arrw_d <- data.frame(scores(mds_envfit, "vectors"),
          co2 = factor("amb", levels = c("amb", "elev")),
          year = factor("Year0", levels = paste0("Year", 0:3))) %>% 
   filter(pval <= 0.1)
+
+mds_envfit_d <- data.frame(variable = row.names(mds_envfit$vectors$arrows),  # summary table of fitting environmental variables
+                           mds_envfit$vectors$arrows,
+                           r2 = mds_envfit$vectors$r,
+                           p  = round(mds_envfit$vectors$pvals, 3)) %>% 
+  mutate_each(funs(format(., digit = 0, nsmall = 2)), r2, MDS1, MDS2)
+write.csv(mds_envfit_d, file = "output/table/result_MDS_envfit.csv", row.names = FALSE)
+
 
 res_prc_site_co2  <- res_prc_site_ring %>%                                    # canonical coefficients for CO2 treatment (i.e. treatment difference for each year)
   group_by(year, co2) %>% 
@@ -190,7 +198,7 @@ science_theme_prc <- science_theme +
 
 fig_prc_site <- ggplot(res_prc_site_co2, aes(x = as.numeric(year), y = CAP1, 
                                              fill = co2, linetype = co2)) +
-  labs(x = "", y = expression(Canonical~coefficient~(C[dt]))) +
+  labs(x = "Year", y = expression(Canonical~coefficient~(C[dt]))) +
   geom_hline(yintercept = 0, linetype = "dotted", col = "gray") +
   
   geom_line() +
@@ -198,7 +206,7 @@ fig_prc_site <- ggplot(res_prc_site_co2, aes(x = as.numeric(year), y = CAP1,
   
   science_theme_prc +
   theme(legend.position = "none") +
-  scale_x_continuous(labels = paste0("Year", 0:3)) +
+  scale_x_continuous(labels = 0:3) +
   scale_fill_manual(values = c("black", "white"),
                      labels = c("Ambient", expression(CO[2]))) +
   scale_linetype_manual(values = c("solid", "dashed"), 
