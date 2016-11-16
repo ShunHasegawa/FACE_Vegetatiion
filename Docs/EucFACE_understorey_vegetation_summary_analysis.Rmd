@@ -1,5 +1,5 @@
 ---
-title: "EucFACE understorey vegetation -Summary of stats with corrected P-"
+title: "EucFACE understorey vegetation -Summary of stats-"
 author: "Shun Hasegawa"
 date: "16 October 2016"
 output:
