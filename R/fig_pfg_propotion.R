@@ -6,8 +6,7 @@
 all_pfg_prop_ci_dd <- grassprop_ci_dd %>% 
   rename(.id = form) %>% 
   bind_rows(pfgprop_ci_dd) %>% 
-  mutate(value_type = "adjusted", 
-         plot_lab   = as.character(factor(.id, labels = paste0("(", letters[1:4], ")"))))  # sub-plot label
+  mutate(value_type = "adjusted")
 
 # observed values
 all_pfg_d <- grassprop_d %>%
@@ -16,6 +15,25 @@ all_pfg_d <- grassprop_d %>%
   bind_rows(pfgprop_d) %>% 
   select(.id, year, co2, ratios) %>% 
   mutate(value_type = "observed")
+
+
+# modify labels for facet_wrap subplots
+facet_labels <- c(Grass       = "Grass~(Grass~vs.~Forb)",
+                  C3vsC4      = "C[3*'_'*grass]~(C[3*'_'*grass]~vs.~C[4*'_'*grass])",
+                  LegvsNonleg = "Legume~(Legume~vs.~Non*-legume)",
+                  NatvsIntr   = "Native~plant~(Native~vs.~Introduced)")
+
+all_pfg_prop_ci_dd <- mutate(all_pfg_prop_ci_dd,
+                             .id        = factor(all_pfg_prop_ci_dd$.id, 
+                                                 levels = c("Grass", "C3vsC4","LegvsNonleg", "NatvsIntr"),
+                                                 labels = facet_labels),
+                             plot_lab   = as.character(factor(.id, labels = paste0("(", letters[1:4], ")"))))  # sub-plot label
+
+
+all_pfg_d$.id          <- factor(all_pfg_d$.id, 
+                                 levels = c("Grass", "C3vsC4", "LegvsNonleg", "NatvsIntr"),
+                                 labels = facet_labels)
+
 
 # df for plot labels and response ratios
 all_pfg_plab_d <- all_pfg_prop_ci_dd %>% 
@@ -26,23 +44,6 @@ all_pfg_plab_d <- all_pfg_prop_ci_dd %>%
   mutate(rr = paste0("RR= ", format(rr, digits = 0, nsmall = 2), co2star))
 
 
-# create a fig
-
-# modify labels for facet_wrap subplots
-facet_labels <- c(Grass       = "Grass~(Grass~vs.~Forb)",
-                  C3vsC4      = "C[3*'_'*grass]~(C[3*'_'*grass]~vs.~C[4*'_'*grass])",
-                  LegvsNonleg = "Legume~(Legume~vs.~Non*-legume)",
-                  NatvsIntr   = "Native~plant~(Native~vs.~Introduced)")
-
-all_pfg_prop_ci_dd$.id <- factor(all_pfg_prop_ci_dd$.id, 
-                                 levels = c("Grass", "C3vsC4", "LegvsNonleg", "NatvsIntr"),
-                                 labels = facet_labels)
-all_pfg_plab_d$.id     <- factor(all_pfg_plab_d$.id, 
-                                 levels = c("Grass", "C3vsC4", "LegvsNonleg", "NatvsIntr"),
-                                 labels = facet_labels)
-all_pfg_d$.id          <- factor(all_pfg_d$.id, 
-                                 levels = c("Grass", "C3vsC4", "LegvsNonleg", "NatvsIntr"),
-                                 labels = facet_labels)
 
 # create fig
 dodgeval <- .3
@@ -69,6 +70,11 @@ fig_pfgprop <- ggplot(all_pfg_prop_ci_dd,
   geom_point(aes(shape = co2, group = co2, col = value_type), 
              size = 2.5, position = position_dodge(width = dodgeval)) +
   geom_text(aes(label = star, y = rupperCL), fontface = "bold", vjust = .4) +
+  geom_blank(data = all_pfg_d %>%
+               select(.id) %>%
+               distinct() %>%
+               mutate(rlsmean = c(NA, 1.03, NA, 1.03), year = "Year0"),
+             aes(x = year, y = rlsmean)) +
 
   
   # scaling
