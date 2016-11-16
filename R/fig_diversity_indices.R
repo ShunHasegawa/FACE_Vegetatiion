@@ -103,8 +103,13 @@ ci_dd <- left_join(CI_dd, contrast_dd, by = c(".id", "year", "co2")) %>%
          variable   = tstrsplit(.id, "[.]")[[2]],
          Type       = factor(Type, labels = c("All", "Forb", "Grass")),
          year       = factor(year, levels = paste0("Year", 0:3)),
-         value_type = "adjusted")
+         value_type = "adjusted",
+         plot_lab   = as.character(factor(.id, labels = paste0("(", letters[1:9], ")")))
+         ) %>% 
+  left_join(div_co2_pval, by = ".id")
 ci_dd$star[is.na(ci_dd$star)] <- ""
+ci_dd$star[ci_dd$.id == "all_spp.H"] <- "" # no CO2xTime interaction
+
          
 # Observed vlaues for each variable
 div_obs_dd <- ldply(DivDF_list) %>% 
@@ -126,9 +131,18 @@ div_plots <- dlply(ci_dd, .(variable), function(x){
   d <- div_obs_dd %>%
     filter(variable == unique(x$variable))
     
+  
+  # df for plot labels
+  plab_d <- x %>% 
+    group_by(Type, plot_lab, co2, co2star) %>% 
+    summarise(value = mean(lsmean)) %>% 
+    group_by(Type, plot_lab, co2star) %>% 
+    summarise(rr = value[co2 == "elev"] / value[co2 == "amb"] - 1) %>% 
+    mutate(rr = paste0("RR= ", format(rr, digits = 0, nsmall = 2), co2star))
+  
   # fig
   dodgeval <- .4
-  p <- ggplot(x, aes(x = year, y = lsmean, shape = co2, group = co2, col = value_type)) +
+  p <- ggplot(x, aes(x = year, y = lsmean)) +
     
     
     geom_vline(xintercept = 1.5, linetype = "dashed") +
@@ -136,15 +150,18 @@ div_plots <- dlply(ci_dd, .(variable), function(x){
    
     
     # observed
-    geom_point(data = d, aes(x = year, y = value), size = 2, fill = "grey80", 
+    geom_point(data = d, 
+               aes(x = year, y = value, shape = co2, col = value_type), 
+               size = 2, fill = "grey80", 
                position = position_dodge(dodgeval)) +
     
     
     # adjusted
-    geom_line(aes(linetype = co2), position = position_dodge(width = dodgeval)) +
-    geom_errorbar(aes(ymin = lower.CL, ymax = upper.CL), width = 0, 
+    geom_line(aes(linetype = co2, group = co2), 
+              position = position_dodge(width = dodgeval)) +
+    geom_errorbar(aes(ymin = lower.CL, ymax = upper.CL, group = co2), width = 0, 
                   position = position_dodge(width = dodgeval)) +
-    geom_point(size = 2.5, position = position_dodge(width = dodgeval)) +
+    geom_point(aes(shape = co2, col = value_type), size = 2.5, position = position_dodge(width = dodgeval)) +
     geom_text(aes(y = upper.CL, label = star), fontface = "bold", vjust = -.1) +
     
     
@@ -160,7 +177,10 @@ div_plots <- dlply(ci_dd, .(variable), function(x){
     
     # legend and theme
     science_theme +
-    theme(legend.position = "none")
+    theme(legend.position = "none") +
+    
+    geom_text(data = plab_d, aes(label = plot_lab), x = -Inf, y = Inf, hjust = -.1, vjust = 1.5, size = 3) +
+    geom_text(data = plab_d, aes(label = rr), x =  Inf, y = Inf, hjust = 1.1, vjust = 1.5, size = 3)
     
   
   return(p)
