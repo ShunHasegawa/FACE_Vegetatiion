@@ -165,7 +165,7 @@ res_prc_site_co2  <- res_prc_site_ring %>%                                    # 
   group_by(year, co2) %>% 
   summarise_each(funs(mean), CAP1) %>% 
   group_by(year) %>% 
-  summarise_each(funs(-diff(.)), CAP1) %>% 
+  summarise_each(funs(diff(.)), CAP1) %>% 
   mutate(co2 = "elev") %>% 
   bind_rows(data.frame(year = levels(.$year), CAP1 = 0, co2 = "amb")) %>% 
   mutate(fig = "site")
@@ -280,9 +280,11 @@ res_pric_sp_d2 <- res_pric_sp_d %>%
   mutate(measure = factor(measure, levels = c("pfgform", "origin"), 
                           labels = c("PFG", "Origin")),
          type    = factor(type, levels = c(pfgform_lev, "native", "naturalised")),  # reorder pfgform by median
-         type    = mapvalues(type, c(pfgform_lev, "native", "naturalised"),
-                             c("C4 grass", "Fern", "C3 grass", "Forb",  "Moss", 
-                               "Wood", "Legume", "Native", "Introduced")),
+         type    = recode(type, 
+                          legume     = "Legume",
+                          Non_legume = "Forb",
+                          c3Grass    = "C3 grass",
+                          c4Grass    = "C4 grass"),
          year    = factor("Year0", levels = paste0("Year", 0:4)),
          co2     = factor("Ambient", levels = c("Ambient", "eCO[2]"))) %>% 
   filter(!is.na(type)) 
@@ -298,12 +300,11 @@ fig_prc_spp_byPfg <- ggplot(res_pric_sp_d2, aes(x = type, y = CAP1)) +
   facet_grid(. ~ measure, space = "free_x", scale = "free_x") +
   geom_hline(yintercept = 0, linetype = "dotted", size = .5) +
   geom_boxplot(aes(fill = rr), outlier.size = 2, na.rm = TRUE) +
-  geom_point(data = fm_df, aes(fill = rr), size = 6, shape = 21) +
-  scale_fill_gradient2("Initial treatment\ndifference\n(Response ratio\nin Year0)\n",
+  geom_jitter(width = .3, shape = 21, fill = "gray", alpha = .5) +
+  geom_point(data = fm_df, aes(fill = rr), size = 4, shape = 21) +
+  scale_fill_gradient2("Initial treatment\ndifference\n(Response ratio\nin Year0)",
                        low = 'blue', mid = 'white', high = 'red', midpoint = 0,
-                       limits = c(-.6, .6), breaks = c(-.6, -.3, 0, .3, .6), 
-                       labels = c(expression(italic(Ambient)), -0.3, 0, 0.3, 
-                                  expression(italic(eCO[2])))) +
+                       limits = c(-.6, .6)) +
   science_theme_prc +
   theme(legend.position  = "right",
         legend.text.align = 0,
