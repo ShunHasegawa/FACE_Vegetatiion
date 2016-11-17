@@ -221,7 +221,7 @@ fig_prc_site
 # . Sp weight plot -----------------------------------------------------------
 
 
-## merge sp score with pfg and propotion in Year0
+## merge sp score with pfg and CO2 response ratios in Year3
 
 
 ### sp score given by PRC
@@ -239,11 +239,11 @@ pfg_spp_tbl <- veg_FullVdf %>%
   select(variable, pfgform, origin)
 
 
-## Treatment difference in Year0
+## Treatment difference in Year3
 
-#### df for Year0
-year0_df        <- PlotSumVeg %>%            
-  filter(year == "Year0") %>% 
+#### df for Year3
+year3_df        <- PlotSumVeg %>%            
+  filter(year == "Year3") %>% 
   gather(variable, value, one_of(SppName)) %>% 
   group_by(variable, co2) %>% 
   summarise(value = sum(value)) %>% 
@@ -251,7 +251,7 @@ year0_df        <- PlotSumVeg %>%
   left_join(pfg_spp_tbl, by = "variable")
 
 ### df for treatment difference for each pfg
-year0_pfg_df <- year0_df %>%
+year3_pfg_df <- year3_df %>%
   group_by(pfgform) %>%
   summarise(rr = sum(value[co2 == "elev"]) / sum(value[co2 == "amb"]) - 1) %>% 
   ungroup() %>% 
@@ -259,7 +259,7 @@ year0_pfg_df <- year0_df %>%
 
 
 ### df for treatment difference for each origin
-year0_orgn_df <- year0_df %>%
+year3_orgn_df <- year3_df %>%
   group_by(origin) %>%
   summarise(rr = sum(value[co2 == "elev"]) / sum(value[co2 == "amb"]) - 1) %>% 
   ungroup() %>% 
@@ -268,7 +268,7 @@ year0_orgn_df <- year0_df %>%
 
 
 ## merge dfs for initial treatment difference
-year0_rr_df <- bind_rows(year0_orgn_df, year0_pfg_df)
+year3_rr_df <- bind_rows(year3_orgn_df, year3_pfg_df)
 
 
 ### merge species score and pfg and origin table
@@ -287,7 +287,7 @@ pfgform_lev <- res_pric_sp_d %>%
 ## arrange df for plotting and merge with pfg and orgn
 res_pric_sp_d2 <- res_pric_sp_d %>%
   gather(measure, value = type, pfgform, origin) %>% 
-  left_join(year0_rr_df, by = "type") %>% 
+  left_join(year3_rr_df, by = "type") %>% 
   mutate(measure = factor(measure, levels = c("pfgform", "origin"), 
                           labels = c("PFG", "Origin")),
          type    = factor(type, levels = c(pfgform_lev, "native", "naturalised")),  # reorder pfgform by median
@@ -320,7 +320,7 @@ fig_prc_spp_byPfg <- ggplot(res_pric_sp_d2, aes(x = type, y = CAP1)) +
   geom_boxplot(aes(fill = rr), outlier.size = 2, na.rm = TRUE) +
   geom_jitter(width = .3, shape = 21, fill = "gray", alpha = .5) +
   geom_point(data = fm_df, aes(fill = rr), size = 4, shape = 21) +
-  scale_fill_gradient2("Initial treatment\ndifference\n(Response ratio\nin Year0)",
+  scale_fill_gradient2("Response\nratio in\nYear3",
                        low = 'blue', mid = 'white', high = 'red', midpoint = 0,
                        limits = c(-.6, .6)) +
   science_theme_prc +
