@@ -158,6 +158,12 @@ multiplot(plotlist = prc_figs, layout = lo)
 ```
 
 
+```{r prc_res, echo=FALSE, results='markup'}
+prc_res
+```
+
+
+
 
 ```{r mds_env_tbl, echo=FALSE, results='asis'}
 emphasize.italics.cols(5)
