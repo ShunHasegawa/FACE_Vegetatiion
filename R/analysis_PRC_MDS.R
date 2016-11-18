@@ -13,12 +13,9 @@ prc_site <- PlotSumVeg %>%                                   # site df
 # > PRC ---------------------------------------------------------------------
 
 
-## principal response curve anlsyis with bray-curtis dissimilarity
-
-prc_all <- capscale(prc_sp ~  year * co2 + Condition(year), data = prc_site, 
-                    distance = "bray")
-
-
+prc_all <- capscale(prc_sp ~  year * co2 + Condition(year), data = prc_site,  # principal response curve anlsyis
+                    distance = "euclidean")
+mds_all <- cmdscale(d = vegdist(prc_sp, method = "bray"), eig = TRUE, k = 2)  # MDS with bray-curtis dissimilarity
 
 
 # . define permutation ------------------------------------------------------
@@ -120,10 +117,15 @@ prc_res
 
 
 ## prepare df for a figure from the result of prc
-summary_prc       <- summary(prc_all, scaling = 3)                            # use scaling = 3, it doesn't matter too much, but this is used in the original prc function
-MDSprop           <- summary_prc$cont$importance[2, c("MDS1", "MDS2")]        # proportion explained by the first 2 MDS axies
-MDSaxes           <- paste0("MDS", 1:2, " (", round(MDSprop * 100, 0), "%)")  # MDS axis with explained proportion
-res_prc_site      <- cbind(summary_prc$sites, prc_site)                       # site score
+summary_prc       <- summary(prc_all, scaling = 3)                              # use scaling = 3, it doesn't matter too much, but this is used in the original prc function
+MDSprop           <- mds_all$eig[1:2] * mds_all$GOF[2]/(sum(mds_all$eig[1:2]))  # proportion explained by the first 2 MDS axies
+MDSaxes           <- paste0("MDS", 1:2, " (", round(MDSprop * 100, 0), "%)")    # MDS axis with explained proportion
+MDSsite           <- scores(mds_all)
+colnames(MDSsite) <- paste0("MDS", 1:ncol(MDSsite))                             # modify column names
+res_prc_site      <- cbind(CAP1 = summary_prc$sites[, 1], MDSsite, prc_site)    # site score
+
+
+
 res_prc_site_ring <- res_prc_site %>%                                         # site scores by ring
   group_by(year, ring, co2) %>% 
   summarise_each(funs(mean), CAP1, MDS1, MDS2) %>%                            # CAP1 is for PRC plot and MDSs for visualisation
@@ -211,8 +213,9 @@ fig_prc_site <- ggplot(res_prc_site_co2, aes(x = as.numeric(year), y = CAP1,
                      labels = c("Ambient", expression(CO[2]))) +
   scale_linetype_manual(values = c("solid", "dashed"), 
                         labels = c("Ambient", expression(CO[2]))) +
-  annotate("text", x = -Inf, y = Inf, label = "(a)", hjust = -.5, vjust = 1) +
-  ylim(c(-.67, .05))
+  annotate("text", x = -Inf, y = Inf, label = "(a)", hjust = -.5, vjust = 1)
+# +
+#   ylim(c(-.67, .05))
 fig_prc_site
 
 
@@ -349,9 +352,9 @@ fig_prc_mds <- ggplot(res_prc_site_ring, aes(x = MDS1, y = MDS2, shape = year,
   geom_point(size = 2, alpha = .6) +
   
   geom_segment(data = mds_arrw_d,
-               aes(x = 0, y = 0, xend = MDS1 * .7, yend = MDS2 * .7),
+               aes(x = 0, y = 0, xend = MDS1 * .15, yend = MDS2 * .15),
                arrow = arrow(length = unit(.2, "cm")),  alpha = .7) +
-  geom_text(data = mds_arrw_d,  aes(x = MDS1 * .8, y = MDS2* .8, label = env),  
+  geom_text(data = mds_arrw_d,  aes(x = MDS1 * .16, y = MDS2* .16, label = env),  
             size = 2, fontface = "italic") +
   
 
