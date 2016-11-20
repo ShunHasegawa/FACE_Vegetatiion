@@ -400,7 +400,11 @@ lo <- matrix(c(1, 1, 3, 3, 3,
              ncol = 5, byrow = TRUE)
 
 
-## save as pdf
+## save as pdf and png
 pdf(file = "output/figs/prc_merge_fig.pdf", width = 6.5, height = 6.5)
+multiplot(plotlist = prc_figs, layout = lo)
+dev.off()
+
+save_png600(file = "output/figs/prc_merge_fig.png", width = 6.5, height = 6.5)
 multiplot(plotlist = prc_figs, layout = lo)
 dev.off()
