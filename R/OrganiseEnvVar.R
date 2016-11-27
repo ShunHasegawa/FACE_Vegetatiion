@@ -351,20 +351,31 @@ save(EnvVarDF, file = "output/Data/FACE_EnvironmenVars.RData")
 
 names(EnvVarDF)
 
-envDF <- EnvVarDF[, c("year", "ring", "co2","TotalC", "moist", "Drysoil_ph", 
-                      "Depth_HL", "gapfraction", "temp")]
+envDF <- EnvVarDF[, c("year", "ring","co2","TotalC", "moist", "Drysoil_ph", 
+                      "Depth_HL", "gapfraction", "temp", "sand", "silt", "clay")]
 envDF$moist <- envDF$moist * 100
 
 # Treatment mean and SE
-envDF_mlt <- melt(envDF, id = c("year", "ring", "co2"))
-TreatSummary <- ddply(envDF_mlt, .(year, co2, variable), summarise,  
-                      Mean = mean(value), 
-                      SE = ci(value)[4], 
-                      N = sum(!is.na(value)))
-TreatSummary$value <- with(TreatSummary,
-                           paste0(round(Mean, 2), "(", round(SE, 2),")"))
-TreatSummary_cst <- dcast(variable ~ year + co2, data = TreatSummary)
 
+TreatSummary <- envDF %>% 
+  select(-ring) %>% 
+  gather(variable, value, -year, -co2) %>% 
+  group_by(year, co2, variable) %>% 
+  summarise_each(funs(Mean = mean, SE = se, N = get_n), value) %>% 
+  ungroup() %>% 
+  transmute(YC = paste(year, co2, sep = "_"),
+            variable,
+            value = paste0(round(Mean, 2), "(", round(SE, 2),")")) %>% 
+  spread(YC, value) %>% 
+  mutate(variable = factor(variable, levels = c("sand", "silt", "clay", "Drysoil_ph",
+                                                "TotalC", "moist", "temp", "Depth_HL",
+                                                "gapfraction")),
+         units = car::recode(variable, 
+                             "c('sand', 'silt', 'clay', 'moist', 'TotalC')='%'; 'Depth_HL'='m'; 'temp'='oC'; c('gapfraction', 'Drysoil_ph')=''")) %>% 
+  arrange(variable) %>% 
+  select(variable, units, everything())
+TreatSummary
+write.csv(TreatSummary, file = "output/table/FACE_EnvVarSummary.csv", row.names = FALSE)
 
 
 
@@ -468,14 +479,7 @@ AnvF_Env_p$stats <- cut(AnvF_Env_p$Pr, breaks = c(0, 0.001, 0.01, 0.05, 0.1, 1),
 
 AnvF_Env_p_cst <- dcast(variable ~ term, value.var = "stats", data = AnvF_Env_p)
 AnvF_Env_p_cst[is.na(AnvF_Env_p_cst)] <- "ns"
-
-# combine treatment summary and stats
-Env_summary <- merge(TreatSummary_cst, AnvF_Env_p_cst, by = "variable")
-Env_summary <- Env_summary[match(c("TotalC", "moist", "Drysoil_ph", "Depth_HL", 
-                                   "gapfraction", "temp"), 
-                                 Env_summary$variable), ]
-write.csv(Env_summary, file = "output/table/FACE_EnvVarSummary.csv", row.names = FALSE)
-
+AnvF_Env_p_cst
 
 
 
