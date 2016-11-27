@@ -14,7 +14,7 @@ anova_df_ed <- anova_df %>%
                         labels = c("CO2", "Year", "CO2xYear", "BL")),
          statistic = round(statistic, 2),
          Df.res    = round(Df.res, 0), 
-         Fv        = paste0("F(", df, ", ", Df.res, ")=", statistic),
+         Fv        = paste0("F(", df, ",", Df.res, ")=", statistic),
          P         = round(p.value, 3),
          P         = ifelse(P < 0.001, "<0.001", P),
          Type      = tstrsplit(.id, "[.]")[[1]]) %>% 
@@ -28,37 +28,33 @@ anova_df_ed
 div_tbl <- anova_df_ed %>% 
   filter(Type == "diversity") %>% 
   mutate(Form = tstrsplit(.id, "[.]")[[2]],
-         Ind  = tstrsplit(.id, "[.]")[[3]]) %>% 
-  select(term, variable, value, Form, Ind) %>% 
-  mutate(Form_var = paste(Form, variable, sep = "_")) %>% 
-  select(-Form, -variable) %>% 
-  spread(key = Form_var, value) %>% 
-  select(Ind, everything()) %>% 
-  arrange(Ind, term)
+         Ind  = tstrsplit(.id, "[.]")[[3]],
+         response = paste(Ind, Form, sep =  "_")) %>% 
+  select(Type, term, variable, value, response)
 
 # dominent species
 dom_tbl <- anova_df_ed %>% 
   filter(Type == "dominentSpp") %>%
-  mutate(Spp = paste(tstrsplit(.id, "[.]")[[2]], tstrsplit(.id, "[.]")[[3]])) %>% 
-  select(term, variable, value, Spp) %>% 
-  mutate(Spp_var = paste(Spp, variable, sep = "_")) %>% 
-  select(-Spp, -variable) %>% 
-  spread(key = Spp_var, value) %>% 
-  arrange(term)
+  mutate(response = paste(tstrsplit(.id, "[.]")[[2]], tstrsplit(.id, "[.]")[[3]])) %>% 
+  select(Type, term, variable, value, response)
 
 # PFG proportion
 pfg_tbl <- anova_df_ed %>% 
   filter(Type %in% c("grass_prop", "pfg_prop")) %>% 
-  mutate(PFG = ifelse(.id == "grass_prop", "grass_prop", tstrsplit(.id, "[.]")[[2]])) %>% 
-  select(term, variable, value, PFG) %>% 
-  mutate(PFG_var = paste(PFG, variable, sep = "_")) %>% 
-  select(-PFG, -variable) %>% 
-  spread(key = PFG_var, value) %>% 
-  arrange(term)
+  mutate(response = ifelse(.id == "grass_prop", "grass_prop", tstrsplit(.id, "[.]")[[2]])) %>% 
+  select(Type, term, variable, value, response) 
+
+# mege the above tables
+all_tbl <- rbind.fill(div_tbl, dom_tbl, pfg_tbl) %>% 
+  mutate(tv = paste(term, variable, sep = "_")) %>% 
+  select(-term, -variable) %>% 
+  spread(tv, value) %>% 
+  select(-Type)
+all_tbl
+
 
 # save tables
-write.csv(div_tbl, file = "output/table/diversity_indices_anova.csv", row.names = FALSE)
-write.csv(dom_tbl, file = "output/table/dominentSpp_anova.csv", row.names = FALSE)
-write.csv(pfg_tbl, file = "output/table/PFG_anova.csv", row.names = FALSE)
+write.csv(all_tbl, "output/table/summary_rptdAov_tbl.csv", row.names = FALSE)
+
 
 save.image(file = "output/Data/summary_analysis.RData")
