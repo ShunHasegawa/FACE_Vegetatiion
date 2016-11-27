@@ -949,3 +949,12 @@ create_rda_plots <- function(sitedd,    # site score
   
   return(p)
 }
+
+
+se <- function(...){
+  ci(...)[4]
+}
+
+get_n <- function(x){
+  sum(!is.na(x))
+}
