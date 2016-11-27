@@ -2,6 +2,7 @@
 #  Prepare dataframe ------------------------------------------------------
 
 prc_sp   <- log(PlotSumVeg[, SppName] + 1) # log-transformed sp df
+prc_sp$Rosulabryum.billarderi <- NULL # remove moss
 prc_site <- PlotSumVeg %>%                                   # site df 
   select(year, ring, plot, co2) %>% 
   mutate(id = ring:plot)
@@ -238,7 +239,10 @@ pfg_spp_tbl <- veg_FullVdf %>%
   mutate(form    = as.character(form),
          PFG     = as.character(PFG),
          pfgform = ifelse(form == "Grass", paste0(PFG, form),
-                          ifelse(form == "Forb", PFG, form))) %>% 
+                          ifelse(form == "Forb", PFG, form)),
+         origin  = mapvalues(origin, 
+                             c("native", "naturalised"), 
+                             c("Native", "Introduced"))) %>% 
   select(variable, pfgform, origin)
 
 
@@ -278,6 +282,18 @@ year3_rr_df <- bind_rows(year3_orgn_df, year3_pfg_df)
 res_pric_sp_d <- res_prc_sp %>%
   left_join(pfg_spp_tbl, by = "variable")
 
+### save species scores
+unique(res_pric_sp_d$pfgform)
+res_pric_sp_tbl <- res_pric_sp_d %>% 
+  select(variable, pfgform, origin, CAP1) %>%
+  transmute(Species = gsub("[.]", " ", as.character(variable)),
+            PFG = recode(pfgform, 
+                         Non_legume = "Non-legume", c4Grass = "C4_grass",
+                         c3Grass = "C3_grass", legume = "Legume"),
+            origin,
+            PRC.score = round(CAP1, 2)) %>%
+  arrange(PRC.score)
+write.csv(res_pric_sp_tbl, "output/table/summary_PRCscore.csv", row.names = FALSE)
 
 ### define order of pfgform by median
 pfgform_lev <- res_pric_sp_d %>% 
@@ -293,7 +309,7 @@ res_pric_sp_d2 <- res_pric_sp_d %>%
   left_join(year3_rr_df, by = "type") %>% 
   mutate(measure = factor(measure, levels = c("pfgform", "origin"), 
                           labels = c("PFG", "Origin")),
-         type    = factor(type, levels = c(pfgform_lev, "native", "naturalised")),  # reorder pfgform by median
+         type    = factor(type, levels = c(pfgform_lev, "Native", "Introduced")),  # reorder pfgform by median
          type    = recode(type, 
                           legume     = "Legume",
                           Non_legume = "Forb",
@@ -304,9 +320,9 @@ res_pric_sp_d2 <- res_pric_sp_d %>%
   filter(!is.na(type)) 
 
 
-## df for fern and moss; there is only single species for those so they can't
-## generate box-wisker plot
-fm_df <- filter(res_pric_sp_d2, type %in% c("Moss", "Fern"))
+## df for fern; there is only single species for this so it can't generate
+## box-wisker plot
+fm_df <- filter(res_pric_sp_d2, type %in% c("Fern"))
 
 
 ## df for plot label
@@ -330,7 +346,7 @@ fig_prc_spp_byPfg <- ggplot(res_pric_sp_d2, aes(x = type, y = CAP1)) +
   theme(legend.position  = "right",
         legend.text.align = 0,
         axis.text.x      = element_text(angle = 45, hjust = 1, vjust = 1, size = 8)) +
-  labs(y = "Species weight", x = "") +
+  labs(y = "Species weight", x = NULL) +
   geom_text(data = fig_prc_spp_lab_d, aes(label = plot_lab), x = -Inf, y = Inf, 
             hjust = -.5, vjust = 1)
 fig_prc_spp_byPfg
@@ -352,10 +368,10 @@ fig_prc_mds <- ggplot(res_prc_site_ring, aes(x = MDS1, y = MDS2, shape = year,
   geom_point(size = 2, alpha = .6) +
   
   geom_segment(data = mds_arrw_d,
-               aes(x = 0, y = 0, xend = MDS1 * .15, yend = MDS2 * .15),
+               aes(x = 0, y = 0, xend = MDS1 * .23, yend = MDS2 * .23),
                arrow = arrow(length = unit(.2, "cm")),  alpha = .7) +
-  geom_text(data = mds_arrw_d,  aes(x = MDS1 * .16, y = MDS2* .16, label = env),  
-            size = 2, fontface = "italic") +
+  geom_text(data = mds_arrw_d,  aes(x = MDS1 * .25, y = MDS2* .25, label = env),  
+            size = 2.5, fontface = "italic") +
   
 
   science_theme_prc +
