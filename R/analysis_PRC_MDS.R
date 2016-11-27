@@ -1,7 +1,7 @@
 
 #  Prepare dataframe ------------------------------------------------------
 
-prc_sp   <- decostand(PlotSumVeg[, SppName], method = "log") # log-transformed sp df
+prc_sp   <- log(PlotSumVeg[, SppName] + 1) # log-transformed sp df
 prc_site <- PlotSumVeg %>%                                   # site df 
   select(year, ring, plot, co2) %>% 
   mutate(id = ring:plot)
