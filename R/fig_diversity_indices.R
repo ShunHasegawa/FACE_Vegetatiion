@@ -148,7 +148,9 @@ div_plots <- dlply(ci_dd, .(variable), function(x){
     summarise(value = mean(lsmean)) %>% 
     group_by(Type, plot_lab, co2star) %>% 
     summarise(rr = value[co2 == "elev"] / value[co2 == "amb"] - 1) %>% 
-    mutate(rr = paste0("RR= ", format(rr, digits = 0, nsmall = 2), co2star))
+    mutate(rr = ifelse(rr >= 0,
+                       paste0("RR= +", format(rr, digits = 0, nsmall = 2), co2star), 
+                       paste0("RR= ", format(rr, digits = 0, nsmall = 2), co2star)))
   
   # fig
   dodgeval <- .4

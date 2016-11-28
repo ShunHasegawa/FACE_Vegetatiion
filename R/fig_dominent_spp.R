@@ -146,7 +146,9 @@ plab_d <- ci_dd %>%
   summarise(value = mean(rlsmean)) %>% 
   group_by(.id, plot_lab, co2star) %>% 
   summarise(rr = value[co2 == "elev"] / value[co2 == "amb"] - 1) %>% 
-  mutate(rr = paste0("RR= ", format(rr, digits = 0, nsmall = 2), co2star))
+  mutate(rr = ifelse(rr >= 0,
+                     paste0("RR= +", format(rr, digits = 0, nsmall = 2), co2star), 
+                     paste0("RR= ", format(rr, digits = 0, nsmall = 2), co2star)))
 
 
 # fig
@@ -200,7 +202,7 @@ fig_domspp <- ggplot(ci_dd, aes(x = year, y = rlsmean)) +
 fig_domspp
 
 ggsavePP(filename = "output/figs/adjusted_abundance_dominenetSPP", 
-         plot = fig_domspp, width = 5, height = 5.5)
+         plot = fig_domspp, width = 4, height = 4.5)
 
 
 # summary table -----------------------------------------------------------

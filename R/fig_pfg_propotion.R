@@ -41,7 +41,9 @@ all_pfg_plab_d <- all_pfg_prop_ci_dd %>%
   summarise(value = mean(rlsmean)) %>% 
   group_by(.id, plot_lab, co2star) %>% 
   summarise(rr = value[co2 == "elev"] / value[co2 == "amb"] - 1) %>% 
-  mutate(rr = paste0("RR= ", format(rr, digits = 0, nsmall = 2), co2star))
+  mutate(rr = ifelse(rr >= 0,
+                     paste0("RR= +", format(rr, digits = 0, nsmall = 2), co2star), 
+                     paste0("RR= ", format(rr, digits = 0, nsmall = 2), co2star)))
 
 
 
@@ -101,7 +103,7 @@ fig_pfgprop <- ggplot(all_pfg_prop_ci_dd,
   geom_text(data = all_pfg_plab_d, aes(label = rr), x =  Inf, y = Inf, hjust = 1.1, vjust = 1.5, size = 3)
 fig_pfgprop
 
-ggsavePP(filename = "output/figs/adjusted_PFG_proportion", width = 5, height = 5.5,
+ggsavePP(filename = "output/figs/adjusted_PFG_proportion", width = 4, height = 4.5,
          plot = fig_pfgprop)
 
 
