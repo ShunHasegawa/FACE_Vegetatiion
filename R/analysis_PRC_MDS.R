@@ -169,7 +169,12 @@ mds_envfit_d <- data.frame(variable = row.names(mds_envfit$vectors$arrows),  # s
                            mds_envfit$vectors$arrows,
                            r2 = mds_envfit$vectors$r,
                            p  = round(mds_envfit$vectors$pvals, 3)) %>% 
-  mutate_each(funs(format(., digit = 0, nsmall = 2)), r2, MDS1, MDS2)
+  mutate_each(funs(format(., digit = 0, nsmall = 2)), r2, MDS1, MDS2) %>% 
+  mutate(variable = recode_factor(variable, 
+                                  sand = "Sand", silt = "Silt", clay = "Clay",
+                                  Drysoil_ph = "pH", TotalC = "TotalC", moist = "Moist", 
+                                  temp = "Temp", Depth_HL = "HL", gapfraction = "Light"))
+
 write.csv(mds_envfit_d, file = "output/table/result_MDS_envfit.csv", row.names = FALSE)
 
 
