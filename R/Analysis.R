@@ -146,6 +146,27 @@ spp_co2_summary <- veg_FullVdf %>%
          total    = uni_amb + uni_elev + common)
 
 
+# total % coverage by spp
+spp_cov_summary <- veg_FullVdf %>% 
+  group_by(variable) %>% 
+  summarise(value = sum(value)) %>% 
+  ungroup() %>% 
+  mutate(cov = value * 100 / sum(value)) %>% 
+  arrange(cov)
+
+
+# total % coverage by PFG
+pfg_cov_summary <- veg_FullVdf %>% 
+  mutate(form    = as.character(form),
+         PFG     = as.character(PFG),
+         pfgform = ifelse(form == "Grass", paste0(PFG, form),
+                          ifelse(form == "Forb", PFG, form))) %>% 
+  group_by(pfgform) %>% 
+  summarise(value = sum(value)) %>% 
+  ungroup() %>% 
+  mutate(cov = round(value * 100 / sum(value), 1)) %>% 
+  arrange(cov)
+pfg_cov_summary
 
 
 # analysis and fig --------------------------------------------------------
