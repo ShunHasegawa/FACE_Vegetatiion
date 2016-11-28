@@ -144,14 +144,14 @@ cntr       <- how(within = Within(type = "series"),                             
                   plots = Plots(strata = res_prc_site_ring$ring, type = "free"),
                   nperm = 9999)
 mds_envfit <- envfit(res_prc_site_ring[, c("MDS1", "MDS2")],                      # fit environmental variables
-                     EnvDF_3df[, c("Depth_HL", "TotalC", "Drysoil_ph", "moist", 
+                     EnvDF_3df[, c("co2", "Depth_HL", "TotalC", "Drysoil_ph", "moist", 
                                    "gapfraction", "temp", "sand", "silt", "clay")],
                      permutations = cntr)
 
-
-mds_arrw_d <-  data.frame(scores(mds_envfit, "vectors"),  # arrows for environmental variables
-                          pval = mds_envfit$vector$pvals) %>% 
-  mutate(env = recode(row.names(.), 
+mds_vect_d <- data.frame(scores(mds_envfit, "vectors"),   # scores for vecorts
+                         pval = mds_envfit$vector$pvals,
+                         r2  = mds_envfit$vector$r) %>% 
+  mutate(env = recode(row.names(.),
                       Depth_HL    = "HL", 
                       TotalC      = "Total C",
                       Drysoil_ph  = "pH",
@@ -160,21 +160,29 @@ mds_arrw_d <-  data.frame(scores(mds_envfit, "vectors"),  # arrows for environme
                       temp        = "Temp",
                       sand        = "Sand",
                       silt        = "Silt",
-                      clay        = "Clay"),
-         co2 = factor("amb", levels = c("amb", "elev")),
+                      clay        = "Clay"))
+
+mds_fact_d <- data.frame(scores(mds_envfit, "factors"),   # scores for facctors (CO2)
+                         pval = mds_envfit$factors$pvals,
+                         r2   = mds_envfit$factors$r,
+                         env  = "CO2")[1, ] 
+
+mds_arrw_d <-  mds_vect_d %>% 
+  mutate(co2 = factor("amb", levels = c("amb", "elev")),
          year = factor("Year0", levels = paste0("Year", 0:3))) %>% 
   filter(pval <= 0.1)
 
-mds_envfit_d <- data.frame(variable = row.names(mds_envfit$vectors$arrows),  # summary table of fitting environmental variables
-                           mds_envfit$vectors$arrows,
-                           r2 = mds_envfit$vectors$r,
-                           p  = round(mds_envfit$vectors$pvals, 3)) %>% 
+mds_envfit_d <- bind_rows(mds_vect_d, mds_fact_d) %>% 
+  mutate(pval = round(pval, 3)) %>% 
   mutate_each(funs(format(., digit = 0, nsmall = 2)), r2, MDS1, MDS2) %>% 
-  mutate(variable = recode_factor(variable, 
-                                  sand = "Sand", silt = "Silt", clay = "Clay",
-                                  Drysoil_ph = "pH", TotalC = "TotalC", moist = "Moist", 
-                                  temp = "Temp", Depth_HL = "HL", gapfraction = "Light"))
-
+  mutate(variable = recode_factor(env, 
+                                  CO2 = "CO2", sand = "Sand", silt = "Silt", 
+                                  clay = "Clay", Drysoil_ph = "pH", 
+                                  'Total C' = "Total C", moist = "Moist", 
+                                  temp = "Temp", Depth_HL = "HL", 
+                                  gapfraction = "Light")) %>%
+  select(variable, MDS1, MDS2, r2, pval) %>% 
+  arrange(variable)
 write.csv(mds_envfit_d, file = "output/table/result_MDS_envfit.csv", row.names = FALSE)
 
 
