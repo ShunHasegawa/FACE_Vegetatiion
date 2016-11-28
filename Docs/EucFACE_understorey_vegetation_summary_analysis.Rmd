@@ -52,25 +52,32 @@ pander(spp_year_summary, caption = "The number of species for each PFG")
 
 
 pander(spp_co2_summary, caption = "The number of species for each CO2 treatment. Total number of species for each treatment (tot_), uniquely found ones (uni_) and commonly found in both CO2 treatments (common)", justify = "right")
+
+pander(pfg_cov_summary, caption = "% coverage of each PFG")
+
+pander(tail(spp_cov_summary, n = 10), caption = "% coverage of top 10 species")
 ```
 
 
 
 # Univariate analysis (ANCOVA)
 
-## Diversity indices
+## Summary results
 
-```{r div_stats, echo=FALSE, warning=FALSE}
-pcol <- grep("_P$", names(div_tbl))
-d <- div_tbl
+```{r summary_stats, echo=FALSE, warning=FALSE}
+pcol <- grep("_P$", names(all_tbl))
+d <- all_tbl
 d[, pcol] <- apply(d[, pcol], 2, as.numeric)
 d[is.na(d)] <- 0
 
 emphasize.italics.cols(pcol)
 emphasize.strong.cells(which(d <= .1, arr.ind = TRUE))
 
-pander(div_tbl, caption = "Diversity indices", justify = "right", split.table = Inf, keep.line.breaks = TRUE)
+pander(all_tbl, caption = "Summary of repeated measures ANOVA", justify = "right", split.table = Inf, keep.line.breaks = TRUE)
 ```
+
+
+## Diversity indices
 
 
 ```{r div_plot, echo=FALSE, fig.cap="Fig.1 Diversity indices. Black points depict mean values adjusted by Year0 values with 95% CI. Gray points depict observed values for each FACE ring.", fig.height=6, fig.width=6}
@@ -91,16 +98,6 @@ l[[3]]
 
 ## Dominent species
 
-```{r dom_stats, echo=FALSE, warning=FALSE}
-pcol <- grep("_P$", names(dom_tbl))
-d <- dom_tbl
-d[, pcol] <- apply(d[, pcol], 2, as.numeric)
-d[is.na(d)] <- 0
-emphasize.italics.cols(pcol)
-emphasize.strong.cells(which(d <= .1, arr.ind = TRUE))
-
-pander(dom_tbl, caption = "Dominent species", justify = "right", split.table = Inf, keep.line.breaks = TRUE)
-```
 
 ```{r dom_plot, echo=FALSE, fig.cap="Fig.2 Dominent species. Black points depict mean values adjusted by Year0 values with 95% CI. Gray points depict observed values for each FACE ring.", fig.height=5.5, fig.width=5}
 fig_domspp
@@ -118,18 +115,6 @@ l[[4]]
 
 
 ## Proportions of plant functional groups
-
-```{r pfgprop_stat, echo=FALSE, warning=FALSE}
-pcol <- grep("_P$", names(pfg_tbl))
-d <- pfg_tbl
-d[, pcol] <- apply(d[, pcol], 2, as.numeric)
-d[is.na(d)] <- 0
-emphasize.italics.cols(pcol)
-emphasize.strong.cells(which(d <= .1, arr.ind = TRUE))
-
-pander(pfg_tbl, caption = "Dominent species", justify = "right", split.table = Inf, keep.line.breaks = TRUE)
-
-```
 
 
 ```{r pfgprop_plot, echo=FALSE, fig.cap="Fig.3 PFG proportion. Black points depict mean values adjusted by Year0 values with 95% CI. Gray points depict observed values for each FACE ring.",fig.height=5.5, fig.width=5}
@@ -149,9 +134,9 @@ l[[4]]
 
 
 
-# Multivariate analysis (RDA)
+# Multivariate analysis (PRC and MDS)
 
-Log transformation was applied to species data to improve asymmetric distribution of species abundance.
+Log transformation (log(n + 1)) was applied to species data to improve asymmetric distribution of species abundance.
 
 ```{r fig_prc_mds, echo=FALSE, fig.width = 6.5, fig.height = 6.5, fig.cap="Results of PRC and MDS", warning=FALSE}
 multiplot(plotlist = prc_figs, layout = lo)
@@ -169,5 +154,25 @@ prc_res
 emphasize.italics.cols(5)
 emphasize.strong.cells(cbind(which(mds_envfit_d$p <= .1), 5))
 pander(mds_envfit_d, caption = "Summary of environmental variables fitted to the first two MDS axes")
+```
+
+
+
+
+
+## Appendix
+
+### Species coverage
+```{r sp_cov_tbl, echo=FALSE, results='asis'}
+pander(spp_cov_summary)
+```
+
+
+
+### Species weight of PRC
+```{r sp_weight_prc, echo=FALSE, results='asis'}
+emphasize.italics.cols(1)
+pander(res_pric_sp_tbl)
+
 ```
 
