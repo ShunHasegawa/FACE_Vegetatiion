@@ -40,5 +40,6 @@ library(vegan)
 library(parallel)
 library(foreach)
 library(doParallel)
+library(scales)
 
 library(HIEv)
