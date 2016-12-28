@@ -18,10 +18,10 @@ all_pfg_d <- grassprop_d %>%
 
 
 # modify labels for facet_wrap subplots
-facet_labels <- c(Grass       = "Grass~(Grass~vs.~Forb)",
-                  C3vsC4      = "C[3*'_'*grass]~(C[3*'_'*grass]~vs.~C[4*'_'*grass])",
-                  LegvsNonleg = "Legume~(Legume~vs.~Non*-legume)",
-                  NatvsIntr   = "Native~plant~(Native~vs.~Introduced)")
+facet_labels <- c(Grass       = "Grass",
+                  C3vsC4      = "C[3]~grass",
+                  LegvsNonleg = "Legume",
+                  NatvsIntr   = "Native~species")
 
 all_pfg_prop_ci_dd <- mutate(all_pfg_prop_ci_dd,
                              .id        = factor(all_pfg_prop_ci_dd$.id, 
