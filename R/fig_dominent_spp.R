@@ -181,7 +181,7 @@ fig_domspp <- ggplot(ci_dd, aes(x = year, y = rlsmean)) +
                         labels = c("Ambient", expression(eCO[2]))) +
   scale_color_manual(values = c("black", "grey80"),
                      guide = guide_legend(override.aes = list(linetype = "blank",size = 2))) +
-  scale_y_continuous(limits = c(0, 26)) +
+  scale_y_continuous(limits = c(0, 30), breaks = c(0, 10, 20)) +
   scale_x_discrete("Year", labels = 0:4, drop = FALSE) +
   
   
