@@ -24,7 +24,7 @@ fig_light <- ggplot() +
             aes(xmin = start_date, 
                 xmax = end_date, 
                 ymin = -Inf, ymax = Inf), 
-            fill = "gray70", col = "gray80") +
+            fill = "gray70", col = NA) +
   geom_line(data = light_dayly_co2, aes(x = Date, y = Gapfraction.mean, col = co2)) +
   geom_point(data = suevey_date, aes(x = Date, y = .35), shape = 25, size = 3, fill = "black") +
   labs(y = "Canopy transmittance\n(Understorey light)", x = NULL) +
@@ -37,7 +37,7 @@ fig_light <- ggplot() +
 
 # Moisture & Temperature --------------------------------------------------
 
-oad("Data//SoilVariables/soil.var_ring.means.RData")
+load("Data//SoilVariables/soil.var_ring.means.RData")
 
 
 # sampling period
@@ -62,7 +62,7 @@ MT_dayly_co2 <- ring.means %>%
 fig_temp <- ggplot()+
   geom_rect(data = MT_range, 
             aes(xmin = start_date, xmax = end_date, ymin = -Inf, ymax = Inf),
-            fill = "gray", col = "gray") +
+            fill = "gray70", col = NA) +
   geom_line(dat = MT_dayly_co2, aes(x = Date, y = temp, col = co2, linetype = co2)) +
   scale_color_manual(values = c("blue", "red"), labels = c("Ambient", expression(eCO[2]))) +
   geom_vline(xintercept = as.numeric(as.Date("2012-09-18")), linetype = "dashed") +
@@ -80,7 +80,7 @@ fig_temp
 fig_moist <- ggplot()+
   geom_rect(data = MT_range, 
             aes(xmin = start_date, xmax = end_date, ymin = -Inf, ymax = Inf),
-            fill = "gray", col = "gray")+
+            fill = "gray70", col = NA)+
   geom_line(dat = MT_dayly_co2, aes(x = Date, y = moist, col = co2)) +
   labs(x = NULL, y = "Soil moisture (%)") +
   geom_vline(xintercept = as.numeric(as.Date("2012-09-18")), linetype = "dashed") +
