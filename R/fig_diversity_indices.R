@@ -117,8 +117,9 @@ ci_dd <- left_join(CI_dd, contrast_dd, by = c(".id", "year", "co2")) %>%
                                           labels = paste0("(", letters[c(1, 4, 7, 2, 5, 8,3, 6, 9)], ")")))  # sub-plot label
          ) %>% 
   left_join(div_co2_pval, by = ".id")                                             # merge with pvalues for CO2 term
-ci_dd$star[is.na(ci_dd$star)]        <- ""                                        # turn NA to ""
-ci_dd$star[ci_dd$.id == "all_spp.H"] <- ""                                        # no CO2xTime interaction, so don't show post-hoc results
+ci_dd$star[is.na(ci_dd$star)]          <- ""                                        # turn NA to ""
+ci_dd$star[ci_dd$.id == "all_spp.H"]   <- ""                                        # no CO2xTime interaction, so don't show post-hoc results
+ci_dd$star[ci_dd$.id == "grass_spp.S"] <- ""                                        # no CO2xTime interaction, so don't show post-hoc results
 
          
 # Observed vlaues for each variable
