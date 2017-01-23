@@ -195,7 +195,8 @@ fig_domspp <- ggplot(ci_dd, aes(x = year, y = rlsmean)) +
   
   labs(y = expression(Abundance~(Counts~m^'-1'))) +
   
-  geom_text(data = plab_d, aes(label = plot_lab), x = -Inf, y = Inf, hjust = -.1, vjust = 1.5, size = 3) +
+  geom_text(data = plab_d, aes(label = plot_lab), x = -Inf, y = Inf, hjust = -.1, 
+            fontface = "bold", vjust = 1.5, size = 3) +
   geom_text(data = plab_d, aes(label = rr), x =  Inf, y = Inf, hjust = 1.1, vjust = 1.5, size = 3)
 
 

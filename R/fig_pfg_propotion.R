@@ -18,8 +18,8 @@ all_pfg_d <- grassprop_d %>%
 
 
 # modify labels for facet_wrap subplots
-facet_labels <- c(Grass       = "Grass",
-                  C3vsC4      = "C[3]~grass",
+facet_labels <- c(Grass       = "Graminoid",
+                  C3vsC4      = "C[3]~graminoid",
                   LegvsNonleg = "Legume",
                   NatvsIntr   = "Native~species")
 
@@ -99,8 +99,10 @@ fig_pfgprop <- ggplot(all_pfg_prop_ci_dd,
         strip.text.x      = element_text(size = 8)) +
 
   labs(y = expression("Proportion")) +
-  geom_text(data = all_pfg_plab_d, aes(label = plot_lab), x = -Inf, y = Inf, hjust = -.1, vjust = 1.5, size = 3) +
-  geom_text(data = all_pfg_plab_d, aes(label = rr), x =  Inf, y = Inf, hjust = 1.1, vjust = 1.5, size = 3)
+  geom_text(data = all_pfg_plab_d, aes(label = plot_lab), x = -Inf, y = Inf, 
+            hjust = -.1, vjust = 1.5, size = 3, fontface = "bold") +
+  geom_text(data = all_pfg_plab_d, aes(label = rr), x =  Inf, y = Inf, 
+            hjust = 1.1, vjust = 1.5, size = 3)
 fig_pfgprop
 
 ggsavePP(filename = "output/figs/adjusted_PFG_proportion", width = 4, height = 4.5,
@@ -137,13 +139,8 @@ obs_tbl <- bind_rows(grassprop_co2_d, pfgprop_co2_d) %>%
 # . bind with adjusted values ---------------------------------------------
 
 pfgprop_adjMean_tble <- all_pfg_prop_ci_dd %>% 
-  mutate(.id = factor(.id,                                                        # change .id labels 
-                      levels = c("Grass~(Grass~vs.~Forb)",
-                                 "C[3*'_'*grass]~(C[3*'_'*grass]~vs.~C[4*'_'*grass])", 
-                                 "Legume~(Legume~vs.~Non*-legume)",
-                                 "Native~plant~(Native~vs.~Introduced)"),
-                      labels = c("GrasvsFor", "C3vsC4", "LegvsNonleg", 
-                                 "NatvsIntr"))) %>% 
+  mutate(.id = dplyr::recode(.id, "C[3]~graminoid" = "C3graminoid",
+         "Native~species" = "Native")) %>%           # change .id labels 
   select(.id, co2, year, rlsmean, value_type) %>% 
   rename(M = rlsmean) %>% 
   bind_rows(obs_tbl) %>% 

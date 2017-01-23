@@ -227,7 +227,7 @@ fig_prc_site <- ggplot(res_prc_site_co2, aes(x = as.numeric(year), y = CAP1,
                      labels = c("Ambient", expression(CO[2]))) +
   scale_linetype_manual(values = c("solid", "dashed"), 
                         labels = c("Ambient", expression(CO[2]))) +
-  annotate("text", x = -Inf, y = Inf, label = "(a)", hjust = -.5, vjust = 1)
+  annotate("text", x = -Inf, y = Inf, label = "(a)", hjust = -.5, vjust = 1.5, fontface = "bold")
 # +
 #   ylim(c(-.67, .05))
 fig_prc_site
@@ -326,8 +326,8 @@ res_pric_sp_d2 <- res_pric_sp_d %>%
          type    = recode(type, 
                           legume     = "Legume",
                           Non_legume = "Forb",
-                          c3Grass    = "C3 grass",
-                          c4Grass    = "C4 grass"),
+                          c3Grass    = "C3 graminoid",
+                          c4Grass    = "C4 graminoid"),
          year    = factor("Year0", levels = paste0("Year", 0:4)),
          co2     = factor("Ambient", levels = c("Ambient", "eCO[2]"))) %>% 
   filter(!is.na(type)) 
@@ -361,7 +361,7 @@ fig_prc_spp_byPfg <- ggplot(res_pric_sp_d2, aes(x = type, y = CAP1)) +
         axis.text.x      = element_text(angle = 45, hjust = 1, vjust = 1, size = 8)) +
   labs(y = "Species weight", x = NULL) +
   geom_text(data = fig_prc_spp_lab_d, aes(label = plot_lab), x = -Inf, y = Inf, 
-            hjust = -.5, vjust = 1)
+            hjust = -.5, vjust = 1.5, fontface = "bold")
 fig_prc_spp_byPfg
 
 
@@ -398,7 +398,7 @@ fig_prc_mds <- ggplot(res_prc_site_ring, aes(x = MDS1, y = MDS2, shape = year,
   scale_linetype_manual(name = expression(CO[2]),
                         values = c("solid", "dashed"), 
                         labels = c("Ambient", expression(eCO[2]))) +
-  annotate("text", x = -Inf, y = Inf, label = "(b)", hjust = -.5, vjust = 1)
+  annotate("text", x = -Inf, y = Inf, label = "(b)", hjust = -.5, vjust = 1.5, fontface = "bold")
 fig_prc_mds
 
 

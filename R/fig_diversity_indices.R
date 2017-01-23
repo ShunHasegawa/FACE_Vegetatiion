@@ -110,7 +110,7 @@ div_co2_pval <- div_aov_df %>%                                                  
 ci_dd <- left_join(CI_dd, contrast_dd, by = c(".id", "year", "co2")) %>% 
   mutate(Type       = tstrsplit(.id, "[.]")[[1]], 
          variable   = tstrsplit(.id, "[.]")[[2]],
-         Type       = factor(Type, labels = c("All", "Forb", "Grass")),
+         Type       = factor(Type, labels = c("All", "Forb", "Graminoid")),
          year       = factor(year, levels = paste0("Year", 0:3)),
          value_type = "adjusted",
          plot_lab   = as.character(factor(.id, 
@@ -127,7 +127,7 @@ div_obs_dd <- ldply(DivDF_list) %>%
   group_by(.id, year, co2, ring) %>% 
   summarise_each(funs(mean), H, S, J) %>% 
   ungroup() %>% 
-  mutate(.id        = factor(.id, labels = c("All", "Forb", "Grass")),
+  mutate(.id        = factor(.id, labels = c("All", "Forb", "Graminoid")),
          value_type = "observed") %>% 
   rename(Type = .id) %>% 
   gather(variable, value, H, S, J)
@@ -192,8 +192,10 @@ div_plots <- dlply(ci_dd, .(variable), function(x){
     science_theme +
     theme(legend.position = "none") +
     
-    geom_text(data = plab_d, aes(label = plot_lab), x = -Inf, y = Inf, hjust = -.1, vjust = 1.5, size = 3) +
-    geom_text(data = plab_d, aes(label = rr), x =  Inf, y = Inf, hjust = 1.1, vjust = 1.5, size = 3)
+    geom_text(data = plab_d, aes(label = plot_lab), x = -Inf, y = Inf, 
+              hjust = -.1, vjust = 1.5, size = 3, fontface = "bold") +
+    geom_text(data = plab_d, aes(label = rr), x =  Inf, y = Inf, hjust = 1.1, 
+              vjust = 1.5, size = 3)
     
   
   return(p)
