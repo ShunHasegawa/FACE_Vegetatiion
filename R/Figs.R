@@ -10,8 +10,16 @@ Veg_Plot <- veg_FullVdf %>%
   group_by(variable, year, ring, plot, co2, form, PFG, origin) %>%
   summarise(value_m2 = sum(value)/4) %>% 
   ungroup() %>% 
-  mutate(form       = recode(form, "c('Fern', 'Moss') = 'Moss/Fern'"),
+  mutate(form       = car::recode(form, "c('Fern', 'Moss') = 'Moss/Fern'"),
          OrginalVar = variable,
+         variable   = recode(variable,                                         # fix species names
+                             "Ambrosia.sp"            = "Ambrosia.artemisiifolia",
+                             "Arthropodium.sp"        = "Arthropodium.minus",
+                             "Digitaria.sp"           = "Digitaria.longiflora",
+                             "Drosera.sp"             = "Drosera.auriculata",
+                             "Leontodon.taraxacoides" = "Leontodon.saxatilis",
+                             "Phyllanthus.sp"         = "Phyllanthus.gunnii",
+                             "Sisyrinchium.sp"        = "Sisyrinchium.iridifolium"),
          variable   = gsub("[.]", " ", as.character(variable)),                # e.g.  Araujia.sericifera ->  Araujia sericifera
          co2        = factor(co2, labels = c("Ambient", expression(eCO[2]))),
          PFG        = ifelse(form == "Grass", paste(PFG, form, sep = "_"),     # relabel PFG: (C3grass, C4grass, legume, non-legeume, wood, Moss/Fern)
@@ -20,7 +28,7 @@ Veg_Plot <- veg_FullVdf %>%
          PFG        = factor(PFG, 
                              levels = c("c3_Grass", "c4_Grass", "legume", 
                                         "Non_legume", "Wood", "Moss/Fern"),
-                             labels = c("C[3*'\u005F'*grass]","C[4*'\u005F'*grass]",
+                             labels = c("C[3]~graminoid","C[4]~graminoid",
                                         "Legume", "Non*-legume", "Wood", "Moss/Fern")))
 summary(Veg_Plot)
   
