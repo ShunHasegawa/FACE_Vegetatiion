@@ -89,7 +89,8 @@ ggsavePP <- function(filename, plot, width, height){
   ggsave(filename = paste(filename, ".pdf", sep = ""), 
          plot = plot, 
          width = width, 
-         height = height)
+         height = height,
+         encoding = "MacRoman.enc") # default (ISOLatin1) on mac can't show a dagger sign
   
   ggsave(filename = paste(filename, ".png", sep = ""), 
          plot = plot, 
