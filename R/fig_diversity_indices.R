@@ -237,7 +237,7 @@ div_plots[[1]] <- div_plots[[1]] + theme(legend.position = "top",
 
 
 # set margins
-div_margins <- llply(list(c(1, 1, 0, 0), c(0, 1, 0, 0), c(0, 1, 0, 0)),
+div_margins <- llply(list(c(1, 1, -.5, .5), c(0, 1, -.5, .5), c(0, 1, 0, .5)),
                      function(x) unit(x, "line"))
 
 for (i in 1:3){
