@@ -1,0 +1,28 @@
+\documentclass[12pt, a4paper]{article}
+
+\usepackage{fullpage}
+\usepackage{pdfpages}
+\usepackage{float}
+\usepackage[super]{nth} % add superscript for numbers (ex. 1st, 2nd)
+\usepackage{caption}
+\usepackage{hanging}    % indentation
+
+% caption
+\renewcommand{\thefigure}{{S\arabic{figure}}}
+\usepackage[labelsep=period]{caption}
+
+\begin{document}
+
+\section*{GRAPHICAL ABSTRACT}
+for the article "Elevated CO$_2$ concentrations reduce C$_4$ abundance and decrease diversity in a \textit{Eucalyptus} woodland understorey plant community woodland" by Shun Hasegawa*, Juan Pi\~{n}eiro, Ra\'{u}l Ochoa-Hueso, Kirk L. Barnett, Anthony M. Haigh, Paul D. Rymer and Sally A. Power.
+
+
+\paragraph{}
+Elevated CO$_2$ had cumulative impacts on understorey plant community dynamics, decreasing C$_4$ graminoid abundance, species richness and diversity in a P-limited, mature \textit{Eucalyptus} woodland.
+
+\begin{figure}[H]
+\includegraphics{prc_merge_fig.pdf}
+\end{figure}
+
+
+\end{document}
