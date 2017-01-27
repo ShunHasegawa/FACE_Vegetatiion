@@ -5,7 +5,6 @@
 \usepackage{float}
 \usepackage[super]{nth} % add superscript for numbers (ex. 1st, 2nd)
 \usepackage{caption}
-\pagenumbering{gobble}  % remove page number
 \usepackage{hanging}    % indentation
 
 % caption
@@ -14,7 +13,7 @@
 
 \begin{document}
 
-\section*{Supporting information}
+\section*{Supporting information figures}
 for the article "Elevated CO$_2$ concentrations suppress C$_4$ abundance and decrease diversity in understorey plant community in a \textit{Eucalyptus} woodland" by Shun Hasegawa, Juan Piñeiro Nevado, Raúl Ochoa-Hueso, Kirk L. Barnett, Anthony M. Haigh, Paul D. Rymer, Sally A. Power.
 
 \begin{figure}[H]
