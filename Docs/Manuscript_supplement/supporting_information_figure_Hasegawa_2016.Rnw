@@ -14,7 +14,7 @@
 \begin{document}
 
 \section*{Supporting information figures}
-for the article "Elevated CO$_2$ concentrations suppress C$_4$ abundance and decrease diversity in understorey plant community in a \textit{Eucalyptus} woodland" by Shun Hasegawa, Juan Piñeiro Nevado, Raúl Ochoa-Hueso, Kirk L. Barnett, Anthony M. Haigh, Paul D. Rymer, Sally A. Power.
+for the article "Elevated CO$_2$ concentrations reduce C$_4$ abundance and decrease diversity in a \textit{Eucalyptus} woodland understorey plant community woodland" by Shun Hasegawa, Juan Pi\~{n}eiro, Ra\'{u}l Ochoa-Hueso, Kirk L. Barnett, Anthony M. Haigh, Paul D. Rymer and Sally A. Power.
 
 \begin{figure}[H]
 \includegraphics{FACE_vegetation_CO2_Scatter.pdf}
