@@ -123,8 +123,8 @@ tsp <- names(vdf)[!names(vdf) %in% SiteVec]
 all(vdf[, tsp] < 2)
 # FALSE
 which(vdf[, tsp] > 1, arr.ind = TRUE)
-names(vdf[, tsp])[36]
-names(vdf[, tsp])[44]
+names(vdf[, tsp])[34]
+names(vdf[, tsp])[42]
 
 # Glycine sp. and Eragrostis.brownii; turn those into 1
 vdf[, tsp][which(vdf[, tsp] > 1, arr.ind = TRUE)] <- 1
@@ -402,12 +402,14 @@ vdf.mlt <- melt(vdf, id = c("year", "month", "ring", "plot", "position", "cell")
   # check unknown spp
   all(!grepl("unknown", names(FullVdf), ignore.case = TRUE))
   
-  # add co2, block and id, combine sedge and grass, wood and shrub
+  # add co2, block and id, , RY (ring x year)combine sedge and grass, wood and
+  # shrub
   FullVdf <- FullVdf %>% 
     mutate(cell  = as.character(cell),
            co2   = factor(ifelse(ring %in% c(1, 4, 5), "elev", "amb")),
-           block = recode(ring, "1:2 = 'A'; 3:4 = 'B'; 5:6 = 'C'"),
-           id    = ring:plot) %>% 
+           block = car::recode(ring, "1:2 = 'A'; 3:4 = 'B'; 5:6 = 'C'"),
+           id    = ring:plot,
+           RY    = ring:year) %>% 
     select(one_of(SiteName), everything())
   summary(FullVdf)
 
@@ -499,8 +501,10 @@ llply(veg_list, function(x) unique(x$PFG))
 
 # combine sedge and grass, and tree, shrub and vine
 veg_list <- llply(veg_list, function(x)
-  mutate(x, form  = recode(form, "c('Tree', 'Shrub', 'Vine')  = 'Wood'; 
-                                  c('Grass', 'Sedge', 'Rush') = 'Grass'")))
+  mutate(x, 
+         form  = car::recode(form, "c('Tree', 'Shrub', 'Vine')  = 'Wood'; 
+                                  c('Grass', 'Sedge', 'Rush') = 'Grass'"),
+         RY    = ring:year))
 
 
 # save
@@ -514,3 +518,4 @@ save_Rdata_csv(veg_uniqueYear0_Vdf,
                filename = "output/Data/EucFACE_understorey_vegetation_2012-2106_S2_PFG")
 save_Rdata_csv(veg_uniqueYear0_plot_Vdf, 
                filename = "output/Data/EucFACE_understorey_vegetation_2012-2106_S3_PFG")
+

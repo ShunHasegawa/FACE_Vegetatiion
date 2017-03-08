@@ -2,7 +2,7 @@ rm(list=ls(all=TRUE))
 
 source("R/Packages.R")
 source("R/functions.R")
-SiteName <- c("year", "block", "ring", "co2", "plot", "id", "position", "cell")
+SiteName <- c("year", "block", "ring", "co2", "plot", "id", "position", "cell", "RY")
 
 
 
