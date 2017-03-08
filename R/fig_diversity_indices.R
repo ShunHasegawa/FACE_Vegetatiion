@@ -35,17 +35,18 @@ l_ply(names(DivDF_year0_list), function(x){
 
 
 # create models to be tested
+summary(DivDF_year0_list)
+
 div_m_list <- llply(DivDF_year0_list, function(x){
   dlply(x, .(variable), function(y){
-    m1 <- lmer(value ~ co2 * year + value0 + (1|block) + (1|ring) + (1|id), data = y)
-    m2 <- update(m1, ~ . - (1|block))
+    m1 <- lmer(value ~ co2 * year + value0 + (1|block) + (1|ring) + (1|id) + (1|RY), data = y)
+    m2 <- lmer(value ~ co2 * year + value0 + (1|ring) + (1|id) + (1|RY), data = y)
     if (AICc(m1) >= AICc(m2)) return(m2) else return(m1)
     })
   })
 
 div_m_list <- unlist(div_m_list, recursive = FALSE)
 summary(div_m_list)  
-
 
 
 # . model diagnosis -------------------------------------------------------
@@ -65,15 +66,14 @@ dev.off()
 # inspect grass_spp.J
 div_m_list[["grass_spp.J"]]
 d_gsj <- filter(DivDF_year0_list[["grass_spp"]], variable == "J")
-m1 <- lmer(value ~ co2 * year + value0 + (1|ring) + (1|id), data = d_gsj)
+m1 <- lmer(value ~ co2 * year + value0 + (1|ring) + (1|id) + (1|RY), data = d_gsj)
+plot(m1)
 which.min(resid(m1))
 m2 <- update(m1, subset = -8)
 plot(m2)
 # model is improved
 llply(list(m1, m2), function(x) Anova(x, test.statistic = "F"))
-# co2 x time interaction seems to be driven by outlier so remove
-
-div_m_list[["grass_spp.J"]] <- m2
+  # no difference so keep the original
 
 
 
@@ -81,7 +81,10 @@ div_m_list[["grass_spp.J"]] <- m2
 # CI and post-hoc test ----------------------------------------------------
 
 
-# compute 95 CI and post-hoc test
+# compute 95 CI and post-hoc test (onely need grass and forb species)
+nl <- names(div_m_list)
+div_m_list <- div_m_list[grepl("grass|forb", nl)]  # extract grass and forb species
+
 lsmeans_list <- llply(div_m_list, function(x) {
   lsmeans::lsmeans(x, ~ co2 | year)
   })
@@ -110,44 +113,42 @@ div_co2_pval <- div_aov_df %>%                                                  
 ci_dd <- left_join(CI_dd, contrast_dd, by = c(".id", "year", "co2")) %>% 
   mutate(Type       = tstrsplit(.id, "[.]")[[1]], 
          variable   = tstrsplit(.id, "[.]")[[2]],
-         Type       = factor(Type, labels = c("All", "Forb", "Graminoid")),
+         Type       = mapvalues(Type, c("forb_spp", "grass_spp"), c("Forb", "Graminoid")),
          year       = factor(year, levels = paste0("Year", 0:3)),
          value_type = "adjusted",
-         plot_lab   = as.character(factor(.id, 
-                                          labels = paste0("(", letters[c(1, 4, 7, 2, 5, 8,3, 6, 9)], ")")))  # sub-plot label
-         ) %>% 
-  left_join(div_co2_pval, by = ".id")                                             # merge with pvalues for CO2 term
-ci_dd$star[is.na(ci_dd$star)]          <- ""                                        # turn NA to ""
-ci_dd$star[ci_dd$.id == "all_spp.H"]   <- ""                                        # no CO2xTime interaction, so don't show post-hoc results
-ci_dd$star[ci_dd$.id == "grass_spp.S"] <- ""                                        # no CO2xTime interaction, so don't show post-hoc results
+         plot_lab   = mapvalues(variable, c("H", "J", "S"), 
+                                paste0("(", letters[1:3], ")"))) %>%  # sub-plot label
+  left_join(div_co2_pval, by = ".id")                                           # merge with pvalues for CO2 term
+ci_dd$star[is.na(ci_dd$star)]            <- ""                                   # turn NA to ""
+ci_dd$star[ci_dd$.id == "grass_spp.S"]   <- ""                                   # no CO2xTime interaction, so don't show post-hoc results
+ci_dd$star[ci_dd$.id == "grass_spp.J"]   <- ""                                   # no CO2xTime interaction, so don't show post-hoc results
+# ci_dd$star[ci_dd$.id == "grass_spp.S"] <- ""                                       # no CO2xTime interaction, so don't show post-hoc results
 
          
 # Observed vlaues for each variable
-div_obs_dd <- ldply(DivDF_list) %>% 
+div_obs_dd <- ldply(DivDF_list) %>%
+  filter(.id != "all_spp") %>% 
   group_by(.id, year, co2, ring) %>% 
   summarise_each(funs(mean), H, S, J) %>% 
   ungroup() %>% 
-  mutate(.id        = factor(.id, labels = c("All", "Forb", "Graminoid")),
+  mutate(Type = mapvalues(.id, c("forb_spp", "grass_spp"), c("Forb", "Graminoid")),
          value_type = "observed") %>% 
-  rename(Type = .id) %>% 
   gather(variable, value, H, S, J)
 
 
 # create fig --------------------------------------------------------------
 
 
-div_plots <- dlply(ci_dd, .(variable), function(x){
+div_plots <- dlply(ci_dd, .(Type, variable), function(x){
   
   # df for observed values
-  d <- div_obs_dd %>%
-    filter(variable == unique(x$variable))
-    
+  d <- filter(div_obs_dd, Type == unique(x$Type) & variable == unique(x$variable))    
   
   # df for plot labels and response ratios
   plab_d <- x %>% 
-    group_by(Type, plot_lab, co2, co2star) %>% 
+    group_by(plot_lab, co2, co2star) %>% 
     summarise(value = mean(lsmean)) %>% 
-    group_by(Type, plot_lab, co2star) %>% 
+    group_by(plot_lab, co2star) %>% 
     summarise(rr = value[co2 == "elev"] / value[co2 == "amb"] - 1) %>% 
     mutate(rr = ifelse(rr >= 0,
                        paste0("RR= +", format(rr, digits = 0, nsmall = 2), co2star), 
@@ -155,14 +156,14 @@ div_plots <- dlply(ci_dd, .(variable), function(x){
   
   # fig
   dodgeval <- .4
+  yscale   <- 1.2
   p <- ggplot(x, aes(x = year, y = lsmean)) +
     
     
     geom_vline(xintercept = 1.5, linetype = "dashed") +
-    facet_grid(. ~ Type) +
-   
     
-    # observed
+  
+  # observed
     geom_point(data = d, 
                aes(x = year, y = value, shape = co2, col = value_type), 
                size = 2, fill = "grey80", 
@@ -185,7 +186,9 @@ div_plots <- dlply(ci_dd, .(variable), function(x){
                           labels = c("Ambient", expression(eCO[2]))) +
     scale_color_manual(values = c("black", "grey80"),
                        guide = guide_legend(override.aes = list(linetype = "blank",size = 2))) +
-    scale_x_discrete("", labels = NULL, drop = FALSE) +
+    scale_x_discrete("Year", labels = 0:4, drop = FALSE) +
+    ylim(min(c(d$value, x$lower.CL), na.rm = TRUE), 
+         max(c(d$value, x$upper.CL), na.rm = TRUE) * yscale) +
     
     
     # legend and theme
@@ -200,61 +203,82 @@ div_plots <- dlply(ci_dd, .(variable), function(x){
   
   return(p)
   })
+
 div_plots[[1]]
+names(div_plots)
 
 
 # . fine tuning of figure ---------------------------------------------------
 
 
 # add ylabels
-div_ylabs <- c(expression(Diversity~(italic("H'"))), 
-               expression(Evenness~(italic("J'"))),
-               expression(Species~richness~(italic(S))))
+div_ylabs <- c(expression(italic("H'")~('2x2'~m^'-2')), 
+               expression(italic("J'")~('2x2'~m^'-2')),
+               expression(italic(S)~('2x2'~m^'-2')))
+div_ylabs <- rep(div_ylabs, 2)
 
-
-for (i in 1:3){
+for (i in 1:6){
   div_plots[[i]] <- div_plots[[i]] + 
     labs(x = NULL, y = div_ylabs[i]) +
     theme(axis.title.y = element_text(size = 9))
   }
 
-# remove facet_gird labels
-for (i in 2:3) {
-  div_plots[[i]] <-  div_plots[[i]] + theme(strip.background = element_blank(), 
-                                            strip.text.x = element_blank())
+
+# add legend 
+for( i in c(3, 6)){
+  div_plots[[i]] <- div_plots[[i]] +
+    theme(legend.position = c(1.5, .5),
+          legend.direction  = "vertical", 
+          legend.text.align = 0,
+          legend.margin     = unit(0, "line"),
+          legend.text       = element_text(size = 8))
   }
 
-# x lab for the bottom plot
-div_plots[[3]] <- div_plots[[3]] + scale_x_discrete("Year", labels = c(0:3))
-
-# add legend in the top plot
-div_plots[[1]] <- div_plots[[1]] + theme(legend.position = "top",
-                                         legend.box        = "horizontal", 
-                                         legend.direction  = "vertical", 
-                                         legend.text.align = 0,
-                                         legend.margin     = unit(0, "line"),
-                                         legend.text = element_text(size = 8))
 
 
-# set margins
-div_margins <- llply(list(c(1, 1, -.5, .5), c(0, 1, -.5, .5), c(0, 1, 0, .5)),
-                     function(x) unit(x, "line"))
+# # set margins
+# div_margins <- llply(list(c(1, 1, -.5, .5), c(0, 1, -.5, .5), c(0, 1, 0, .5)),
+#                      function(x) unit(x, "line"))
+# 
+# for (i in 1:3){
+#   div_plots[[i]] <-  div_plots[[i]] + theme(plot.margin = div_margins[[i]])
+# }
 
-for (i in 1:3){
-  div_plots[[i]] <-  div_plots[[i]] + theme(plot.margin = div_margins[[i]])
-}
 
-# merge plots
-div_plot_merged <- rbind(ggplotGrob(div_plots[[1]]), 
-                         ggplotGrob(div_plots[[2]]), 
-                         ggplotGrob(div_plots[[3]]), 
-                         size = "last")
 
+
+# . merge figures ---------------------------------------------------------
+
+
+# blank plot to place 3 figures on a 2 by 2 panel.
+blankpl    <- ggplot(filter(ci_dd, .id == "forb_spp.H")) +
+  geom_blank() +
+  theme(panel.border = element_blank(),
+        axis.ticks.length = unit(0, "lines"),
+        axis.text       = element_blank(),
+        axis.title      = element_blank())
+
+
+# forb
+forb_tplot <- cbind(ggplotGrob(div_plots[[1]]), ggplotGrob(div_plots[[2]]))  # top panels
+forb_bplot <- cbind(ggplotGrob(div_plots[[3]]), ggplotGrob(blankpl))         # bottom panel
+forb_mplot <- rbind(forb_tplot, forb_bplot)
 grid.newpage()
-grid.draw(div_plot_merged)
+grid.draw(forb_mplot)
 
-ggsavePP(filename = "output/figs/adjusted_diversity_indices", 
-         plot = div_plot_merged, width = 6, height  = 6)
+ggsavePP(filename = "output/figs/adjusted_diversity_indices_forb", 
+         plot = forb_mplot, width = 4.5, height  = 4)
+
+
+# grass
+grass_tplot <- cbind(ggplotGrob(div_plots[[4]]), ggplotGrob(div_plots[[5]]))  # top panels
+grass_bplot <- cbind(ggplotGrob(div_plots[[6]]), ggplotGrob(blankpl))         # bottom panel
+grass_mplot <- rbind(grass_tplot, grass_bplot)
+grid.newpage()
+grid.draw(grass_mplot)
+
+ggsavePP(filename = "output/figs/adjusted_diversity_indices_graminoid", 
+         plot = grass_mplot, width = 4.5, height  = 4)
 
 
 
@@ -266,11 +290,12 @@ obs_tbl <- div_obs_dd %>%
   mutate(.id = paste0(tolower(Type), "_spp.", variable)) %>% 
   select(.id, year, co2, value_type, ring, value) %>% 
   group_by(.id, year, co2, value_type) %>% 
-  summarise(M = mean(value))
+  summarise(M = mean(value, na.rm = TRUE))
 
 
 # bind with adjusted values
-div_adjMean_tble <- ci_dd %>% 
+div_adjMean_tble <- ci_dd %>%
+  mutate(.id = paste0(tolower(Type), "_spp.", variable)) %>% 
   select(.id, co2, year, lsmean, value_type) %>% 
   rename(M = lsmean) %>% 
   bind_rows(obs_tbl) %>% 
@@ -291,9 +316,8 @@ div_adjMean_tble <- ci_dd %>%
 # split df by variable
 div_tbl_l <- dlply(div_adjMean_tble, .(variable), function(x) select(x, -variable))
 
-
 # save as excel
-writeWorksheetToFile(file  = "output/table/summary_tbl_diversity.xlsx",  # define file name to be saved
-                     data  = div_tbl_l,                                  # writeWorksheetToFile doesn't take dplyr object so turn them into data frames using as.data.frame
-                     sheet = names(div_tbl_l))                           # sheet names in excel are defined by object names a list
-
+writeWorksheetToFile(file        = "output/table/summary_tbl_diversity.xlsx",  # define file name to be saved
+                     data        = div_tbl_l,                                  # writeWorksheetToFile doesn't take dplyr object so turn them into data frames using as.data.frame
+                     sheet       = names(div_tbl_l),                           # sheet names in excel are defined by object names a list
+                     clearSheets = TRUE)
