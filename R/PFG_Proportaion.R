@@ -5,7 +5,7 @@ summary(veg_FullVdf)
 # proportion of each form for each plot
 PropDF <- veg_FullVdf %>%
   filter(form %in% c("Forb", "Grass")) %>% 
-  group_by(year, co2, block, ring, plot, id, form) %>% 
+  group_by(year, co2, block, ring, plot, id, form, RY) %>% 
   summarise(value = sum(value)) %>% 
   spread(form, value) %>% 
   mutate(Total      = Forb + Grass, 
@@ -38,11 +38,11 @@ plot(logit(grass_prop) ~ logitv0, pch = 19, col = year, data = PropDF_year0, mai
 
 # Analysis ----------------------------------------------------------------
 
-m1 <- lmer(logit(grass_prop) ~ co2 * year + value0 + (1|block) + (1|ring) + (1|id), data = PropDF_year0)
-m2 <- lmer(logit(grass_prop) ~ co2 * year + logitv0 + (1|block) + (1|ring) + (1|id), data = PropDF_year0)
-m3 <- lmer(logit(grass_prop) ~ co2 * year + sqrtv0 + (1|block) + (1|ring) + (1|id), data = PropDF_year0)
-m4 <- lmer(logit(grass_prop) ~ co2 * year + logv0 + (1|block) + (1|ring) + (1|id), data = PropDF_year0)
-AICc(m1, m2, m3, m4)
+m1 <- lmer(logit(grass_prop) ~ co2 * year + value0  + (1|block) + (1|ring) + (1|id) + (1|RY), data = PropDF_year0)
+m2 <- lmer(logit(grass_prop) ~ co2 * year + logitv0 + (1|block) + (1|ring) + (1|id) + (1|RY), data = PropDF_year0)
+m3 <- lmer(logit(grass_prop) ~ co2 * year + sqrtv0  + (1|block) + (1|ring) + (1|id) + (1|RY), data = PropDF_year0)
+m4 <- lmer(logit(grass_prop) ~ co2 * year + logv0   + (1|block) + (1|ring) + (1|id) + (1|RY), data = PropDF_year0)
+model.sel(m1, m2, m3, m4, extra = "r.squaredGLMM")
 # m4 is slightly better
 
 m5 <- update(m4, ~ . - (1|block))
@@ -60,15 +60,20 @@ qqline(resid(m5))
 which.max(resid(m5))
 m6 <- update(m2, subset = -43)
 plot(m6)
+qqnorm(resid(m6))
+qqline(resid(m6))
 llply(list(m5, m6), function(x) Anova(x, test.statistic = "F"))
-# CO2xYear interaction was driven by outlier so remove
-grassprop_m <- m6
+## no difference, so just use the original
+grassprop_m <- m5
+
+
+
 
 # CI and post-hoc ---------------------------------------------------------
 
 
 # compute 95 CI and post-hoc test
-lsmeans_dd <- lsmeans::lsmeans(m6, ~ co2 | year)
+lsmeans_dd <- lsmeans::lsmeans(grassprop_m, ~ co2 | year)
 
 # 95% CI
 CI_dd <- data.frame(summary(lsmeans_dd))
