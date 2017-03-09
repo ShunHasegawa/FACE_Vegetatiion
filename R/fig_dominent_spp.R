@@ -193,6 +193,7 @@ c4ab_m_fin <- c4ab_m2
 
 
 
+
 # > C3 abundance ------------------------------------------------------------
 
 
@@ -248,7 +249,7 @@ lsmeans_list <- llply(dom_m_list, function(x) {
 
 # 95% CI
 CI_ll <- llply(lsmeans_list, function(x) data.frame(summary(x)))
-CI_dd
+CI_ll
 
 # reverse transformation and standerdise for 1m x 1m
 sapply(dom_m_list, function(x) x@call)
@@ -273,7 +274,7 @@ CI_dd <- ldply(CI_ll)
 
 # post-hoc test
 contrast_dd <- ldply(lsmeans_list, function(x) {
-  data.frame(summary(pairs(x)[1:3], adjust = "fdr"))
+  data.frame(summary(pairs(x)[1:3], adjust = "none"))
 }) %>% 
   mutate(co2 = factor("amb", levels = c("amb", "elev")),
          star = cut(p.value, right = FALSE,
@@ -293,7 +294,7 @@ dom_co2_pval <- dom_aov_df %>%                                                  
 
 # merge
 ci_dd <- left_join(CI_dd, contrast_dd, by = c(".id", "year", "co2")) %>% 
-  rename(rlsmean = lsmean_r, rlowerCL = lower.CL_r, rupperCL = upper.CL_r) %>% 
+  rename(rlsmean    = lsmean_r, rlowerCL = lower.CL_r, rupperCL = upper.CL_r) %>% 
   mutate(year       = factor(year, levels = paste0("Year", 0:3)),
          value_type = "adjusted") %>% 
   left_join(dom_co2_pval, by = ".id") %>%                                         # merge with pvalues for CO2 term
@@ -422,5 +423,5 @@ domsp_tbl_l <- dlply(domsp_adjMean_tble, .(.id), function(x) select(x, -.id))
 # save as excel
 writeWorksheetToFile(file  = "output/table/summary_tbl_dom_spp.xlsx",  # define file name to be saved
                      data  = domsp_tbl_l,                              # writeWorksheetToFile doesn't take dplyr object so turn them into data frames using as.data.frame
-                     sheet = names(domsp_tbl_l))                       # sheet names in excel are defined by object names a list
-
+                     sheet = names(domsp_tbl_l),                       # sheet names in excel are defined by object names a list
+                     clearSheets = TRUE)
