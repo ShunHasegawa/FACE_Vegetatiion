@@ -1,22 +1,41 @@
 
 # prepare data frame ------------------------------------------------------
 
-# create models to be tests
-dominentsp <- veg_FullVdf %>% 
-  filter(variable %in% DmSpp) %>% 
-  group_by(variable, year, block, co2, ring, plot, id) %>% 
+# create models to be tested
+
+
+# microlaena and cynodon
+mic_cyn <- veg_FullVdf %>% 
+  filter(variable %in% c("Microlaena.stipoides", "Cynodon.dactylon")) %>% 
+  group_by(variable, year, block, co2, ring, plot, id, RY) %>% 
   summarise(value = sum(value)) %>% 
   ungroup()
 
+
+# C3 and C4 grass abundance
+C3grassC4_abund <- veg_FullVdf %>%
+  filter(form == "Grass") %>% 
+  group_by(PFG, year, block, ring, co2, plot, id, RY) %>% 
+  summarise_each(funs(sum), value) %>% 
+  ungroup() %>% 
+  mutate(PFG = factor(paste(PFG, "total", sep = "_"))) %>% 
+  rename(variable = PFG)
+
+
+# merge the above
+dominentsp <- bind_rows(mic_cyn, C3grassC4_abund)
+
+
+# Year0
 dominentsp_year0 <- dominentsp %>%
   filter(year == "Year0") %>%
   select(id, value, variable) %>%
   rename(value0 = value) %>% 
-  left_join(filter(dominentsp, year != "Year0"), by = c("id", "variable")) %>% 
-  mutate(logitv  = logit(value), 
-         logitv0 = logit(value0),
-         logv0   = log(value0 + 1),
-         sqrtv0  = sqrt(value0))
+  left_join(filter(dominentsp, year != "Year0"), by = c("id", "variable")) 
+
+
+# transformations for x value
+xtrans <- c("value0", "logitv0", "logv0", "sqrtv0")
 
 
 
@@ -24,60 +43,201 @@ dominentsp_year0 <- dominentsp %>%
 # analysis ----------------------------------------------------------------
 
 
-# independent variable transformation
-par(mfrow = c(2, 4), mar = c(2, 2, 1, 1))
+# > Microlaena --------------------------------------------------------------
 
-# raw
-d_ply(dominentsp_year0, .(variable), 
-      function(x) plot(logit(value) ~ value0, data = x, pch = 19, col = factor(year), 
-                       main = "raw"))  
+mic_df <- dominentsp_year0 %>%
+  filter(variable == "Microlaena.stipoides") %>% 
+  mutate(logitv  = logit(value/100),
+         logitv0 = logit(value0/100),
+         logv0   = log(value0 + 1), 
+         sqrtv0  = sqrt(value0))
 
-# sqrt
-d_ply(dominentsp_year0, .(variable), 
-      function(x) plot(logit(value) ~ sqrtv0, data = x, pch = 19, col = factor(year), 
-                       main = "sqrt"))  
+mic_m1 <- lmer(logitv ~ co2 * year + logitv0 + (1|block) + (1|ring) + (1|id) + (1|RY), data = mic_df, REML = F)
+mic_m2 <- lmer(logitv ~ co2 * year + logv0   + (1|block) + (1|ring) + (1|id) + (1|RY), data = mic_df, REML = F)
+mic_m3 <- lmer(logitv ~ co2 * year + value0  + (1|block) + (1|ring) + (1|id) + (1|RY), data = mic_df, REML = F)
+mic_m4 <- lmer(logitv ~ co2 * year + sqrtv0  + (1|block) + (1|ring) + (1|id) + (1|RY), data = mic_df, REML = F)
+model.sel(mic_m1, mic_m2, mic_m3, mic_m4, extra = "r.squaredGLMM")
 
-# log
-d_ply(dominentsp_year0, .(variable), 
-      function(x) plot(logit(value) ~ logv0, data = x, pch = 19, col = factor(year), 
-                       main = "log"))  
-
-# logit
-d_ply(dominentsp_year0, .(variable), 
-      function(x) plot(logit(value) ~ logitv0, data = x, pch = 19, col = factor(year), 
-                       main = "logit"))  
+mic_m5 <- lmer(logitv ~ co2 * year + sqrtv0  + (1|block) + (1|ring) + (1|id) + (1|RY), data = mic_df)
+mic_m6 <- lmer(logitv ~ co2 * year + sqrtv0  + (1|ring) + (1|id) + (1|RY), data = mic_df)
+model.sel(mic_m5, mic_m6)
+plot(mic_m6)
+qqnorm(resid(mic_m6))
+qqline(resid(mic_m6))
+mic_m_fin <- mic_m6
 
 
-dom_m_list <- dlply(dominentsp_year0, .(variable), function(x){
-  m1 <- lmer(logit(value) ~ co2 * year + value0  + (1|block) + (1|ring) + (1|id), data = x)
-  m2 <- lmer(logit(value) ~ co2 * year + sqrtv0  + (1|block) + (1|ring) + (1|id), data = x)
-  m3 <- lmer(logit(value) ~ co2 * year + logv0   + (1|block) + (1|ring) + (1|id), data = x)
-  m4 <- lmer(logit(value) ~ co2 * year + logitv0 + (1|block) + (1|ring) + (1|id), data = x)
-  ml <- list(m1, m2, m3, m4)
-  bm <- ml[[which.min(AICc(m1, m2, m3, m4)$AICc)]]
-  m2 <- update(bm, ~ . - (1|block))
-  if (AICc(bm) >= AICc(m2)) return(m2) else return(m1)
+
+
+# > Cynodon --------------------------------------------------------------
+
+
+cyn_df <- dominentsp_year0 %>%
+  filter(variable == "Cynodon.dactylon") %>% 
+  mutate(logitv  = logit(value/100),
+         logitv0 = logit(value0/100),
+         logv0   = log(value0 + 1), 
+         sqrtv0  = sqrt(value0))
+
+
+# . possible transformation -----------------------------------------------
+
+
+cyn_p <- ldply(xtrans, function(x){
+  f <- formula(paste("I(value + 1) ~ co2 * year +", x))
+  a <- boxcox(f, data = cyn_df, plotit = FALSE)
+  p <- a$x[which.max(a$y)]
+  return(data.frame(xt = x, p))
+})
+
+
+# inspect the above-suggested transformation
+cyn_ms <- mlply(cyn_p, function(xt, p){
+  f <- formula(paste("value^(", p, ") ~ co2 * year +", xt, 
+                     "+ (1|block) + (1|ring) + (1|id) + (1|RY)"))
+  m <- lmer(f, data = cyn_df)
+  return(m)
+})
+llply(cyn_ms, function(x) Anova(x, test.statistic = "F"))
+
+plot(cyn_ms[[1]])
+plot(cyn_ms[[2]])
+plot(cyn_ms[[3]])
+plot(cyn_ms[[4]])
+par(mfrow = c(2, 2))
+l_ply(cyn_ms, function(x){
+  qqnorm(resid(x))
+  qqline(resid(x))
 })
 
 
 
+# . model selection -------------------------------------------------------
 
-# model diagnosis ---------------------------------------------------------
 
-pdf("output/figs/mod_diag_domspp.pdf", onefile = TRUE, width = 4, height = 4)
-l_ply(names(dom_m_list), function(x){
-  m <- dom_m_list[[x]]
-  print(plot(m, main = x))
-  qqnorm(resid(m, main = x))
-  qqline(resid(m, main = x))
+# check model4; there was an outlier
+cyn_m1 <- cyn_ms[[4]]
+which.min(qqnorm(resid(cyn_m1))$y)
+cyn_m2 <- update(cyn_ms[[4]], subset = -72)
+Anova(cyn_m1, test.statistic = "F")
+Anova(cyn_m2, test.statistic = "F")
+ # maybe interaction was driven by the outlier
+
+
+# check model1
+cyn_m3 <- cyn_ms[[1]]
+cyn_m4 <- update(cyn_m3, ~ . - (1|block))
+AICc(cyn_m3, cyn_m4)
+Anova(cyn_m4, test.statistic = "F")
+plot(cyn_m4)
+qqnorm(resid(cyn_m4))
+qqline(resid(cyn_m4))
+### use this model
+cyn_m_fin <- cyn_m4
+
+
+
+
+# > C4 abundance ------------------------------------------------------------
+
+
+
+c4ab_df <- dominentsp_year0 %>%
+  filter(variable == "c4_total") %>% 
+  mutate(logitv  = logit(value/100),
+         logitv0 = logit(value0/100),
+         logv0   = log(value0 + 1),
+         sqrtv0  = sqrt(value0))
+
+
+# determin the "best" xtransformation for each of variaous y tranformtion to
+# express linearity
+c4ab_df_p <- ldply(xtrans, function(x){
+  f <- formula(paste("I(value + 1) ~ co2 * year +", x))
+  a <- boxcox(f, data = c4ab_df, plotit = FALSE)
+  p <- a$x[which.max(a$y)]
+  return(data.frame(xt = x, p))
 })
-dev.off()
 
+
+# inspect the above-suggested transformation
+c4ab_df_ms <- mlply(c4ab_df_p, function(xt, p){
+  f <- formula(paste("value^(", p, ") ~ co2 * year +", xt, 
+                     "+ (1|block) + (1|ring) + (1|id) + (1|RY)"))
+  m <- lmer(f, data = c4ab_df)
+  return(m)
+})
+llply(c4ab_df_ms, function(x) Anova(x, test.statistic = "F"))
+
+plot(c4ab_df_ms[[1]])  # not bad
+plot(c4ab_df_ms[[2]])  # bad
+plot(c4ab_df_ms[[3]])  # bad
+plot(c4ab_df_ms[[4]])  # not bad
+par(mfrow = c(2, 2))
+l_ply(c4ab_df_ms, function(x){
+  qqnorm(resid(x))
+  qqline(resid(x))
+})
+## model 1 or 4
+
+# check model1
+c4ab_m1 <- c4ab_df_ms[[1]]
+c4ab_m2 <- update(c4ab_df_ms[[1]], ~ . - (1|block))
+AICc(c4ab_m1, c4ab_m2)
+Anova(c4ab_m2, test.statistic = "F")
+plot(c4ab_m2)
+qqnorm(resid(c4ab_m2))
+qqline(resid(c4ab_m2))
+## this looks good
+c4ab_m_fin <- c4ab_m2
+
+
+
+# > C3 abundance ------------------------------------------------------------
+
+
+c3ab_df <- dominentsp_year0 %>%
+  filter(variable == "c3_total") %>% 
+  mutate(logitv  = logit(value/100),
+         logitv0 = logit(value0/100),
+         logv0   = log(value0 + 1),
+         sqrtv0  = sqrt(value0))
+
+
+# check transformation
+c3ab_df_p <- ldply(c(xtrans), function(x){
+  f <- formula(paste("I(value + 1) ~ co2 * year +", x))
+  a <- boxcox(f, data = c3ab_df, plotit = FALSE, lambda = seq(-10, 10, .2))
+  p <- a$x[which.max(a$y)]
+  return(data.frame(xt = x, p))
+})
+c3ab_df_p
+  # not improved
+
+
+plot(value ~ log(value0), data = c3ab_df)
+plot(value ~ value0, data = c3ab_df)
+plot(log(value) ~ log(value0), data = c3ab_df)
+plot(logit(value / 10) ~ value0, data = c3ab_df)
+
+c3ab_m1 <- lmer(value ~ co2 * year + log(value0) + (1|block) + (1|ring) + (1|id) + (1|RY), data = c3ab_df)
+c3ab_m2 <- lmer(value ~ co2 * year + log(value0) + (1|ring) + (1|id) + (1|RY), data = c3ab_df)
+model.sel(c3ab_m1, c3ab_m2, extra = "r.squaredGLMM")
+plot(c3ab_m2)
+qqnorm(resid(c3ab_m2))
+qqline(resid(c3ab_m2))
+Anova(c3ab_m2, test.statistic = "F")
+c3ab_m_fin <- c3ab_m2
 
 
 
 
 # CI and post-hoc test ----------------------------------------------------
+
+dom_m_list <- list('Microlaena.stipoides' = mic_m_fin, 
+                   'Cynodon.dactylon'     = cyn_m_fin, 
+                   'C3 abundance'         = c3ab_m_fin,
+                   'C4 abundance'         = c4ab_m_fin)
 
 
 # compute 95 CI and post-hoc test
@@ -87,8 +247,29 @@ lsmeans_list <- llply(dom_m_list, function(x) {
 
 
 # 95% CI
-CI_dd <- ldply(lsmeans_list, function(x) data.frame(summary(x))) 
+CI_ll <- llply(lsmeans_list, function(x) data.frame(summary(x)))
+CI_dd
 
+# reverse transformation and standerdise for 1m x 1m
+sapply(dom_m_list, function(x) x@call)
+  ## Microlaena: logit
+  ## Cynodon: 0.5
+  ## C3: no transforamtion
+  ## C4: 0.5
+
+CI_ll[["Microlaena.stipoides"]] <- CI_ll[["Microlaena.stipoides"]] %>% 
+  mutate_each(funs(r = boot::inv.logit(.)*100/4), lsmean, lower.CL, upper.CL)
+
+CI_ll[["Cynodon.dactylon"]]     <- CI_ll[["Cynodon.dactylon"]] %>% 
+  mutate_each(funs(r = (.^2)/4), lsmean, lower.CL, upper.CL)
+
+CI_ll[["C4 abundance"]]         <- CI_ll[["C4 abundance"]] %>% 
+  mutate_each(funs(r = (.^2)/4), lsmean, lower.CL, upper.CL)
+
+CI_ll[["C3 abundance"]]         <- CI_ll[["C3 abundance"]] %>% 
+  mutate_each(funs(r = ./4), lsmean, lower.CL, upper.CL)
+
+CI_dd <- ldply(CI_ll)
 
 # post-hoc test
 contrast_dd <- ldply(lsmeans_list, function(x) {
@@ -107,20 +288,20 @@ dom_aov_df <- ldply(dom_m_list, function(x) tidy(Anova(x, test.statistic = "F"))
 dom_co2_pval <- dom_aov_df %>%                                                     # get p-values for CO2 term
   filter(term == "co2") %>% 
   mutate(co2star = get_star(p.value)) %>% 
-  select(variable, co2star) %>% 
-  rename(.id = variable)
+  select(.id, co2star) 
 
 
 # merge
 ci_dd <- left_join(CI_dd, contrast_dd, by = c(".id", "year", "co2")) %>% 
-  mutate(year = factor(year, levels = paste0("Year", 0:3)),
-         rlsmean = boot::inv.logit(lsmean) * 25,                                  # reverse transform and standardise for 1mx1m plot
-         rlowerCL = boot::inv.logit(lower.CL) * 25,
-         rupperCL = boot::inv.logit(upper.CL) * 25,
-         plot_lab   = as.character(factor(.id, labels = paste0("(", letters[1:4], ")"))),  # sub-plot label
+  rename(rlsmean = lsmean_r, rlowerCL = lower.CL_r, rupperCL = upper.CL_r) %>% 
+  mutate(year       = factor(year, levels = paste0("Year", 0:3)),
          value_type = "adjusted") %>% 
   left_join(dom_co2_pval, by = ".id") %>%                                         # merge with pvalues for CO2 term
-  mutate(.id = gsub("[.]", " ", .id))
+  mutate(.id        = gsub("[.]", " ", .id),
+         .id        = factor(.id, levels = c("C3 abundance", "Microlaena stipoides", 
+                                             "C4 abundance", "Cynodon dactylon")),
+         plot_lab   = as.character(factor(.id, labels = paste0("(", letters[1:4], ")"))))                 # sub-plot label
+         
 ci_dd$star[is.na(ci_dd$star)] <- ""
 
 
@@ -136,7 +317,11 @@ obs_d <- dominentsp %>%
   ungroup() %>% 
   mutate(year = factor(year, levels = paste0("Year", 0:3)),
          value = value/4,                                    # standardise for 1mx1m plot
-         .id = gsub("[.]", " ", variable),
+         .id = mapvalues(variable, paste0(c("c3", "c4"), "_total"), 
+                         paste(c("C3", "C4"), "abundance")),
+         .id = gsub("[.]", " ", .id),
+         .id = factor(.id, levels = c("C3 abundance", "Microlaena stipoides", 
+                                      "C4 abundance", "Cynodon dactylon")),
          value_type = "observed")
 
 
@@ -148,7 +333,7 @@ plab_d <- ci_dd %>%
   summarise(rr = value[co2 == "elev"] / value[co2 == "amb"] - 1) %>% 
   mutate(rr = ifelse(rr >= 0,
                      paste0("RR= +", format(rr, digits = 0, nsmall = 2), co2star), 
-                     paste0("RR= ", format(rr, digits = 0, nsmall = 2), co2star)))
+                     paste0("RR= ",  format(rr, digits = 0, nsmall = 2), co2star)))
 
 
 # fig
@@ -181,7 +366,7 @@ fig_domspp <- ggplot(ci_dd, aes(x = year, y = rlsmean)) +
                         labels = c("Ambient", expression(eCO[2]))) +
   scale_color_manual(values = c("black", "grey80"),
                      guide = guide_legend(override.aes = list(linetype = "blank",size = 2))) +
-  scale_y_continuous(limits = c(0, 30), breaks = c(0, 10, 20)) +
+  scale_y_continuous(limits = c(0, 40), breaks = c(0, 10, 20, 30)) +
   scale_x_discrete("Year", labels = 0:4, drop = FALSE) +
   
   
@@ -203,7 +388,7 @@ fig_domspp <- ggplot(ci_dd, aes(x = year, y = rlsmean)) +
 fig_domspp
 
 ggsavePP(filename = "output/figs/adjusted_abundance_dominenetSPP", 
-         plot = fig_domspp, width = 4, height = 4.5)
+         plot = fig_domspp, width = 4.5, height = 4.5)
 
 
 # summary table -----------------------------------------------------------
