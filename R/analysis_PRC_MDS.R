@@ -1,7 +1,7 @@
 
 #  Prepare dataframe ------------------------------------------------------
 
-prc_sp   <- log(PlotSumVeg[, SppName] + 1) # log-transformed sp df
+prc_sp   <- log(PlotSumVeg[, SppName_grass] + 1) # log-transformed sp df
 prc_sp$Rosulabryum.billarderi <- NULL # remove moss
 prc_site <- PlotSumVeg %>%                                   # site df 
   select(year, ring, plot, co2) %>% 
