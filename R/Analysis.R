@@ -47,7 +47,7 @@ SppName_grass <- gfspp[gfspp$form == "Grass", 1]
 SppName_forb  <- gfspp[gfspp$form == "Forb", 1]
 
 # plot sum
-PlotSumVeg <- ddply(FullVdf, .(year, ring, plot, block, co2, id), 
+PlotSumVeg <- ddply(FullVdf, .(year, ring, plot, block, co2, id, RY), 
                     function(x) colSums(x[, SppName])) %>% 
   arrange(ring, plot, year)
 
