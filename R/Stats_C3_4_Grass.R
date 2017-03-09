@@ -4,7 +4,8 @@
 # Create C3grass:C4, legume:non-legume and Native:introduced
 C3grassC4 <- veg_FullVdf %>% 
   filter(form == "Grass") %>% 
-  mutate(yval = factor(ifelse(PFG == "c3", "p", "q")))
+  mutate(yval = factor(ifelse(PFG == "c4", "p", "q")))
+
   
 legumeR <- veg_FullVdf %>% 
   filter(form == "Forb") %>% 
@@ -15,14 +16,14 @@ NativeR <- veg_FullVdf %>%
   mutate(yval = factor(ifelse(origin == "native", "p", "q")))
 summary(NativeR)  
 
-dfList <- list('C3vsC4' = C3grassC4, 
+dfList <- list('C3vsC4'      = C3grassC4, 
                'LegvsNonleg' = legumeR, 
-               'NatvsIntr' = NativeR)
+               'NatvsIntr'   = NativeR)
 
 # compute ratios and total number
 PfgRDF <- llply(dfList, function(x){
   x %>% 
-    group_by(year, co2, block, ring, plot, id) %>%
+    group_by(year, co2, block, ring, plot, id, RY) %>%
     summarise(Total = sum(value),
               ratios = sum(value[yval == "p"]/Total)) %>%
     ungroup() # grouping informaiton is not required later
@@ -54,16 +55,21 @@ PfgRDF_year0[[3]]$t_value0 <- sqrt(PfgRDF_year0[[3]]$ratios0)
 
 # Aanlysis ----------------------------------------------------------------
 
+
 # models to be tested
 pfgprop_m_list <- llply(PfgRDF_year0, function(x) {
-  m1 <- lmer(logit(ratios) ~ co2 * year + t_value0 + (1|block) + (1|ring) + (1|id), data = x)
-  m2 <- update(m1, ~ . - (1|block))
+  m1 <- lmer(logit(ratios) ~ co2 * year + t_value0 + (1|block) + (1|ring) + (1|id) + (1|RY), data = x)
+  m2 <- lmer(logit(ratios) ~ co2 * year + t_value0 + (1|ring) + (1|id) + (1|RY), data = x)
   if (AICc(m1) >= AICc(m2)) return(m2) else return(m1)
 })
 
 
+llply(pfgprop_m_list, function(x) Anova(x, test.statistic = "F"))
 
-
+m1 <- pfgprop_m_list[[1]]
+m2 <- update(m1, ~ . -co2:year)
+m3 <- update(m2, ~ . -year)
+Anova(m3, test.statistic = "F")
 
 # model diagnosis ---------------------------------------------------------
 
@@ -116,6 +122,7 @@ contrast_dd <- ldply(lsmeans_list, function(x) {
   mutate(co2  = factor("elev", levels = c("amb", "elev")),
          star = get_star(p.value)) %>% 
   select(.id, year, co2, p.value, star)
+contrast_dd$star[contrast_dd$.id == "C3vsC4"] <- ""  # no co2:year interaction
 
 # CO2 effect
 pfgprop_aov_df <- ldply(pfgprop_m_list, function(x) tidy(Anova(x, test.statistic = "F")),  # Anova result of models

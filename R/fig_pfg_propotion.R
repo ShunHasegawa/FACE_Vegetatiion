@@ -19,7 +19,7 @@ all_pfg_d <- grassprop_d %>%
 
 # modify labels for facet_wrap subplots
 facet_labels <- c(Grass       = "Graminoid",
-                  C3vsC4      = "C[3]~graminoid",
+                  C3vsC4      = "C[4]~graminoid",
                   LegvsNonleg = "Legume",
                   NatvsIntr   = "Native~species")
 
