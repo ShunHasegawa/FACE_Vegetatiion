@@ -1,11 +1,11 @@
 
 #  Prepare dataframe ------------------------------------------------------
 
-prc_sp   <- log(PlotSumVeg[, SppName_grass] + 1) # log-transformed sp df
-prc_sp$Rosulabryum.billarderi <- NULL # remove moss
-prc_site <- PlotSumVeg %>%                                   # site df 
-  select(year, ring, plot, co2) %>% 
-  mutate(id = ring:plot)
+prc_sp       <- log(PlotSumVeg[, SppName_grass] + 1)                  # log-transformed grass sp df
+prc_sp_all   <- log(PlotSumVeg[, SppName] + 1)                  # log-transformed all sp df
+prc_site     <- PlotSumVeg[, c("year", "ring", "plot", "co2", "id")]  # site df 
+
+
 
 
 # analysis ----------------------------------------------------------------
@@ -16,7 +16,7 @@ prc_site <- PlotSumVeg %>%                                   # site df
 
 prc_all <- capscale(prc_sp ~  year * co2 + Condition(year), data = prc_site,  # principal response curve anlsyis
                     distance = "euclidean")
-mds_all <- cmdscale(d = vegdist(prc_sp, method = "bray"), eig = TRUE, k = 2)  # MDS with bray-curtis dissimilarity
+mds_all <- cmdscale(d = vegdist(prc_sp_all, method = "bray"), eig = TRUE, k = 2)  # MDS with bray-curtis dissimilarity
 
 
 # . define permutation ------------------------------------------------------
@@ -247,120 +247,39 @@ res_prc_sp <- data.frame(summary_prc$species,
 
 ### PFG, form table
 pfg_spp_tbl <- veg_FullVdf %>%
-  select(variable, form, PFG, origin) %>% 
+  filter(form == "Grass") %>% 
+  select(variable, PFG) %>% 
   distinct() %>% 
-  mutate(form    = as.character(form),
-         PFG     = as.character(PFG),
-         pfgform = ifelse(form == "Grass", paste0(PFG, form),
-                          ifelse(form == "Forb", PFG, form)),
-         origin  = mapvalues(origin, 
-                             c("native", "naturalised"), 
-                             c("Native", "Introduced"))) %>% 
-  select(variable, pfgform, origin)
-
-
-## Treatment difference in Year3
-
-#### df for Year3
-year3_df        <- PlotSumVeg %>%            
-  filter(year == "Year3") %>% 
-  gather(variable, value, one_of(SppName)) %>% 
-  group_by(variable, co2) %>% 
-  summarise(value = sum(value)) %>% 
-  ungroup() %>% 
-  left_join(pfg_spp_tbl, by = "variable")
-
-### df for treatment difference for each pfg
-year3_pfg_df <- year3_df %>%
-  group_by(pfgform) %>%
-  summarise(rr = sum(value[co2 == "elev"]) / sum(value[co2 == "amb"]) - 1) %>% 
-  ungroup() %>% 
-  rename(type = pfgform)
-
-
-### df for treatment difference for each origin
-year3_orgn_df <- year3_df %>%
-  group_by(origin) %>%
-  summarise(rr = sum(value[co2 == "elev"]) / sum(value[co2 == "amb"]) - 1) %>% 
-  ungroup() %>% 
-  filter(!is.na(origin)) %>% 
-  rename(type = origin)
-
-
-## merge dfs for initial treatment difference
-year3_rr_df <- bind_rows(year3_orgn_df, year3_pfg_df)
+  mutate(PFG = ifelse(PFG == "c3", "C3", "C4")) %>% 
+  select(variable, PFG)
 
 
 ### merge species score and pfg and origin table
-res_pric_sp_d <- res_prc_sp %>%
-  left_join(pfg_spp_tbl, by = "variable")
+res_pric_sp_d <- res_prc_sp %>% 
+  left_join(pfg_spp_tbl, by = "variable") %>% 
+  mutate(year    = factor("Year0", levels = paste0("Year", 0:4)),
+         co2     = factor("Ambient", levels = c("Ambient", "eCO[2]")))
 
 ### save species scores
 unique(res_pric_sp_d$pfgform)
 res_pric_sp_tbl <- res_pric_sp_d %>% 
-  select(variable, pfgform, origin, CAP1) %>%
-  transmute(Species = gsub("[.]", " ", as.character(variable)),
-            PFG = recode(pfgform, 
-                         Non_legume = "Non-legume", c4Grass = "C4_grass",
-                         c3Grass = "C3_grass", legume = "Legume"),
-            origin,
-            PRC.score = round(CAP1, 2)) %>%
+  select(variable, PFG, CAP1) %>%
+  transmute(Species   = gsub("[.]", " ", as.character(variable)),
+            PRC.score = round(CAP1, 2),
+            PFG       = PFG) %>%
   arrange(PRC.score)
 write.csv(res_pric_sp_tbl, "output/table/summary_PRCscore.csv", row.names = FALSE)
 
-### define order of pfgform by median
-pfgform_lev <- res_pric_sp_d %>% 
-  group_by(pfgform) %>% 
-  summarise(med = median(CAP1)) %>% 
-  arrange(-med) %>% 
-  .$pfgform
 
-
-## arrange df for plotting and merge with pfg and orgn
-res_pric_sp_d2 <- res_pric_sp_d %>%
-  gather(measure, value = type, pfgform, origin) %>% 
-  left_join(year3_rr_df, by = "type") %>% 
-  mutate(measure = factor(measure, levels = c("pfgform", "origin"), 
-                          labels = c("PFG", "Origin")),
-         type    = factor(type, levels = c(pfgform_lev, "Native", "Introduced")),  # reorder pfgform by median
-         type    = recode(type, 
-                          legume     = "Legume",
-                          Non_legume = "Forb",
-                          c3Grass    = "C3 graminoid",
-                          c4Grass    = "C4 graminoid"),
-         year    = factor("Year0", levels = paste0("Year", 0:4)),
-         co2     = factor("Ambient", levels = c("Ambient", "eCO[2]"))) %>% 
-  filter(!is.na(type)) 
-
-
-## df for fern; there is only single species for this so it can't generate
-## box-wisker plot
-fm_df <- filter(res_pric_sp_d2, type %in% c("Fern"))
-
-
-## df for plot label
-fig_prc_spp_lab_d <- res_pric_sp_d2 %>% 
-  select(measure) %>% 
-  distinct() %>% 
-  mutate(plot_lab = c("(c)", ""))
 
 
 ## create a plot
-fig_prc_spp_byPfg <- ggplot(res_pric_sp_d2, aes(x = type, y = CAP1)) +
-  facet_grid(. ~ measure, space = "free_x", scale = "free_x") +
+fig_prc_spp_byPfg <- ggplot(res_pric_sp_d, aes(x = PFG, y = CAP1)) +
   geom_hline(yintercept = 0, linetype = "dotted", size = .5) +
-  geom_boxplot(aes(fill = rr), outlier.size = 2, na.rm = TRUE) +
-  geom_jitter(width = .3, shape = 21, fill = "gray", alpha = .5) +
-  geom_point(data = fm_df, aes(fill = rr), size = 4, shape = 21) +
-  scale_fill_gradient2("Response\nratio in\nYear3",
-                       low = 'blue', mid = 'white', high = 'red', midpoint = 0,
-                       limits = c(-.6, .6)) +
+  geom_boxplot(outlier.size = 2, na.rm = TRUE) +
   science_theme_prc +
-  theme(legend.position  = "right",
-        legend.text.align = 0,
-        axis.text.x      = element_text(angle = 45, hjust = 1, vjust = 1, size = 8)) +
-  labs(y = "Species weight", x = NULL) +
-  geom_text(data = fig_prc_spp_lab_d, aes(label = plot_lab), x = -Inf, y = Inf, 
+  labs(y = "Species weight", x = "PFG") +
+  geom_text(aes(label = "(b)"), x = -Inf, y = Inf, 
             hjust = -.5, vjust = 1.5, fontface = "bold")
 fig_prc_spp_byPfg
 
@@ -397,8 +316,7 @@ fig_prc_mds <- ggplot(res_prc_site_ring, aes(x = MDS1, y = MDS2, shape = year,
                      values = c(21, 22, 23, 24)) +
   scale_linetype_manual(name = expression(CO[2]),
                         values = c("solid", "dashed"), 
-                        labels = c("Ambient", expression(eCO[2]))) +
-  annotate("text", x = -Inf, y = Inf, label = "(b)", hjust = -.5, vjust = 1.5, fontface = "bold")
+                        labels = c("Ambient", expression(eCO[2]))) 
 fig_prc_mds
 
 
@@ -421,19 +339,14 @@ prc_figs <- list(fig_prc_site, fig_prc_spp_byPfg, fig_prc_mds)
 
 
 ## define layout
-lo <- matrix(c(1, 1, 3, 3, 3,
-               1, 1, 3, 3, 3,
-               2, 2, 2, 2, 2,
-               2, 2, 2, 2, 2,
-               2, 2, 2, 2, 2), 
-             ncol = 5, byrow = TRUE)
+lo <- matrix(c(1, 1, 2), ncol = 3)
 
 
 ## save as pdf and png
-pdf(file = "output/figs/prc_merge_fig.pdf", width = 6.5, height = 6.5)
-multiplot(plotlist = prc_figs, layout = lo)
+pdf(file = "output/figs/prc_merge_fig.pdf", width = 5.5, height = 3)
+multiplot(plotlist = list(fig_prc_site, fig_prc_spp_byPfg), layout = lo)
 dev.off()
 
-save_png600(file = "output/figs/prc_merge_fig.png", width = 6.5, height = 6.5)
-multiplot(plotlist = prc_figs, layout = lo)
+save_png600(file = "output/figs/prc_merge_fig.png", width = 5.5, height = 3)
+multiplot(plotlist = list(fig_prc_site, fig_prc_spp_byPfg), layout = lo)
 dev.off()
