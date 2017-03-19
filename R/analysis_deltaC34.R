@@ -8,14 +8,14 @@
 # download from HIEv ------------------------------------------------------
 
 
-setToken(tokenfile = "Data/token.txt")
-
-airvar_raw <- downloadTOA5(filename = "FACE_.*_AirVars_.*dat",
-                          topath    = "Data/hievdata/raw_data/",
-                          maxnfiles = 999)
-
-save(airvar_raw, file = "output/Data/FACE_airvar_raw.RData")
-# load("output/Data/FACE_airvar_raw.RData")
+# setToken(tokenfile = "Data/token.txt")
+# 
+# airvar_raw <- downloadTOA5(filename = "FACE_.*_AirVars_.*dat",
+#                           topath    = "Data/hievdata/raw_data/",
+#                           maxnfiles = 999)
+# 
+# save(airvar_raw, file = "output/Data/FACE_airvar_raw.RData")
+load("output/Data/FACE_airvar_raw.RData")
 
 
 
@@ -43,7 +43,12 @@ airvar_day <- airvar_raw %>%
          T = max(27, 1.745 * annual_temp2m  + 11.143)[1]) %>% 
   ungroup() %>% 
   mutate(c3growth = airtemp2m_Min >= -1 & airtemp2m_Max >= 10 & airtemp2m_Max < 24, # c3 growing dates
-         c4growth = airtemp2m_Max >= 21 & airtemp2m_Max < T)                        # c4 growtin dates
+         c4growth = airtemp2m_Max >= 21 & airtemp2m_Max < T & month(Date))                        # c4 growtin dates
+
+head(airvar_day$c4growth)
+
+airvar_day$Date[airvar_day$c4growth]
+
 
 c34growthdate <- airvar_day %>% 
   select(year, Date, ring, c3growth, c4growth, annual_temp2m)
@@ -79,11 +84,19 @@ veg_moist <- FACE_TDR_ProbeDF %>%
 summary(c34growthdate)
 summary(veg_moist)
 
+
+## survey dates: 2012-12-15 (Year0), 2014-1-15 (Year1), 2015-1-30 (Year2), 2016 (Year3)
+
 c34growth_moist <- left_join(veg_moist, c34growthdate) %>% 
   filter(Date >= as.Date("2012-12-15"), Date <= as.Date("2016-2-15")) %>% 
-  mutate(year = ifelse(Date < as.Date("2014-1-15"), "Year1", 
-                       ifelse(Date < as.Date("2015-1-30"), "Year2", "Year3")),
-         plot = factor(plot)) %>% 
+  mutate(year     = ifelse(Date < as.Date("2014-1-15"), "Year1", 
+                           ifelse(Date < as.Date("2015-1-30"), "Year2", "Year3")),
+         plot     = factor(plot)
+         # ,
+         # c4growth = ifelse(c4growth & year == "Year1" & Date <= as.Date("2013-12-31"), TRUE,
+         #                   ifelse(c4growth & year == "Year2" & Date <= as.Date("2014-12-31"), TRUE, 
+         #                          ifelse(c4growth & year == "Year3" & Date <= as.Date("2015-12-31"), TRUE, FALSE)))
+         ) %>% 
   group_by(year, ring, plot) %>%
   summarise_each(funs(c3moist = sum(.[c3growth]),
                       c4moist = sum(.[c4growth]),
@@ -95,9 +108,11 @@ c34growth_moist <- left_join(veg_moist, c34growthdate) %>%
          plot = factor(plot)) %>% 
   left_join(annualtemp)
 
+plot(c4moist ~ totalmoist, data = c34growth_moist)
+
+
 plot(swa_c4 ~ totalmoist, data = c34growth_moist)
 plot(swa_c3 ~ totalmoist, data = c34growth_moist)
-plot(c4moist ~ totalmoist, data = c34growth_moist)
 c34growth_moist %>% 
   gather(key = category, value = moisture, c3moist, c4moist, totalmoist) %>%
   group_by(category, year, ring) %>% 
@@ -107,7 +122,7 @@ ggplot(., aes(x = year, y = moisture, col = category))+
   facet_wrap(~ ring)
 
 
-# merge with C34 ratios df ---------------------------------------------
+# C4/3 proprtion change ---------------------------------------------
 
 c34_prop <- PfgRDF$C3vsC4 %>% 
   arrange(id, year) %>% 
@@ -128,61 +143,357 @@ c34_prop_year0 <- c34_prop %>%
 
 
 
-# . ratios  --------------------------------------------------------------
+# > rat_diff  --------------------------------------------------------------
 names(c34_prop_year0)
 summary(c34_prop_year0)
-ratd_m1 <- lmer(ratios ~ co2 * (swa_c4     + annual_temp2m) + ratios0 + (1|ring) + (1|RY) + (1|id), data = c34_prop_year0)
-ratd_m2 <- lmer(ratios ~ co2 * (c4moist    + annual_temp2m) + ratios0 + (1|ring) + (1|RY) + (1|id), data = c34_prop_year0)
-ratd_m3 <- lmer(ratios ~ co2 * (totalmoist + annual_temp2m) + ratios0 + (1|ring) + (1|RY) + (1|id), data = c34_prop_year0)
+ratd_m1 <- lmer(rat_diff ~ co2 * (swa_c4     + annual_temp2m) + (1|ring) + (1|RY) + (1|id), data = c34_prop_year0)
+ratd_m2 <- lmer(rat_diff ~ co2 * (c4moist    + annual_temp2m) + (1|ring) + (1|RY) + (1|id), data = c34_prop_year0)
+ratd_m3 <- lmer(rat_diff ~ co2 * (totalmoist + annual_temp2m) + (1|ring) + (1|RY) + (1|id), data = c34_prop_year0)
+ratd_init <- list(ratd_m1, ratd_m2, ratd_m3)
+model.sel(llply(ratd_init, function(x) update(x, REML = F)))
+plot(ratd_m2)
+qqnorm(resid(ratd_m2))
+qqline(resid(ratd_m2))
+
+Anova(ratd_m2, test.statistic = "F")
+ratd_m2_full <- dredge(ratd_m2, REML = F)
+ratd_m2_avg <- model.avg(get.models(ratd_m2_full, subset = cumsum(weight) <= .95))
+summary(ratd_m2_avg)
+confint(ratd_m2_avg)
+# delta AICc for null model is only 2.39
 
 
-plot(ratios ~ totalmoist, data = c34_prop_year0, col = co2)
-plot(ratios ~ annual_temp2m, data = c34_prop_year0, col = co2)
-Anova(ratd_m3, test.statistic = "F")
-ratd_m3_full <- dredge(ratd_m3, REML = F)
-ratd_m3_avg <- model.avg(get.models(ratd_m3_full, subset = cumsum(weight) <= .95))
-summary(ratd_m3_avg)
-confint(ratd_m3_avg)
+
+
+# > rat_prop  --------------------------------------------------------------
+names(c34_prop_year0)
+summary(c34_prop_year0)
+ratp_m1 <- lmer(rat_prop ~ co2 * (swa_c4     + annual_temp2m) + (1|ring) + (1|RY) + (1|id), data = c34_prop_year0)
+ratp_m2 <- lmer(rat_prop ~ co2 * (c4moist    + annual_temp2m) + (1|ring) + (1|RY) + (1|id), data = c34_prop_year0)
+ratp_m3 <- lmer(rat_prop ~ co2 * (totalmoist + annual_temp2m) + (1|ring) + (1|RY) + (1|id), data = c34_prop_year0)
+ratp_init <- list(ratp_m1, ratp_m2, ratp_m3)
+model.sel(llply(ratp_init, function(x) update(x, REML = F)))
+plot(ratp_m2)
+qqnorm(resid(ratp_m2))
+qqline(resid(ratp_m2))
+
+Anova(ratp_m2, test.statistic = "F")
+ratp_m2_full <- dredge(ratp_m2, REML = F)
+# delta AICc for null model is only 1.69
+
+
+
+
+# abundance change ------------------------------------------------------------
+
+
+c34sum <- C3grassC4 %>%
+  group_by(year, block, ring, plot, co2, id, PFG, RY) %>% 
+  summarise(value = sum(value)) %>% 
+  spread(key = PFG, value = value) %>% 
+  ungroup() %>% 
+  arrange(id, year) %>%
+  group_by(id) %>%
+  mutate_each(funs(ddiff = . - lag(., 1),             # Year1-Year0 and etc.
+                   dprop = (. + 1) / lag(. + 1, 1)),  # Year1/Year0 and etc.
+                   c3, c4) %>%
+  filter(year != "Year0") %>%
+  left_join(c34growth_moist)
+
+
+
+
+
+# c4 abundance ------------------------------------------------------------
+
+
+
+# > diff ------------------------------------------------------------------
+names(c34sum)
+
+c34sum <- c34sum %>% 
+  ungroup() %>% 
+  mutate(s_c4_ddiff = scale(c4_ddiff)[, 1],
+         s_logmiost = scale(log(totalmoist))[, 1],
+         s_c3       = scale(log(c3))[, 1],
+         s_temp     = scale(annual_temp2m)[, 1])
+
+plot(c4_ddiff ~ sqrt(c4moist), c34sum, col = co2, pch = 19)
+plot(c4_ddiff ~ log(c4moist), c34sum, col = co2, pch = 19)
+plot(c4_ddiff ~ log(totalmoist), c34sum, col = co2, pch = 19)
+plot(c4_ddiff ~ c3, c34sum, col = co2, pch = 19)
+
+
+
+# . random slopes ---------------------------------------------------------
+
+# moisture
+xyplot(c4_ddiff ~ s_logmiost | ring, group = id, data = c34sum, type=c("p", "r"))
+  # this should be included
+xyplot(c4_ddiff ~ s_logmiost | ring, group = ring, data = c34sum, type=c("p", "r"))
+  # this probably is not required
+xyplot(c4_ddiff ~ s_logmiost | ring, group = RY, data = c34sum, type=c("p", "r"))
+  # this should be included 
+xyplot(c4_ddiff ~ s_logmiost | ring, group = year, data = c34sum, type=c("p", "r"))
+
+
+# temperature
+xyplot(c4_ddiff ~ s_temp | ring, group = id, data = c34sum, type=c("p", "r"))
+  # not required
+xyplot(c4_ddiff ~ s_temp | co2, group = ring, data = c34sum, type=c("p", "r"))
+  # not required
+xyplot(c4_ddiff ~ s_temp | co2, group = RY, data = c34sum, type=c("p", "r"))
+  # not run 
+xyplot(c4_ddiff ~ s_temp | co2, group = year, data = c34sum, type=c("p", "r"))
+  # not run 
+
+
+# c3
+xyplot(c4_ddiff ~ s_c3 | co2, group = id, data = c34sum, type=c("p", "r"))
+  # probably not..?
+xyplot(c4_ddiff ~ s_c3 | co2, group = ring, data = c34sum, type=c("p", "r"))
+  # not required
+xyplot(c4_ddiff ~ s_c3 | co2, group = RY, data = c34sum, type=c("p", "r"))
+  # should be included
+xyplot(c4_ddiff ~ s_c3 | co2, group = year, data = c34sum, type=c("p", "r"))
+
+names(c34sum)
+c4d_m0 <- lmer(c4_ddiff ~ co2 * (log(c4moist)    + annual_temp2m + log(c3)) + 
+                 (1|ring) + (1|RY) + (1|id), data = c34sum)
+c4d_m1 <- lmer(c4_ddiff ~ co2 * (log(totalmoist)    + annual_temp2m + c3) + 
+                 (1|ring) + (1+s_logmiost+s_c3|RY) + (1+s_logmiost|id), data = c34sum)
+
+c4d_m2 <- lmer(c4_ddiff ~ co2 * (log(totalmoist)    + annual_temp2m + c3) + 
+                 (1|ring) + (1|RY) + (1|id) + (1|year), data = c34sum)
+
+c4d_m3 <- lmer(c4_ddiff ~ co2 * (log(totalmoist)    + annual_temp2m + c3) + 
+                 (1|RY) + (1|id), data = c34sum)
+anova(c4d_m0, c4d_m1, c4d_m2, c4d_m3)
+
+c4d_m4 <- lmer(c4_ddiff ~ co2 + log(totalmoist) + c3 + 
+                 (1|ring) + (1+s_logmiost|RY) + (1+s_logmiost|id), data = c34sum)
+Anova(c4d_m4, test.statistic = "F")
+confint(c4d_m4, method = "boot")
+
+ # not difference in devience is 7, so decently large. but it causes convergence
+ # problems for model comparisons. so just use the model without random slopes
+plot(c4d_m0)  
+qqnorm(resid(c4d_m0))
+qqline(resid(c4d_m0))
+options(na.action = "na.fail")
+c4d_m0_full   <- dredge(c4d_m0, REML = F, extra = "r.squaredGLMM")
+c4d_m0_nested <- subset(c4d_m0_full, !nested(.))
+
+# delta AICc for the Null model is 5.9
+
+c4d_avg <- model.avg(get.models(c4d_m0_nested, subset = delta <= 2))
+c4d_bm  <- get.models(c4d_m0_nested, subset = 1)[[1]] 
+# c4d_avg <- model.avg(get.models(c4d_m4_full, subset = cumsum(weight) <= .95))
+summary(c4d_avg)
+confint(c4d_avg)
+confint(c4d_bm, method = "boot")
+
+
+
 
 # . predicted values ------------------------------------------------------
 
-sitedf <- c34_prop_year0 %>% 
+sitedf <- c34sum %>% 
   select(ring, id, RY, co2) %>% 
   ungroup() %>% 
   distinct()
-# moistval <- seq(min(c34_prop_year0$totalmoist), max(c34_prop_year0$totalmoist), length.out = 1000)
-# tempval <- quantile(c34_prop_year0$annual_temp2m)[4]
+moistval <- seq(min(c34sum$c4moist), max(c34sum$c4moist), length.out = 1000)
+c3val    <- median(c34sum$c3)
 
-moistval <- quantile(c34_prop_year0$totalmoist)[4]
-tempval  <- seq(min(c34_prop_year0$annual_temp2m), max(c34_prop_year0$annual_temp2m), length.out = 1000)
+
+# .. prepare df -----------------------------------------------------------
+
+
+# c3 is median
+c4d_m0_preddf <- ldply(1, function(x){
+  
+  newdf       <- ldply(1:10, function(y){ 
+    cbind(sitedf, 
+          c4moist  = moistval[sample(1000, nrow(sitedf), replace = TRUE)])
+  })
+  
+  newdf <- newdf %>% 
+    mutate(c3      = c3val[x])
+  c4d_m0_pred    <- predict(c4d_avg, newdf, se.fit = TRUE, re.form = NA)
+  c4d_m0_pred_df <- cbind(c4d_m0_pred, newdf) %>% 
+    mutate(lwr = fit - se.fit * 1.96,
+           upr = fit + se.fit * 1.96) 
+  return(c4d_m0_pred_df)
+})
+
+c4d_p <- ggplot(c4d_m0_preddf, aes(x = log(c4moist), y = fit, col = co2)) +
+  geom_line()+
+  geom_line(aes(y = lwr), linetype = "dashed") +
+  geom_line(aes(y = upr), linetype = "dashed") +
+  geom_hline(yintercept = 0, linetype = "dashed")+
+  science_theme
+# +
+#   ylim(c(-50, 40))
+c4d_p
+
+
+# against C3
+moistval <- median(c34sum$c4moist)
+c3val    <- seq(min(c34sum$c3), max(c34sum$c3), length.out = 1000)
+
+c4d_m0_preddf <- ldply(1, function(x){
+  
+  newdf       <- ldply(1:10, function(y){ 
+    cbind(sitedf, 
+          c3  = c3val[sample(1000, nrow(sitedf), replace = TRUE)])
+  })
+  
+  newdf <- newdf %>% 
+    mutate(c4moist      = moistval[x])
+  c4d_m0_pred    <- predict(c4d_avg, newdf, se.fit = TRUE, re.form = NA)
+  c4d_m0_pred_df <- cbind(c4d_m0_pred, newdf) %>% 
+    mutate(lwr = fit - se.fit * 1.96,
+           upr = fit + se.fit * 1.96) 
+  return(c4d_m0_pred_df)
+})
+
+c4d_p2 <- ggplot(c4d_m0_preddf, aes(x = log(c3), y = fit, col = co2)) +
+  geom_line()+
+  geom_line(aes(y = lwr), linetype = "dashed") +
+  geom_line(aes(y = upr), linetype = "dashed") +
+  geom_hline(yintercept = 0, linetype = "dashed")+
+  science_theme
+# +
+#   ylim(c(-50, 40))
+c4d_p2
+
+
+
+
+# c4 prop -----------------------------------------------------------------
+
+names(c34sum)
+plot(c4_dprop ~ log(c4moist), data = c34sum, col = co2, pch = 19)
+plot(log(c4_dprop) ~ log(c4moist), data = c34sum, col = co2, pch = 19)
+plot(c4_ddiff ~ sqrt(c4moist), data = c34sum, col = co2, pch = 19)
+plot(log(c4_dprop) ~ annual_temp2m, data = c34sum, col = co2, pch = 19)
+c4p_m0 <- lmer(c4_dprop ~ co2 * (log(c4moist)    + annual_temp2m) + 
+                 (1|ring) + (1|RY) + (1|id), data = c34sum)
+Anova(c4p_m0, test.statistic = "F")
+dredge(c4p_m0, REML = F)
+
+#
+
+
+
+
+
+
+
+
+
+
 
 newdf    <- ldply(1:10, function(x) 
   cbind(sitedf, 
-        annual_temp2m  = tempval[sample(1000, nrow(sitedf), replace = TRUE)])) %>% 
-  mutate(totalmoist = moistval,
-         ratios0       = mean(c34_prop_year0$ratios0))
-
-ratd_m3_pred <- predict(ratd_m3, newdf, se.fit = TRUE, re.form = NA)
-ratd_m3_pred_df <- cbind(ratd_m3_pred, newdf) %>% 
+        totalmoist  = moistval[sample(1000, nrow(sitedf), replace = TRUE)])) %>% 
+  mutate(c3 = quantile(c34sum$c3)[3])
+c4d_m4_pred <- predict(c4d_avg, newdf, se.fit = TRUE, re.form = NA)
+c4d_m4_pred_df <- cbind(c4d_m4_pred, newdf) %>% 
   mutate(lwr = fit - se.fit * 1.96,
          upr = fit + se.fit * 1.96) 
-ggplot(ratd_m3_pred_df, aes(x = annual_temp2m, y = fit, col = co2)) +
+p1_c3_100 <- ggplot(c4d_m4_pred_df, aes(x = log(totalmoist), y = fit, col = co2)) +
   geom_line()+
   geom_line(aes(y = lwr), linetype = "dashed") +
-  geom_line(aes(y = upr), linetype = "dashed")
+  geom_line(aes(y = upr), linetype = "dashed") +
+  geom_hline(yintercept = 0, linetype = "dashed")+
+  science_theme +
+  ylim(c(-50, 40))
+
+
+newdf    <- ldply(1:10, function(x) 
+  cbind(sitedf, 
+        totalmoist  = moistval[sample(1000, nrow(sitedf), replace = TRUE)])) %>% 
+  mutate(c3 = quantile(c34sum$c3)[5])
+
+c4d_m4_pred <- predict(c4d_avg, newdf, se.fit = TRUE, re.form = NA)
+c4d_m4_pred_df <- cbind(c4d_m4_pred, newdf) %>% 
+  mutate(lwr = fit - se.fit * 1.96,
+         upr = fit + se.fit * 1.96) 
+p1_c3_139 <- ggplot(c4d_m4_pred_df, aes(x = log(totalmoist), y = fit, col = co2)) +
+  geom_line()+
+  geom_line(aes(y = lwr), linetype = "dashed") +
+  geom_line(aes(y = upr), linetype = "dashed") +
+  geom_hline(yintercept = 0, linetype = "dashed") +
+  science_theme +
+  ylim(c(-50, 40))
+
+p1_m <- cbind(ggplotGrob(p1_c3_15), ggplotGrob(p1_c3_100), ggplotGrob(p1_c3_139))
+grid.newpage()
+grid.draw(p1_m)
+
+
+# > prop ------------------------------------------------------------------
+
+names(c34sum)
+
+c4p_m1 <- lmer(c4_dprop ~ co2 * (c4moist    + annual_temp2m) + (1|ring) + (1|RY) + (1|id), data = c34sum)
+c4p_m2 <- lmer(c4_dprop ~ co2 * (swa_c4     + annual_temp2m) + (1|ring) + (1|RY) + (1|id), data = c34sum)
+c4p_m3 <- lmer(c4_dprop ~ co2 * (totalmoist + annual_temp2m) + (1|ring) + (1|RY) + (1|id), data = c34sum)
+c4p_m4 <- lmer(c4_dprop ~ co2 * (log(c4moist)    + annual_temp2m) + (1|ring) + (1|RY) + (1|id), data = c34sum)
+c4p_m5 <- lmer(c4_dprop ~ co2 * (log(swa_c4)     + annual_temp2m) + (1|ring) + (1|RY) + (1|id), data = c34sum)
+c4p_m6 <- lmer(c4_dprop ~ co2 * (log(totalmoist) + annual_temp2m) + (1|ring) + (1|RY) + (1|id), data = c34sum)
+c4p_init <- list(c4p_m1, c4p_m2, c4p_m3, c4p_m4, c4p_m5, c4p_m6)
+model.sel(llply(c4p_init, function(x) update(x, REML = F)))
+
+Anova(c4p_m5, test.statistic = "F")
+
+plot(c4p_m5)
+qqnorm(resid(c4p_m5))
+qqline(resid(c4p_m5))
+c4p_m5_full     <- dredge(c4p_m5, REML = F)
+# delta AICc for the Null model is only 0.05
+
+
+
+
+
+# C3 abundance ------------------------------------------------------------
+
+
+
+# > diff ------------------------------------------------------------------
+
+c3d_m1 <- lmer(c3_ddiff ~ co2 * (c3moist    + annual_temp2m) + (1|ring) + (1|RY) + (1|id), data = c34sum)
+c3d_m2 <- lmer(c3_ddiff ~ co2 * (swa_c3     + annual_temp2m) + (1|ring) + (1|RY) + (1|id), data = c34sum)
+c3d_m3 <- lmer(c3_ddiff ~ co2 * (totalmoist + annual_temp2m) + (1|ring) + (1|RY) + (1|id), data = c34sum)
+c3d_m4 <- lmer(c3_ddiff ~ co2 * (log(c3moist)    + annual_temp2m) + (1|ring) + (1|RY) + (1|id), data = c34sum)
+c3d_m5 <- lmer(c3_ddiff ~ co2 * (log(swa_c3)     + annual_temp2m) + (1|ring) + (1|RY) + (1|id), data = c34sum)
+c3d_m6 <- lmer(c3_ddiff ~ co2 * (log(totalmoist) + annual_temp2m) + (1|ring) + (1|RY) + (1|id), data = c34sum)
+c3d_init <- list(c3d_m1, c3d_m2, c3d_m3, c3d_m4, c3d_m5, c3d_m6)
+model.sel(llply(c3d_init, function(x) update(x, REML = F)))
+Anova(c3d_m3, test.statistic = "F")
+
+plot(c3d_m3)
+qqnorm(resid(c3d_m3))
+qqline(resid(c3d_m3))
+
+c3d_m3_full <- dredge(c3d_m3, REML = F)
+# delta AICc for the Null model is onlly 1.19
+
+
+c3d_m3_avg <- model.avg(get.models(c3d_m3_full, subset = delta < 2))
+summary(c3d_avg)
+
+
+# . predicted values ---------------------------------------------------------------
+
+
+
+
 names(ratd_m3_pred_df)
 
-summary(ratd_m1)
-summary(c34_prop_year0)
 
-
-range(PfgRDF$C3vsC4$ratios)
-test <- sample(10)
-test - lag(test, 1)
-test/lag(test, 1)
-  
-
-            
     rat_diff = c(NA, diff(ratios)),
          rat_prop = (. + 1) / lag(. + 1))%>% 
   
@@ -247,18 +558,6 @@ boxplot(dratios~co2*year, data = c34_prop)
 #   mutate(yval = factor(ifelse(PFG == "c4", "p", "q")))
 
 names(C3grassC4)
-c34sum <- C3grassC4 %>%
-  group_by(year, block, ring, plot, co2, id, PFG, RY) %>% 
-  summarise(value = sum(value)) %>% 
-  spread(key = PFG, value = value) %>% 
-  ungroup() %>% 
-  mutate(c4r = c4 / (c3 + c4)) %>% 
-  arrange(id, year) %>%
-  group_by(id) %>%
-  mutate_each(funs(delta = c(NA, diff(.))), c3, c4, c4r) %>%
-  # mutate_each(funs(delta = (. + 1) / lag(. + 1) ), c3, c4) %>%
-  filter(year != "Year0") %>%
-  left_join(c34growth_moist)
 
 summary(c34sum)
 plot(c4_delta ~ c4moist, data = c34sum, col = co2)
