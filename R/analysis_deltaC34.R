@@ -251,19 +251,26 @@ summary(c4d_m0)
 dredge(c4d_m0, REML = F)
 # id and rind doesn't explain variance
 
-c4d_m1 <- lmer(s_c4_ddiff ~ co2*(s_logmiost+s_temp)+(0+s_logmiost+s_temp|ring)+(0+s_logmiost|id)+(1+s_logmiost|RY), data = c34sum)
-# RY doen't explain any variation. so remove
-c4d_m2 <- lmer(s_c4_ddiff ~ co2*(s_logmiost+s_temp)+(0+s_logmiost+s_temp|ring)+(0+s_logmiost|id), data = c34sum)
+c4d_m1  <- lmer(s_c4_ddiff ~ co2*(s_logmiost+s_temp)+(0+s_logmiost+s_temp|id)+(1+s_logmiost|RY), data = c34sum)
+r.squaredGLMM(c4d_m0)
+r.squaredGLMM(c4d_m1)
+summary(c4d_m1)
+anova(c4d_m0, c4d_m1)
+# s_logmiost for RY doen't explain any variation. so remove
+c4d_m2 <- lmer(s_c4_ddiff ~ co2*(s_logmiost+s_temp)+(0+s_logmiost+s_temp|id)+(1|RY), data = c34sum)
 summary(c4d_m2)
 plot(c4d_m2)
 qqnorm(resid(c4d_m2))
 qqline(resid(c4d_m2))
 r.squaredGLMM(c4d_m2)
-c4d_m2full <- dredge(c4d_m2, REML = F)
+c4d_m2full <- dredge(c4d_m2, REML = F, extra = "r.squaredGLMM")
+c4d_bs <- get.models(c4d_m2full, subset = 1)[[1]]
+Anova(c4d_bs, test.statistic = "F")
 # model averageing
 c4d_m2avg <- model.avg(get.models(c4d_m2full, subset = delta <= 4))
 summary(c4d_m2avg)
-coef(c4d_m2avg)
+coefTable(c4d_m2avg, full = TRUE)
+confint(c4d_m2avg, full = TRUE)
 confint(c4d_m2avg)
 
 
@@ -290,7 +297,7 @@ c4d_m0_preddf <- ldply(1, function(x){
   
   newdf <- newdf %>% 
     mutate(s_temp      = tempval[x])
-  c4d_m0_pred    <- predict(c4d_m2avg, newdf, se.fit = TRUE, re.form = NA)
+  c4d_m0_pred    <- predict(c4d_m2avg, newdf, se.fit = TRUE, re.form = NA, full = TRUE)
   c4d_m0_pred_df <- cbind(c4d_m0_pred, newdf) %>% 
     mutate(lwr = fit - se.fit * 1.96,
            upr = fit + se.fit * 1.96) 
@@ -339,39 +346,21 @@ xyplot(s_c3_ddiff ~ s_temp | ring, group = id, data = c34sum, type=c("p", "r"))
 xyplot(s_c3_ddiff ~ s_temp, group = ring, data = c34sum, type=c("p", "r"))
 
 c3d_m0 <- lmer(s_c3_ddiff ~ co2 * (s_logmiost+s_temp) + (1|ring) + (1|RY) + (1|id), data = c34sum)
-c3d_m1 <- lmer(s_c3_ddiff ~ co2 * (s_logmiost+s_temp) + (1+s_logmiost+s_temp|ring)
-               + (1+s_logmiost|RY) + (1+s_logmiost+s_temp|id), data = c34sum)
+summary(c3d_m0)
+c3d_m1 <- lmer(s_c3_ddiff ~ co2 * (s_logmiost+s_temp) + (1|ring)+(1+s_logmiost+s_temp|RY)+(1+s_logmiost+s_temp|id), data = c34sum)
 # too many parameters
-c3d_m2 <- lmer(s_c3_ddiff ~ co2 * (s_logmiost+s_temp) + (1+s_logmiost+s_temp|ring)
-               + (1+s_logmiost|RY) + (0+s_logmiost+s_temp|id), data = c34sum)
+c3d_m2 <- lmer(s_c3_ddiff ~ co2 * (s_logmiost+s_temp) + (1|ring)+(1+s_logmiost+s_temp|RY)+(0+s_logmiost+s_temp|id), data = c34sum)
 
+plot(c3d_m2)
+qqnorm(resid(c3d_m2))
+qqline(resid(c3d_m2))
 summary(c3d_m2)
+anova(c3d_m0, c3d_m2)
 c3d_m2full <- dredge(c3d_m2, REML = F)
-# convergence issue. so simplify
-
-# remove intercept for RY
-c3d_m3 <- lmer(s_c3_ddiff ~ co2 * (s_logmiost+s_temp) + (1+s_logmiost+s_temp|ring)
-               + (0+s_logmiost|RY) + (0+s_logmiost+s_temp|id), data = c34sum)
-c3d_m3full <- dredge(c3d_m3, REML = F)
-summary(c3d_m3)
-
-
-# remove s_temp in id
-c3d_m4 <- lmer(s_c3_ddiff ~ co2 * (s_logmiost+s_temp) + (1+s_logmiost+s_temp|ring)
-               + (0+s_logmiost|RY) + (0+s_logmiost|id), data = c34sum)
-summary(c3d_m4)
-c3d_m4full <- dredge(c3d_m4, REML = F)
-
-# rmeove intercept for ring
-c3d_m5 <- lmer(s_c3_ddiff ~ co2 * (s_logmiost+s_temp) + (0+s_logmiost+s_temp|ring)
-               + (0+s_logmiost|RY) + (0+s_logmiost|id), data = c34sum)
-summary(c3d_m5)
-r.squaredGLMM(c3d_m5)
-c3d_m5full <- dredge(c3d_m5, REML = F)
-c3d_m5avg <- model.avg(get.models(c3d_m5full, subset = delta <= 4))
+c3d_m2avg <- model.avg(get.models(c3d_m2full, subset = delta <= 4))
 summary(c3d_m5avg)
-confint(c3d_m5avg)
-coef(c3d_m5avg)
+confint(c3d_m5avg, full = TRUE)
+coef(c3d_m5avg, full = TRUE)
 
 ggplot(c34sum, aes(x = s_logmiost, y = s_c3_ddiff, col = ring))+
   geom_point()+
