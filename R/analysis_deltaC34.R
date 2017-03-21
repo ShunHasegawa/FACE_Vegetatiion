@@ -247,31 +247,134 @@ xyplot(s_c4_ddiff ~ s_temp, group = year, data = c34sum, type=c("p", "r"))      
 
 names(c34sum)
 c4d_m0 <- lmer(s_c4_ddiff ~ co2*(s_logmiost+s_temp)+(1|ring)+(1|RY)+(1|id), data = c34sum)
+c4d_m1 <- lmer(s_c4_ddiff ~ co2*(s_logmiost+s_temp)+(1|RY), data = c34sum)
+c4d_m1 <- lmer(s_c4_ddiff ~ co2+s_logmiost+(1|RY), data = c34sum)
+# c4d_m1 <- lmer(s_c4_ddiff ~ co2*(s_logmiost+s_temp)+(1+s_logmiost|ring)+(1+s_logmiost|year)+(1|RY)+(1|id), data = c34sum)
+anova(c4d_m0, c4d_m1)
+confint(c4d_m1, method = "boot")
+
+c4d_m0 <- lmer(s_c4_ddiff ~ co2*(s_logmiost+s_temp)+(1|ring)+(1|RY)+(1|id), data = c34sum)
+c4d_m0 <- lmer(s_c4_ddiff ~ co2+s_logmiost+(1|ring)+(1|RY)+(1|id), data = c34sum)
+
+c4d_m0 <- lmer(s_c4_ddiff ~ 1+(1+s_logmiost|ring)+(1+s_logmiost|year), data = c34sum)
+# c4d_m1 <- lmer(s_c4_ddiff ~ 1+(1|ring)+(1+s_logmiost|year), data = c34sum)
+c4d_m2 <- lmer(s_c4_ddiff ~ 1+(1+s_logmiost|ring)+(1|year), data = c34sum)
+c4d_m3 <- lmer(s_c4_ddiff ~ 1+(1|ring)+(1|year), data = c34sum)
+
+c4d_m2 <- lmer(s_c4_ddiff ~ co2*s_logmiost+(1|ring/id), data = c34sum)
+c4d_m3 <- lmer(s_c4_ddiff ~ co2*s_logmiost+(1+s_logmiost|ring/id), data = c34sum)
+anova(c4d_m2, c4d_m3)
+
+
+c4d_m4 <- lmer(s_c4_ddiff ~ 1+(1+s_logmiost|year/ring), data = c34sum)
+summary(c4d_m3)
+summary(c4d_m4)
+
+ggplot(c34sum, aes(x = s_logmiost, y = s_c4_ddiff))+
+  geom_point()+
+  geom_smooth(method = "lm", se = FALSE, aes(group = RY))+
+  geom_smooth(method = "lm", se = FALSE, col = "red", size = 2)
+
+ggplot(c34sum, aes(x = s_logmiost, y = s_c4_ddiff))+
+  geom_point()+
+  geom_smooth(method = "lm", se = FALSE, aes(group = id), col = "blue")+
+  geom_smooth(method = "lm", se = FALSE, aes(group = RY), col = "brown")+
+  geom_smooth(method = "lm", se = FALSE, col = "red", size = 2)
+
+rand_is_RY <- ddply(c34sum, .(year), function(x){
+  slope <- coef(lm(s_c4_ddiff ~ s_logmiost, data = x))[2]
+  inter <- mean(x$s_c4_ddiff)
+  return(data.frame(slope, inter))
+  })
+plot(slope~inter, data = rand_is_RY)
+boxplot(rand_is_RY$slope)
+var(rand_is_RY$slope)
+cor(rand_is_RY$inter, rand_is_RY$slope)
+
+summary(c4d_m0)
+r.squaredGLMM(c4d_m0)
+r.squaredGLMM(c4d_m3)
+
+Anova(c4d_m0, test.statistic = "F")
 summary(c4d_m0)
 dredge(c4d_m0, REML = F)
-# id and rind doesn't explain variance
+# c4d_m1 <- lmer(s_c4_ddiff ~ co2*(s_logmiost+s_temp)+(1+s_logmiost|ring)+(1+s_logmiost|year)+(1|id)+(1|RY), data = c34sum)
 
-c4d_m1  <- lmer(s_c4_ddiff ~ co2*(s_logmiost+s_temp)+(0+s_logmiost+s_temp|id)+(1+s_logmiost|RY), data = c34sum)
-r.squaredGLMM(c4d_m0)
-r.squaredGLMM(c4d_m1)
+# c4d_m1 <- lmer(s_c4_ddiff ~ co2+s_logmiost+(1|ring)+(1|year)+(1|id)+(1|RY), data = c34sum)
+# c4d_m1 <- lmer(s_c4_ddiff ~ co2+s_logmiost+(1|ring)+(1|year)+(1|RY), data = c34sum)
+# c4d_m1 <- lmer(s_c4_ddiff ~ co2+s_logmiost+(1|ring)+(1|id)+(1|year), data = c34sum)
+# c4d_m1 <- lmer(s_c4_ddiff ~ co2+s_logmiost+(1|ring)+(1|year)+(1|RY)+(1|id), data = c34sum)
+# c4d_m1 <- lmer(s_c4_ddiff ~ co2+s_logmiost+(1|year)+(1|RY), data = c34sum)
+Anova(c4d_m1, test.statistic = "F")
+plot(c4d_m1)
+qqnorm(resid(c4d_m1))
+qqline(resid(c4d_m1))
+confint(c4d_m1, method = "boot", level = .9)
 summary(c4d_m1)
-anova(c4d_m0, c4d_m1)
-# s_logmiost for RY doen't explain any variation. so remove
-c4d_m2 <- lmer(s_c4_ddiff ~ co2*(s_logmiost+s_temp)+(0+s_logmiost+s_temp|id)+(1|RY), data = c34sum)
+
+
+summary(c4d_m1)
+a <- dredge(c4d_m1, REML = F, extra = "r.squaredGLMM")
+aavg <- model.avg(get.models(a, subset = delta <= 2))
+confint(aavg, full = TRUE)
+
+
+Anova(c4d_m1, test.statistic = "F")
+c4d_m1 <- lmer(s_c4_ddiff ~ co2*(s_logmiost+s_temp)  +(1+s_logmiost|ring)+(1|RY)+(1|id), data = c34sum, REML = F)
+
+
+c4d_m1 <- lmer(s_c4_ddiff ~ co2*(s_logmiost+s_temp)  +(1+s_logmiost|ring)+(1+s_logmiost|year), data = c34sum, REML = F)
+
+c4d_m1 <- lmer(s_c4_ddiff ~ co2*(s_logmiost+s_temp)  +(1+s_logmiost|ring)+(1+s_logmiost|year)+(1+s_logmiost|id), data = c34sum, REML = F)
+c4d_m2 <- lmer(s_c4_ddiff ~ co2*s_logmiost  +(1+s_logmiost|ring)+(1+s_logmiost|year)+(1|id), data = c34sum, REML = F)
+c4d_m2 <- lmer(s_c4_ddiff ~ co2+s_logmiost  +(1+s_logmiost|id)+(1+s_logmiost|year), data = c34sum, REML = F)
 summary(c4d_m2)
-plot(c4d_m2)
-qqnorm(resid(c4d_m2))
-qqline(resid(c4d_m2))
-r.squaredGLMM(c4d_m2)
-c4d_m2full <- dredge(c4d_m2, REML = F, extra = "r.squaredGLMM")
-c4d_bs <- get.models(c4d_m2full, subset = 1)[[1]]
-Anova(c4d_bs, test.statistic = "F")
-# model averageing
-c4d_m2avg <- model.avg(get.models(c4d_m2full, subset = delta <= 4))
-summary(c4d_m2avg)
-coefTable(c4d_m2avg, full = TRUE)
-confint(c4d_m2avg, full = TRUE)
-confint(c4d_m2avg)
+dredge(c4d_m2, REML = F)
+Anova(update(c4d_m2, REML = T), test.statistic = "F")
+
+ggplot(c34sum, aes(x = s_logmiost, y = s_c4_ddiff))+
+  geom_point()+
+  geom_smooth(aes(group = ring),method = "lm", se = FALSE)+
+  geom_smooth(method = "lm", se = FALSE, col = "red", size = 2)+
+  facet_grid(. ~ co2)
+
+ggplot(c34sum, aes(x = s_logmiost, y = s_c4_ddiff))+
+  geom_point()+
+  geom_smooth(aes(group = year),method = "lm", se = FALSE)+
+  geom_smooth(method = "lm", se = FALSE, col = "red", size = 2)+
+  facet_grid(. ~ co2)
+
+ggplot(c34sum, aes(x = s_logmiost, y = s_c4_ddiff))+
+  geom_point()+
+  geom_smooth(aes(group = id),method = "lm", se = FALSE)+
+  geom_smooth(method = "lm", se = FALSE, col = "red", size = 2)+
+  facet_grid(. ~ co2)
+
+c4d_m1 <- lmer(s_c4_ddiff ~ co2*(s_logmiost+s_temp)  +(1|ring)+(1|RY)+(1|id), data = c34sum, REML = F)
+c4d_m2 <- lmer(s_c4_ddiff ~ co2+s_logmiost+s_temp+co2:s_logmiost+(1|ring)+(1|RY)+(1|id), data = c34sum, REML = F)
+c4d_m3 <- lmer(s_c4_ddiff ~ co2+s_logmiost+s_temp+    co2:s_temp+(1+s_logmiost|ring)+(1|RY)+(1|id), data = c34sum, REML = F)
+c4d_m4 <- lmer(s_c4_ddiff ~ co2+s_logmiost+s_temp+(1+s_logmiost|ring)+(1|RY)+(1|id), data = c34sum, REML = F)
+?dredge
+
+options(na.action = "na.fail")
+af <- dredge(c4d_m1, fixed = c("s_logmiost", "s_temp", "co2"), REML = F)
+ab <- get.models(af, subset = 1)[[1]]
+summary(ab)
+confint(ab, method = "boot", level = .9)
+
+model.sel(c4d_m1, c4d_m2, c4d_m3)
+
+
+summary(c4d_m0)
+c4d_m0full <- dredge(c4d_m0, REML = F)
+c4d_m0bsm <- get.models(c4d_m0full, subset = 1)[[1]]
+c4d_m0abg <- model.avg(get.models(c4d_m0full, subset = delta <=2))
+summary(c4d_m0abg)
+Anova(c4d_m0bsm, test.statistic = "F")
+coef(c4d_m0abg, full = TRUE)
+confint(c4d_m0abg, full = TRUE, level = .9)
+
+
 
 
 # . predicted values ------------------------------------------------------
@@ -297,7 +400,7 @@ c4d_m0_preddf <- ldply(1, function(x){
   
   newdf <- newdf %>% 
     mutate(s_temp      = tempval[x])
-  c4d_m0_pred    <- predict(c4d_m2avg, newdf, se.fit = TRUE, re.form = NA, full = TRUE)
+  c4d_m0_pred    <- predict(c4d_m0abg, newdf, se.fit = TRUE, re.form = NA, full = TRUE)
   c4d_m0_pred_df <- cbind(c4d_m0_pred, newdf) %>% 
     mutate(lwr = fit - se.fit * 1.96,
            upr = fit + se.fit * 1.96) 
@@ -347,25 +450,21 @@ xyplot(s_c3_ddiff ~ s_temp, group = ring, data = c34sum, type=c("p", "r"))
 
 c3d_m0 <- lmer(s_c3_ddiff ~ co2 * (s_logmiost+s_temp) + (1|ring) + (1|RY) + (1|id), data = c34sum)
 summary(c3d_m0)
-c3d_m1 <- lmer(s_c3_ddiff ~ co2 * (s_logmiost+s_temp) + (1|ring)+(1+s_logmiost+s_temp|RY)+(1+s_logmiost+s_temp|id), data = c34sum)
-# too many parameters
-c3d_m2 <- lmer(s_c3_ddiff ~ co2 * (s_logmiost+s_temp) + (1|ring)+(1+s_logmiost+s_temp|RY)+(0+s_logmiost+s_temp|id), data = c34sum)
-
-plot(c3d_m2)
-qqnorm(resid(c3d_m2))
-qqline(resid(c3d_m2))
-summary(c3d_m2)
-anova(c3d_m0, c3d_m2)
-c3d_m2full <- dredge(c3d_m2, REML = F)
-c3d_m2avg <- model.avg(get.models(c3d_m2full, subset = delta <= 4))
-summary(c3d_m5avg)
-confint(c3d_m5avg, full = TRUE)
-coef(c3d_m5avg, full = TRUE)
+c3d_m1 <- lmer(s_c3_ddiff ~ co2 * (s_logmiost+s_temp) + (1+s_logmiost|ring)+(1|RY)+(1|id), data = c34sum)
+r.squaredGLMM(c3d_m0)
+r.squaredGLMM(c3d_m1)
+anova(c3d_m0, c3d_m1)
+c3d_m1full <- dredge(c3d_m1, REML = F)
+plot(c3d_m1)
+qqnorm(resid(c3d_m1))
+qqline(resid(c3d_m1))
+summary(c3d_m1)
+c3d_m1avg <- model.avg(get.models(c3d_m1full, subset = delta <= 2))
+summary(c3d_m1avg)
+confint(c3d_m1avg, full = TRUE)
+coef(c3d_m1avg, full = TRUE)
 
 ggplot(c34sum, aes(x = s_logmiost, y = s_c3_ddiff, col = ring))+
   geom_point()+
   geom_smooth(method = "lm", se = FALSE)
 
-ggplot(c34sum, aes(x = s_temp, y = s_c3_ddiff, col = ring))+
-  geom_point()+
-  geom_smooth(method = "lm", se = FALSE)
