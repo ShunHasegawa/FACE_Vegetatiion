@@ -959,3 +959,9 @@ se <- function(...){
 get_n <- function(x){
   sum(!is.na(x))
 }
+
+
+# rverse transform z-transformed variables
+rev_ztrans <- function(x, xsd, xmean){
+  x * xsd + xmean
+}
