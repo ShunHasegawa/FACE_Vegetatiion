@@ -81,7 +81,7 @@ llply(list(m1, m2), function(x) Anova(x, test.statistic = "F"))
 # CI and post-hoc test ----------------------------------------------------
 
 
-# compute 95 CI and post-hoc test (onely need grass and forb species)
+# compute 95 CI and post-hoc test (only need grass and forb species)
 nl <- names(div_m_list)
 div_m_list <- div_m_list[grepl("grass|forb", nl)]  # extract grass and forb species
 
@@ -117,8 +117,8 @@ ci_dd <- left_join(CI_dd, contrast_dd, by = c(".id", "year", "co2")) %>%
          year       = factor(year, levels = paste0("Year", 0:3)),
          value_type = "adjusted",
          plot_lab   = mapvalues(variable, c("H", "J", "S"), 
-                                paste0("(", letters[1:3], ")"))) %>%  # sub-plot label
-  left_join(div_co2_pval, by = ".id")                                           # merge with pvalues for CO2 term
+                                paste0("(", letters[1:3], ")"))) %>%             # sub-plot label
+  left_join(div_co2_pval, by = ".id")                                            # merge with pvalues for CO2 term
 ci_dd$star[is.na(ci_dd$star)]            <- ""                                   # turn NA to ""
 ci_dd$star[ci_dd$.id == "grass_spp.S"]   <- ""                                   # no CO2xTime interaction, so don't show post-hoc results
 ci_dd$star[ci_dd$.id == "grass_spp.J"]   <- ""                                   # no CO2xTime interaction, so don't show post-hoc results
