@@ -1,7 +1,7 @@
 ---
 title: "EucFACE understorey vegetation -Summary of stats-"
 author: "Shun Hasegawa"
-date: "28 November 2016"
+date: "22 March 2016"
 output:
   html_document:
     toc: true
@@ -12,6 +12,8 @@ library(pander)
 library(ggplot2)
 library(grid)
 library(plyr)
+library(dplyr)
+library(MuMIn)
 knitr::opts_chunk$set(echo = TRUE)
 load("../output/Data/summary_analysis.RData")
 load("../output/Data/AllObj.RData")
@@ -30,15 +32,10 @@ Here, I reanalysed understorey vegetation data, performing ANCOVA using Year0 va
     + Evenness (*J'*)
     + Species richness (*S*)
 * Dominant species
-    + _Commelina cyanea_
     + _Cynodon dactylon_
     + _Microlaena stipoides_
-    + _Pratia purpurascens_
 * Proportion of plant functional groups
-    + Grass *vs.* Forb
-    + C~3\_grass~ *vs.* C~4\_grass~
-    + Legume *vs.* Non-legume
-    + (Native *vs.* Introduced)
+    + C~4\_grass
 
 Diversity indices and RDA were analysed for all species together, grass species only, and form species only. 
 
@@ -65,6 +62,7 @@ pander(tail(spp_cov_summary, n = 10), caption = "% coverage of top 10 species")
 ## Summary results
 
 ```{r summary_stats, echo=FALSE, warning=FALSE}
+all_tbl <- all_tbl[order(all_tbl$report, decreasing = TRUE), ]
 pcol <- grep("_P$", names(all_tbl))
 d <- all_tbl
 d[, pcol] <- apply(d[, pcol], 2, as.numeric)
@@ -81,7 +79,7 @@ pander(all_tbl, caption = "Summary of repeated measures ANOVA", justify = "right
 
 
 ```{r div_plot, echo=FALSE, fig.cap="Fig.1 Diversity indices. Black points depict mean values adjusted by Year0 values with 95% CI. Gray points depict observed values for each FACE ring.", fig.height=6, fig.width=6}
-grid.draw(div_plot_merged)
+grid.draw(grass_mplot)
 ```
 
 
@@ -117,13 +115,13 @@ l[[4]]
 ## Proportions of plant functional groups
 
 
-```{r pfgprop_plot, echo=FALSE, fig.cap="Fig.3 PFG proportion. Black points depict mean values adjusted by Year0 values with 95% CI. Gray points depict observed values for each FACE ring.",fig.height=5.5, fig.width=5}
-fig_pfgprop
+```{r pfgprop_plot, echo=FALSE, fig.cap="Fig.3 C4 proportion. Black points depict mean values adjusted by Year0 values with 95% CI. Gray points depict observed values for each FACE ring.",fig.height=5.5, fig.width=5}
+fig_c4prop
 ```
 
 
 ```{r pfgprop_tbl, echo=FALSE}
-names(pfgprop_tbl_l) <- c("C3:C4", "Grass:Forb", "Legume:Non-legume", "Natvie:Introduced")
+names(pfgprop_tbl_l) <- c("C4:C3", "Grass:Forb", "Legume:Non-legume", "Natvie:Introduced")
 l <- llply(names(pfgprop_tbl_l), function(x) pander(pfgprop_tbl_l[[x]], caption = x, justify = "right"))
 l[[1]]
 l[[2]]
@@ -138,8 +136,8 @@ l[[4]]
 
 Log transformation (log(n + 1)) was applied to species data to improve asymmetric distribution of species abundance.
 
-```{r fig_prc_mds, echo=FALSE, fig.width = 6.5, fig.height = 6.5, fig.cap="Results of PRC and MDS", warning=FALSE}
-multiplot(plotlist = prc_figs, layout = lo)
+```{r fig_prc_mds, echo=FALSE, fig.width = 6.5, fig.height = 3, fig.cap="Results of PRC and MDS", warning=FALSE}
+multiplot(plotlist = prc_figs[1:2], layout = lo)
 ```
 
 
@@ -159,17 +157,40 @@ pander(mds_envfit_d, caption = "Summary of environmental variables fitted to the
 
 
 
+# Annual changes in C4 and C3 abundance
+Here, I examined the effects of eCO$_2$ on annual changes in C3 and C4 abundance ($\Delta$C4, C3) in relation to understorey temperature, PAR and soil moisture. I tested CO$_2$ and interactions between CO$_2$ and the others. I selected those models with $\Delta AIC <= 2$ as plausible candidates, and employed model averaging over them.  
 
-## Appendix
 
-### Species coverage
+## C4 graminoid
+```{r c4_model_selection, echo=FALSE, results='markup', message=FALSE}
+glbm <- get.models(c4d_m0_full, subset = "128")[[1]]  # global model
+nulm <- get.models(c4d_m0_full, subset = "1")[[1]]    # null model
+
+subset(c4d_m0_full, delta <= 2)
+model.sel(glbm, nulm, rank = AICc, rank.args = alist(REML = F), extra = "r.squaredGLMM")
+```
+
+
+```{r c4_model_summary, echo=FALSE, results='asis'}
+coeftbl <- data.frame(cbind(confint(c4d_m0_avg, full = TRUE), estimate = coef(c4d_m0_avg, full = TRUE))) %>% 
+  transmute(predictor = row.names(.),
+            estimate  = round(estimate, 3),
+            CI        = paste0("[", round(.[, 1], 3), ", ", round(.[, 2], 3), "]"),
+            imp       = c("-", round(importance(c4d_m0_avg), 3)))
+pander(coeftbl)
+```
+
+
+# Appendix
+
+## Species coverage
 ```{r sp_cov_tbl, echo=FALSE, results='asis'}
 pander(spp_cov_summary)
 ```
 
 
 
-### Species weight of PRC
+## Species weight of PRC
 ```{r sp_weight_prc, echo=FALSE, results='asis'}
 emphasize.italics.cols(1)
 pander(res_pric_sp_tbl)
