@@ -8,43 +8,45 @@
 # download from HIEv ------------------------------------------------------
 
 
-# setToken(tokenfile = "Data/token.txt")
+# # setToken(tokenfile = "Data/token.txt")
+# # 
+# # airvar_raw <- downloadTOA5(filename = "FACE_.*_AirVars_.*dat",
+# #                           topath    = "Data/hievdata/raw_data/",
+# #                           maxnfiles = 999)
+# # 
+# # save(airvar_raw, file = "output/Data/FACE_airvar_raw.RData")
+# load("output/Data/FACE_airvar_raw.RData")
 # 
-# airvar_raw <- downloadTOA5(filename = "FACE_.*_AirVars_.*dat",
-#                           topath    = "Data/hievdata/raw_data/",
-#                           maxnfiles = 999)
 # 
-# save(airvar_raw, file = "output/Data/FACE_airvar_raw.RData")
-load("output/Data/FACE_airvar_raw.RData")
+# 
+# 
+# # process HIEv data -------------------------------------------------------
+# 
+# 
+# # get daily mean, min and max temparater at two layers (at a height of 2m and 15m)
+# boxplot(airvar_raw$AirTC_1_Avg)
+# airvar_day <- airvar_raw %>%
+#   filter(Date        > as.Date("2012-09-18"),         # when co2 treatment was commenced
+#          Date        < as.Date("2016-2-15"),
+#          AirTC_1_Avg > -10) %>%                       # remove obviously weird value
+#   distinct() %>%                                      # remove duplicates
+#   mutate(ring = factor(substring(Source, 7, 7)),      # add ring number
+#          year = factor(year(Date))) %>%
+#   group_by(year, Date, ring) %>% 
+#   summarise_each(funs(Mean = mean(., na.rm = TRUE), 
+#                       Min  = min(., na.rm = TRUE),
+#                       Max  = max(., na.rm = TRUE),
+#                       N    = sum(!is.na(.))), 
+#                  airtemp2m = AirTC_1_Avg, airtemp15m = AirTC_2_Avg) %>% 
+#   group_by(year, ring) %>% 
+#   mutate(annual_temp2m = mean(airtemp2m_Mean),
+#          T = max(27, 1.745 * annual_temp2m  + 11.143)[1]) %>% 
+#   ungroup() %>% 
+#   mutate(c3growth = airtemp2m_Min >= -1 & airtemp2m_Max >= 10 & airtemp2m_Max < 24,  # c3 growing dates
+#          c4growth = airtemp2m_Max >= 21 & airtemp2m_Max < T & month(Date))           # c4 growtin dates
+# save(airvar_day, file = "output/Data/FACE_air_variables.RData")
 
-
-
-
-# process HIEv data -------------------------------------------------------
-
-
-# get daily mean, min and max temparater at two layers (at a height of 2m and 15m)
-boxplot(airvar_raw$AirTC_1_Avg)
-airvar_day <- airvar_raw %>%
-  filter(Date        > as.Date("2012-09-18"),         # when co2 treatment was commenced
-         Date        < as.Date("2016-2-15"),
-         AirTC_1_Avg > -10) %>%                       # remove obviously weird value
-  distinct() %>%                                      # remove duplicates
-  mutate(ring = factor(substring(Source, 7, 7)),      # add ring number
-         year = factor(year(Date))) %>%
-  group_by(year, Date, ring) %>% 
-  summarise_each(funs(Mean = mean(., na.rm = TRUE), 
-                      Min  = min(., na.rm = TRUE),
-                      Max  = max(., na.rm = TRUE),
-                      N    = sum(!is.na(.))), 
-                 airtemp2m = AirTC_1_Avg, airtemp15m = AirTC_2_Avg) %>% 
-  group_by(year, ring) %>% 
-  mutate(annual_temp2m = mean(airtemp2m_Mean),
-         T = max(27, 1.745 * annual_temp2m  + 11.143)[1]) %>% 
-  ungroup() %>% 
-  mutate(c3growth = airtemp2m_Min >= -1 & airtemp2m_Max >= 10 & airtemp2m_Max < 24,  # c3 growing dates
-         c4growth = airtemp2m_Max >= 21 & airtemp2m_Max < T & month(Date))           # c4 growtin dates
-
+load("output/Data/FACE_air_variables.RData")  # airvar_day; run the above to obtain up-to-date data from HIEv
 
 c34growthdate <- airvar_day %>% 
   select(year, Date, ring, c3growth, c4growth, annual_temp2m)
@@ -197,15 +199,12 @@ c34sum <- C3grassC4 %>%
                    c3, c4) %>%
   filter(year != "Year0") %>%
   left_join(c34growth_moist) %>% 
-  left_join(lai_summary) %>%
   ungroup() %>% 
   mutate(s_c4_ddiff = scale(c4_ddiff)[, 1],
          s_c3_ddiff = scale(c3_ddiff)[, 1],
          s_logmoist = scale(log(totalmoist))[, 1],
          s_c3       = scale(log(c3))[, 1],
          s_temp     = scale(annual_temp2m)[, 1],
-         s_lai      = scale(LAI)[, 1],
-         s_gapfrac  = scale(Gapfraction.mean)[, 1],
          s_logpar   = scale(log(PAR))[, 1])
 
 
@@ -252,7 +251,7 @@ c4d_m0_avg  <- model.avg(get.models(c4d_m0_full, subset = delta <= 2))
 c4d_m0_bs   <- get.models(c4d_m0_full, subset = 1)[[1]]
 summary(c4d_m0_avg)
 confint(c4d_m0_avg, full = TRUE)
-coef(aavg, full = TRUE)
+coef(c4d_m0_avg, full = TRUE)
 write.csv(c4d_m0_full, file = "output/table/delta_c4_modelsel.csv", na = "-")
 
 
@@ -266,7 +265,7 @@ sitedf <- c34sum %>%
   distinct()
 moistval <- seq(min(c34sum$s_logmoist), max(c34sum$s_logmoist), length.out = 1000)
 tempval  <- median(c34sum$s_temp)
-laival   <- median(c34sum$s_logpar)
+parval   <- median(c34sum$s_logpar)
 
 
 
@@ -280,7 +279,7 @@ c4d_m0_preddf <- ldply(1:10, function(y){
         s_logmoist  = moistval[sample(1000, nrow(sitedf), replace = TRUE)])
 }) %>% 
   mutate(s_temp    = tempval,
-         s_logpar  = laival)
+         s_logpar  = parval)
 
 c4d_m0_pred    <- predict(c4d_m0_avg, c4d_m0_preddf, se.fit = TRUE, re.form = NA, full = TRUE)
 c4d_m0_pred_df <- cbind(c4d_m0_pred, c4d_m0_preddf) %>% 
