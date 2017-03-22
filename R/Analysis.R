@@ -178,7 +178,7 @@ source("R/PFG_Proportaion.R")        # Grass vs Forb
 source("R/fig_pfg_propotion.R")      # combine grassn and PFG proportino results to create a figure
 source("R/analysis_summary.R")       # summarise above analyses
 source("R/analysis_PRC_MDS.R")       # prncipal response curve analysis and MDS analysis
-
+source("R/analysis_deltaC34.R")      # process HIEv data for temp and moist, and perform multivple regression for delta C3 and C4 with temp, moist and PAR
 
 
 # figs --------------------------------------------------------------------
