@@ -181,6 +181,30 @@ pander(coeftbl)
 ```
 
 
+
+
+## C3 graminoid
+```{r c3_model_selection, echo=FALSE, results='markup', message=FALSE}
+glbm <- get.models(c3d_m0full, subset = "128")[[1]]  # global model
+nulm <- get.models(c3d_m0full, subset = "1")[[1]]    # null model
+
+subset(c3d_m0full, delta <= 2)
+model.sel(glbm, nulm, rank = AICc, rank.args = alist(REML = F), extra = "r.squaredGLMM")
+```
+
+
+```{r c3_model_summary, echo=FALSE, results='asis'}
+coeftbl <- data.frame(cbind(confint(c3d_m0favg, full = TRUE), estimate = coef(c3d_m0favg, full = TRUE))) %>% 
+  transmute(predictor = row.names(.),
+            estimate  = round(estimate, 3),
+            CI        = paste0("[", round(.[, 1], 3), ", ", round(.[, 2], 3), "]"),
+            imp       = c("-", round(importance(c3d_m0favg), 3)))
+pander(coeftbl)
+```
+
+
+
+
 # Appendix
 
 ## Species coverage
