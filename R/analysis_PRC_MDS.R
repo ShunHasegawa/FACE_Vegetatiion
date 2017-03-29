@@ -212,24 +212,23 @@ science_theme_prc <- science_theme +
 # . canonical coefficient -------------------------------------------------
 
 
-fig_prc_site <- ggplot(res_prc_site_co2, aes(x = as.numeric(year), y = CAP1, 
-                                             fill = co2, linetype = co2)) +
+fig_prc_site <- ggplot(res_prc_site_co2, aes(x = as.numeric(year), y = CAP1,
+                                             linetype = co2)) +
   labs(x = "Year", y = expression(Canonical~coefficient~(C[dt]))) +
   geom_hline(yintercept = 0, linetype = "dotted", col = "gray") +
   
   geom_line() +
-  geom_point(size = 2, shape = 21) +
+  geom_point(size = 2.5, aes(shape = co2)) +
   
   science_theme_prc +
-  theme(legend.position = "none") +
+  theme(legend.position = c(.15, .75),
+        legend.title    = element_blank()) +
   scale_x_continuous(labels = 0:3) +
-  scale_fill_manual(values = c("black", "white"),
-                     labels = c("Ambient", expression(CO[2]))) +
   scale_linetype_manual(values = c("solid", "dashed"), 
-                        labels = c("Ambient", expression(CO[2]))) +
+                        labels = c("Ambient", expression(eCO[2]))) +
+  scale_shape_manual(values = c(16, 17), 
+                        labels = c("Ambient", expression(eCO[2]))) +
   annotate("text", x = -Inf, y = Inf, label = "(a)", hjust = -.5, vjust = 1.5, fontface = "bold")
-# +
-#   ylim(c(-.67, .05))
 fig_prc_site
 
 
