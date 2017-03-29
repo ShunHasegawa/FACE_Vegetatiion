@@ -186,8 +186,11 @@ ratp_m2_full <- dredge(ratp_m2, REML = F)
 
 # abundance change ------------------------------------------------------------
 
-
+head(C3grassC4)
 c34sum <- C3grassC4 %>%
+  group_by(year, block, ring, plot, co2, id, PFG, RY, variable) %>% 
+  summarise(value = sum(value)) %>%
+  mutate(value = log(value + 1)) %>% 
   group_by(year, block, ring, plot, co2, id, PFG, RY) %>% 
   summarise(value = sum(value)) %>% 
   spread(key = PFG, value = value) %>% 
@@ -207,6 +210,14 @@ c34sum <- C3grassC4 %>%
          s_temp     = scale(annual_temp2m)[, 1],
          s_logpar   = scale(log(PAR))[, 1])
 
+plot(s_c4_ddiff ~ log(totalmoist), data = c34sum, pch = 19, col = co2)
+plot(s_c4_ddiff ~ annual_temp2m, data = c34sum, pch = 19, col = co2)
+plot(s_c4_ddiff ~ log(PAR), data = c34sum, pch = 19, col = co2)
+
+which.max(c34sum$c4_dprop)
+plot(log(c4_dprop) ~ log(totalmoist), data = c34sum, pch = 19, col = co2, subset = -5)
+plot(log(c4_dprop) ~ annual_temp2m, data = c34sum, pch = 19, col = co2, subset = -5)
+plot(log(c4_dprop) ~ log(PAR), data = c34sum, pch = 19, col = co2, subset = -5)
 
 
 
@@ -227,7 +238,7 @@ xyplot(s_c4_ddiff ~ s_logmoist | ring, group = id, data = c34sum, type=c("p", "r
   # this should be included
 xyplot(s_c4_ddiff ~ s_logmoist, group = ring, data = c34sum, type=c("p", "r"))
   # this is probably required
-xyplot(c4_ddiff ~ s_logmoist, group = RY, data = c34sum, type=c("p", "r"))
+xyplot(c4_ddiff ~ s_logmoist | ring, group = RY, data = c34sum, type=c("p", "r"))
   # this should be included 
 xyplot(c4_ddiff ~ s_logmoist, group = year, data = c34sum, type=c("p", "r"))
 
@@ -238,20 +249,37 @@ xyplot(s_c4_ddiff ~ s_temp, group = ring, data = c34sum, type=c("p", "r"))
 xyplot(s_c4_ddiff ~ s_temp | year, group = RY, data = c34sum, type=c("p", "r")) # not run
 xyplot(s_c4_ddiff ~ s_temp, group = year, data = c34sum, type=c("p", "r"))      # not run
 
-
 c4d_m0 <- lmer(s_c4_ddiff ~ co2*(s_logmoist+s_temp+s_logpar)+(1|ring)+(1|RY)+(1|id), data = c34sum)
-c4d_m1 <- lmer(s_c4_ddiff ~ co2*(s_logmoist+s_temp+s_logpar)+(1|ring)+(1|RY)+(1+s_logmoist|id), data = c34sum, REML = F)
-anova(c4d_m0, c4d_m1) # subtle difference; so don't use slope
+summary(c4d_m0)
+tt <- getME(c4d_m0,"theta")
+ll <- getME(c4d_m0,"lower")
+min(tt[ll==0])
+## it has a singularity problem
+
 plot(c4d_m0)
 qqnorm(resid(c4d_m0))
 qqline(resid(c4d_m0))
 
 c4d_m0_full <- dredge(c4d_m0, REML = F, extra = "r.squaredGLMM")
-c4d_m0_avg  <- model.avg(get.models(c4d_m0_full, subset = delta <= 2))
+c4nest <- subset(c4d_m0_full, !nested(.))
+c4d_m0_avg  <- model.avg(get.models(c4nest, subset = delta <= 2))
 c4d_m0_bs   <- get.models(c4d_m0_full, subset = 1)[[1]]
 summary(c4d_m0_avg)
-confint(c4d_m0_avg, full = TRUE)
-coef(c4d_m0_avg, full = TRUE)
+confint(c4d_m0_avg, full = TRUE, level = .9)
+summary(c4d_m0_bs)
+Anova(c4d_m0_bs, test.statistic = "F")
+confint(c4d_m0_bs, method = "boot", nsim = 999)
+  ## convergence problem
+summary(c4d_m0_bs)
+## noone of the random factor explain any variace so refit the fixed factors to
+## a linear model and get 95% CI fo coefficients
+c4d_m0_bs_lm <- lm(s_c4_ddiff ~ co2 + s_logmoist + s_logpar + s_temp, data = c34sum)
+coef(c4d_m0_bs_lm)
+confint(c4d_m0_bs_lm)
+
+# m4coef <- coef(c4d_m0_avg, full = TRUE)
+# exp(-m4coef[2]/m4coef[3]) # miosture required for delta C4 to be positive in eCO2 relative to ambient (ignoring temp and par as their coeeficients are close to 0)
+
 write.csv(c4d_m0_full, file = "output/table/delta_c4_modelsel.csv", na = "-")
 
 
@@ -259,58 +287,106 @@ write.csv(c4d_m0_full, file = "output/table/delta_c4_modelsel.csv", na = "-")
 
 # . predicted values ------------------------------------------------------
 
-sitedf <- c34sum %>% 
-  select(ring, id, RY, co2) %>% 
-  ungroup() %>% 
-  distinct()
-moistval <- seq(min(c34sum$s_logmoist), max(c34sum$s_logmoist), length.out = 1000)
-tempval  <- median(c34sum$s_temp)
-parval   <- median(c34sum$s_logpar)
+par(mfrow = c(2, 2))
+boxplot(totalmoist ~ year, c34sum, ylab = "Moist")
+boxplot(annual_temp2m ~ year, c34sum, ylab = "Temp")
+boxplot(PAR ~ year, c34sum, ylab = "PAR")
 
 
 
 
-# .. prepare df -----------------------------------------------------------
+
+# .figure  -----------------------------------------------------------
 
 
-# temp is median
-c4d_m0_preddf <- ldply(1:10, function(y){ 
-  cbind(sitedf, 
-        s_logmoist  = moistval[sample(1000, nrow(sitedf), replace = TRUE)])
-}) %>% 
-  mutate(s_temp    = tempval,
-         s_logpar  = parval)
+newdf_moist <- data.frame(co2 = c("amb", "elev"), 
+                    s_temp     = median(c34sum$s_temp),
+                    s_logpar   = median(c34sum$s_logpar),
+                    s_logmoist = seq(min(c34sum$s_logmoist), max(c34sum$s_logmoist), length.out = 1000))
 
-c4d_m0_pred    <- predict(c4d_m0_avg, c4d_m0_preddf, se.fit = TRUE, re.form = NA, full = TRUE)
-c4d_m0_pred_df <- cbind(c4d_m0_pred, c4d_m0_preddf) %>% 
-  mutate(lwr = fit - se.fit * 1.96,
-         upr = fit + se.fit * 1.96) 
+newdf_temp <- data.frame(co2 = c("amb", "elev"), 
+                    s_logmoist     = median(c34sum$s_logmoist),
+                    s_logpar   = median(c34sum$s_logpar),
+                    s_temp = seq(min(c34sum$s_temp), max(c34sum$s_temp), length.out = 1000))
+
+newdf_par<- data.frame(co2 = c("amb", "elev"), 
+                    s_temp     = median(c34sum$s_temp),
+                    s_logmoist = median(c34sum$s_logmoist),
+                    s_logpar   = seq(min(c34sum$s_logpar), max(c34sum$s_logpar), length.out = 1000))
+
+newdf_l <- list(moist = newdf_moist, 
+                temp  = newdf_temp,
+                par   = newdf_par)
+
+predval_l <- llply(newdf_l, function(x){
+  pred   <- predict(c4d_m0_bs_lm, x, interval = "confidence")
+  preddf <- cbind(x, pred)
+  return(preddf)
+  })
+  
 
 # reverse transform
 moist_sd <- sd(log(c34sum$totalmoist))
 moist_m  <- mean(log(c34sum$totalmoist))
+temp_sd  <- sd(c34sum$annual_temp2m)
+temp_m   <- mean(c34sum$annual_temp2m)
+par_sd   <- sd(log(c34sum$PAR))
+par_m    <- mean(log(c34sum$PAR))
 c4d_sd   <- sd(c34sum$c4_ddiff)
 c4d_m    <- mean(c34sum$c4_ddiff)
 
 
-c4d_m0_preddf_rv <- c4d_m0_pred_df %>% 
-  mutate(r_moist = rev_ztrans(s_logmoist, xsd = moist_sd, xmean = moist_m), 
-         r_fit   = rev_ztrans(fit, c4d_sd, c4d_m),
-         r_lwr   = rev_ztrans(lwr, c4d_sd, c4d_m), 
-         r_upr   = rev_ztrans(upr, c4d_sd, c4d_m))
 
-c4d_p <- ggplot(c4d_m0_preddf_rv, aes(x = r_moist, y = r_fit, col = co2)) +
-  geom_line()+
-  geom_line(aes(y = r_lwr), linetype = "dashed") +
-  geom_line(aes(y = r_upr), linetype = "dashed") +
-  geom_hline(yintercept = 0, linetype = "dashed")+
-  geom_point(data = c34sum, aes(x = log(totalmoist), y = c4_ddiff), size = 3, alpha = .7)+
-  science_theme+
-  theme(legend.position = c(.2, .9))+
-  scale_color_manual(values = c("blue", "red"),labels = c("Ambient", expression(eCO[2])))+
-  labs(x = "log(Annual water availability)", y = expression(Delta*C[4]))
-c4d_p
-ggsavePP(c4d_p, filename = "output/figs/delta_c4_moist", width = 4, height = 4)
+c4d_m0_preddf_rv_l <- llply(predval_l, function(x){
+  x %>% 
+    mutate(r_moist = rev_ztrans(s_logmoist, xsd = moist_sd, xmean = moist_m),
+           r_temp  = rev_ztrans(s_temp, xsd = temp_sd, xmean = temp_m),
+           r_par   = rev_ztrans(s_logpar, xsd = par_sd, xmean = par_m),
+           r_fit   = rev_ztrans(fit, c4d_sd, c4d_m),
+           r_lwr   = rev_ztrans(lwr, c4d_sd, c4d_m), 
+           r_upr   = rev_ztrans(upr, c4d_sd, c4d_m))
+})
+names(c4d_m0_preddf_rv_l)
+c4d_m0_preddf_rv_l[[1]]$xval <- c4d_m0_preddf_rv_l[[1]]$r_moist
+c4d_m0_preddf_rv_l[[2]]$xval <- c4d_m0_preddf_rv_l[[2]]$r_temp
+c4d_m0_preddf_rv_l[[3]]$xval <- c4d_m0_preddf_rv_l[[3]]$r_par
+
+
+
+llply(c4d_m0_preddf_rv_l, summary)
+c4d_p_l <- llply(c4d_m0_preddf_rv_l, function(x){
+  ggplot(x, aes(x = xval, y = r_fit, col = co2)) +
+    geom_hline(yintercept = 0, col = "gray")+
+    geom_line(size = 1)+
+    geom_line(aes(y = r_lwr), linetype = "dashed") +
+    geom_line(aes(y = r_upr), linetype = "dashed") +
+    science_theme+
+    theme(legend.position = "none")+
+    scale_color_manual(values = c("blue", "red"),labels = c("Ambient", expression(eCO[2])))+
+    labs(y = expression(Delta*C[4]))
+})
+
+
+
+c4d_p_l[[1]] <- c4d_p_l[[1]] + 
+  geom_point(data = c34sum, aes(x = log(totalmoist), y = c4_ddiff), size = 2, alpha = .7)+
+  labs(x = "ln(Soil moisture)") +
+  theme(legend.position = c(.25, .85))
+c4d_p_l[[2]] <- c4d_p_l[[2]] + 
+  geom_point(data = c34sum, aes(x = annual_temp2m, y = c4_ddiff), size = 2, alpha = .7)+
+  labs(x = expression(Temperature~(degree*C)))
+c4d_p_l[[3]] <- c4d_p_l[[3]] + 
+  geom_point(data = c34sum, aes(x = log(PAR), y = c4_ddiff), size = 2, alpha = .7)+
+  labs(x = "ln(Understorey PAR)")
+
+sublabels <- c("(a)", "(b)", "(c)")
+
+for(i in 1:3){
+  c4d_p_l[[i]] <- c4d_p_l[[i]] +
+    annotate("text", label = sublabels[i], x = -Inf, y = Inf, hjust = -.5, vjust = 1.5, 
+              fontface = "bold")
+  }
+
 
 
 
@@ -330,14 +406,79 @@ xyplot(s_c3_ddiff ~ s_logmoist, group = year, data = c34sum, type=c("p", "r"))
 xyplot(s_c3_ddiff ~ s_temp | ring, group = id, data = c34sum, type=c("p", "r"))
 xyplot(s_c3_ddiff ~ s_temp, group = ring, data = c34sum, type=c("p", "r"))
 
-c3d_m0     <- lmer(s_c3_ddiff ~ co2 * (s_logmoist+s_temp+s_logpar) + (1|ring) + (1|RY) + (1|id), data = c34sum)
-plot(c3d_m0)
-qqnorm(resid(c3d_m0))
-qqline(resid(c3d_m0))
+
+# remove outlier
+boxplot(c34sum$s_c3_ddiff)
+c34sum2 <- c34sum %>% 
+  filter(s_c3_ddiff != max(s_c3_ddiff))
+
+c3d_m0     <- lmer(s_c3_ddiff ~ co2 * (s_logmoist+s_temp+s_logpar) + (1|ring) + (1|RY) + (1|id), data = c34sum2)
 c3d_m0full <- dredge(c3d_m0, REML = F, extra = "r.squaredGLMM")
+c3nest   <- subset(c3d_m0full, !nested(.))
 c3d_m0bs <- get.models(c3d_m0full, subset = 1)[[1]]
+summary(c3d_m0bs)
+Anova(c3d_m0bs, test.statistic = "F")
+confint(c3d_m0bs, method = "boot")
 c3d_m0favg <- model.avg(get.models(c3d_m0full, subset = delta <= 2))
 summary(c3d_m0favg)
 confint(c3d_m0favg, full = TRUE)
 coef(c3d_m0favg, full = TRUE)
 write.csv(c3d_m0full, file = "output/table/delta_c3_modelsel.csv", na = "-")
+
+
+# predicted values --------------------------------------------------------
+
+
+# get 95% CI by parametric bootstrap
+parval <- with(c34sum2, seq(min(s_logpar), max(s_logpar), length.out = 1000))
+par_df <- data.frame(s_logpar = parval[sample(1000, nrow(c3site_df))])
+bb <- bootMer(c3d_m0bs,
+              FUN=function(x) predict(x, par_df, re.form = NA),
+              nsim=999)
+lwr <- apply(bb$t, 2, quantile, 0.025)
+upr <- apply(bb$t, 2, quantile, 0.975)
+fit <- bb$t0
+c3_pred_df <- cbind(lwr, upr, fit, par_df)
+
+
+# reverse transform
+par_sd   <- sd(log(c34sum$PAR))
+par_m    <- mean(log(c34sum$PAR))
+c3d_sd   <- sd(c34sum$c3_ddiff)
+c3d_m    <- mean(c34sum$c3_ddiff)
+
+c3d_preddf_rv <- c3_pred_df %>% 
+  mutate(r_par = rev_ztrans(s_logpar, xsd = par_sd, xmean = par_m), 
+         r_fit   = rev_ztrans(fit, c3d_sd, c3d_m),
+         r_lwr   = rev_ztrans(lwr, c3d_sd, c3d_m), 
+         r_upr   = rev_ztrans(upr, c3d_sd, c3d_m))
+
+
+# create a plot
+c3d_p <- ggplot(c3d_preddf_rv, aes(x = r_par, y = r_fit))+
+  geom_hline(yintercept = 0, col = "gray")+
+  geom_point(data = c34sum2, aes(x = log(PAR), y = s_c3_ddiff, col = co2), size = 2, alpha = .7)+
+  geom_line(size = 1)+
+  geom_line(aes(y = r_lwr), linetype = "dashed")+
+  geom_line(aes(y = r_upr), linetype = "dashed")+
+  science_theme+
+  theme(legend.position = "none")+
+  scale_color_manual(values = c("blue", "red"),labels = c("Ambient", expression(eCO[2])))+
+  labs(x = "ln(Understorey PAR)", y = expression(Delta*C[3]))+
+  annotate("text", label = "(d)", x = -Inf, y = Inf, hjust = -.5, vjust = 1.5, 
+           fontface = "bold")
+
+
+
+
+# merge figures -----------------------------------------------------------
+
+topfig <- cbind(ggplotGrob(c4d_p_l[[1]]), ggplotGrob(c4d_p_l[[2]]))
+bomfig <- cbind(ggplotGrob(c4d_p_l[[3]]), ggplotGrob(c3d_p))
+deltaC34_fig <- rbind(topfig, bomfig)
+grid.newpage()
+grid.draw(deltaC34_fig)
+
+ggsavePP(filename = "output/figs/delta_C34_envvar", plot = deltaC34_fig,
+         width = 6.5, height = 5.5)
+
