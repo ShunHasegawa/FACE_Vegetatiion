@@ -186,10 +186,11 @@ ratp_m2_full <- dredge(ratp_m2, REML = F)
 
 # abundance change ------------------------------------------------------------
 
-head(C3grassC4)
+
 c34sum <- C3grassC4 %>%
   group_by(year, block, ring, plot, co2, id, PFG, RY, variable) %>% 
   summarise(value = sum(value)) %>%
+  # filter(variable != "Cynodon.dactylon") %>%
   mutate(value = log(value + 1)) %>% 
   group_by(year, block, ring, plot, co2, id, PFG, RY) %>% 
   summarise(value = sum(value)) %>% 
@@ -363,21 +364,22 @@ c4d_p_l <- llply(c4d_m0_preddf_rv_l, function(x){
     science_theme+
     theme(legend.position = "none")+
     scale_color_manual(values = c("blue", "red"),labels = c("Ambient", expression(eCO[2])))+
-    labs(y = expression(Delta*C[4]))
+    labs(y = expression(ln(Delta*C[4])))
 })
 
 
 
 c4d_p_l[[1]] <- c4d_p_l[[1]] + 
   geom_point(data = c34sum, aes(x = log(totalmoist), y = c4_ddiff), size = 2, alpha = .7)+
-  labs(x = "ln(Soil moisture)") +
+  labs(x = "ln(Soil moisture (%))") +
   theme(legend.position = c(.25, .85))
 c4d_p_l[[2]] <- c4d_p_l[[2]] + 
   geom_point(data = c34sum, aes(x = annual_temp2m, y = c4_ddiff), size = 2, alpha = .7)+
   labs(x = expression(Temperature~(degree*C)))
 c4d_p_l[[3]] <- c4d_p_l[[3]] + 
   geom_point(data = c34sum, aes(x = log(PAR), y = c4_ddiff), size = 2, alpha = .7)+
-  labs(x = "ln(Understorey PAR)")
+  labs(x = expression(ln(Understorey~PAR~(mu*mol~s^'-1'~m^"-2"))))
+
 
 sublabels <- c("(a)", "(b)", "(c)")
 
@@ -430,8 +432,8 @@ write.csv(c3d_m0full, file = "output/table/delta_c3_modelsel.csv", na = "-")
 
 
 # get 95% CI by parametric bootstrap
-parval <- with(c34sum2, seq(min(s_logpar), max(s_logpar), length.out = 1000))
-par_df <- data.frame(s_logpar = parval[sample(1000, nrow(c3site_df))])
+par_df <- data.frame(s_logpar = with(c34sum2, seq(min(s_logpar), 
+                                                  max(s_logpar), length.out = 1000)))
 bb <- bootMer(c3d_m0bs,
               FUN=function(x) predict(x, par_df, re.form = NA),
               nsim=999)
@@ -464,7 +466,8 @@ c3d_p <- ggplot(c3d_preddf_rv, aes(x = r_par, y = r_fit))+
   science_theme+
   theme(legend.position = "none")+
   scale_color_manual(values = c("blue", "red"),labels = c("Ambient", expression(eCO[2])))+
-  labs(x = "ln(Understorey PAR)", y = expression(Delta*C[3]))+
+  labs(x = expression(ln(Understorey~PAR~(mu*mol~s^'-1'~m^"-2"))), 
+       y = expression(ln(Delta*C[3])))+
   annotate("text", label = "(d)", x = -Inf, y = Inf, hjust = -.5, vjust = 1.5, 
            fontface = "bold")
 
