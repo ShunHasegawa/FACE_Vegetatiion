@@ -2,6 +2,7 @@ rm(list=ls(all=TRUE))
 
 source("R/Packages.R")
 source("R/functions.R")
+options(na.action = "na.fail")  # change na.action setting for MuMIN::dredge
 SiteName <- c("year", "block", "ring", "co2", "plot", "id", "position", "cell", "RY")
 
 
