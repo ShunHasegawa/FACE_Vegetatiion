@@ -251,6 +251,7 @@ xyplot(s_c4_ddiff ~ s_temp | year, group = RY, data = c34sum, type=c("p", "r")) 
 xyplot(s_c4_ddiff ~ s_temp, group = year, data = c34sum, type=c("p", "r"))      # not run
 
 c4d_m0 <- lmer(s_c4_ddiff ~ co2*(s_logmoist+s_temp+s_logpar)+(1|ring)+(1|RY)+(1|id), data = c34sum)
+c4d_m0 <- lmer(s_c4_ddiff ~ co2*(log(totalmoist)+annual_temp2m+log(PAR))+(1|ring)+(1|RY)+(1|id), data = c34sum)
 summary(c4d_m0)
 tt <- getME(c4d_m0,"theta")
 ll <- getME(c4d_m0,"lower")
@@ -278,8 +279,13 @@ c4d_m0_bs_lm <- lm(s_c4_ddiff ~ co2 + s_logmoist + s_logpar + s_temp, data = c34
 coef(c4d_m0_bs_lm)
 confint(c4d_m0_bs_lm)
 
-# m4coef <- coef(c4d_m0_avg, full = TRUE)
-# exp(-m4coef[2]/m4coef[3]) # miosture required for delta C4 to be positive in eCO2 relative to ambient (ignoring temp and par as their coeeficients are close to 0)
+m4coef <- coef(c4d_m0_bs_lm)
+moist_sd <- sd(log(c34sum$totalmoist))
+moist_m  <- mean(log(c34sum$totalmoist))
+exp(-m4coef[2] * moist_sd / m4coef[3])
+
+
+exp(-m4coef[2]/m4coef[3]) # miosture required for delta C4 to be positive in eCO2 relative to ambient (ignoring temp and par as their coeeficients are close to 0)
 
 write.csv(c4d_m0_full, file = "output/table/delta_c4_modelsel.csv", na = "-")
 
@@ -287,6 +293,52 @@ write.csv(c4d_m0_full, file = "output/table/delta_c4_modelsel.csv", na = "-")
 
 
 # . predicted values ------------------------------------------------------
+
+
+
+
+# > Use each year climate conditions --------------------------------------
+names(c34sum)
+
+# yearly climate
+yearly_climate <- c34sum %>% 
+  group_by(year, co2) %>% 
+  summarise_each(funs(mean), s_logmoist, s_temp, s_logpar)
+
+# number of C4 spp per plot
+c34_spn <- C3grassC4 %>% 
+  group_by(year, co2, PFG, id, variable) %>% 
+  summarise(value = sum(value)) %>% 
+  group_by(year, co2, PFG, id) %>% 
+  summarise(sp_n = sum(value > 0)) %>% 
+  group_by(year, co2, PFG) %>% 
+  summarise(spn_plt = round(mean(sp_n), 0), sample_n = sum(!is.na(sp_n))) %>% 
+  ungroup() %>% 
+  select(-sample_n) %>% 
+  spread(PFG, spn_plt) %>% 
+  filter(year != "Year0") %>% 
+  rename(c3_spn = c3, c4_spn = c4)
+
+
+
+
+yearly_pred <- predict(c4d_m0_bs_lm, yearly_climate, interval = "confidence")
+yearly_pred_df <- data.frame(yearly_climate, yearly_pred) %>% 
+  mutate(r_moist = exp(rev_ztrans(s_logmoist, xsd = moist_sd, xmean = moist_m)),
+         r_temp  = rev_ztrans(s_temp, xsd = temp_sd, xmean = temp_m),
+         r_par   = exp(rev_ztrans(s_logpar, xsd = par_sd, xmean = par_m)),
+         r_lwr   = exp(rev_ztrans(lwr, c4d_sd, c4d_m)), 
+         r_fit   = exp(rev_ztrans(fit, c4d_sd, c4d_m)),
+         r_upr   = exp(rev_ztrans(upr, c4d_sd, c4d_m))) %>% 
+  left_join(c34_spn) %>% 
+  mutate(lwr_persp = r_lwr^(1/c4_spn), 
+         upr_persp = r_upr^(1/c4_spn), 
+         fit_persp = r_fit^(1/c4_spn))
+
+
+
+# > regression lines ------------------------------------------------------
+
 
 par(mfrow = c(2, 2))
 boxplot(totalmoist ~ year, c34sum, ylab = "Moist")
@@ -421,6 +473,7 @@ c3d_m0bs <- get.models(c3d_m0full, subset = 1)[[1]]
 summary(c3d_m0bs)
 Anova(c3d_m0bs, test.statistic = "F")
 confint(c3d_m0bs, method = "boot")
+dc3_confint <- confint(c3d_m0bs, method = "boot", nsim = 999)
 c3d_m0favg <- model.avg(get.models(c3d_m0full, subset = delta <= 2))
 summary(c3d_m0favg)
 confint(c3d_m0favg, full = TRUE)
