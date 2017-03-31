@@ -1,7 +1,7 @@
 ---
 title: "EucFACE understorey vegetation -Summary of stats-"
 author: "Shun Hasegawa"
-date: "22 March 2016"
+date: "30 March 2016"
 output:
   html_document:
     toc: true
@@ -160,6 +160,12 @@ pander(mds_envfit_d, caption = "Summary of environmental variables fitted to the
 # Annual changes in C4 and C3 abundance
 Here, I examined the effects of eCO$_2$ on annual changes in C3 and C4 abundance ($\Delta$C4, C3) in relation to understorey temperature, PAR and soil moisture. I tested CO$_2$ and interactions between CO$_2$ and the others. I selected those models with $\Delta AIC <= 2$ as plausible candidates, and employed model averaging over them.  
 
+```{r deltaC34_fig, echo=FALSE, fig.width=6.5, fig.height=5.5, fig.cap="Regression analysis for delta C3 and C4"}
+grid.newpage()
+grid.draw(deltaC34_fig)
+```
+
+
 
 ## C4 graminoid
 ```{r c4_model_selection, echo=FALSE, results='markup', message=FALSE}
@@ -172,12 +178,13 @@ model.sel(glbm, nulm, rank = AICc, rank.args = alist(REML = F), extra = "r.squar
 
 
 ```{r c4_model_summary, echo=FALSE, results='asis'}
-coeftbl <- data.frame(cbind(confint(c4d_m0_avg, full = TRUE), estimate = coef(c4d_m0_avg, full = TRUE))) %>% 
-  transmute(predictor = row.names(.),
-            estimate  = round(estimate, 3),
-            CI        = paste0("[", round(.[, 1], 3), ", ", round(.[, 2], 3), "]"),
-            imp       = c("-", round(importance(c4d_m0_avg), 3)))
-pander(coeftbl)
+coefc4 <- cbind(coef(c4d_m0_bs_lm), confint(c4d_m0_bs_lm))
+colnames(coefc4) <- c("estimate", "lwr", "upr")
+coefc4 <- data.frame(coefc4) %>% 
+  mutate(predictor = row.names(.)) %>% 
+  mutate_each(funs(round(., 3)), estimate, lwr, upr) %>% 
+  transmute(predictor, coefs = paste0(estimate, " [", lwr, ", ", upr, "]"))
+pander(coefc4)
 ```
 
 
@@ -194,11 +201,11 @@ model.sel(glbm, nulm, rank = AICc, rank.args = alist(REML = F), extra = "r.squar
 
 
 ```{r c3_model_summary, echo=FALSE, results='asis'}
-coeftbl <- data.frame(cbind(confint(c3d_m0favg, full = TRUE), estimate = coef(c3d_m0favg, full = TRUE))) %>% 
+coeftbl <- data.frame(cbind(dc3_confint[-(1:4), ], 
+                            estimate = coef(summary(c3d_m0bs))[, "Estimate"])) %>% 
   transmute(predictor = row.names(.),
             estimate  = round(estimate, 3),
-            CI        = paste0("[", round(.[, 1], 3), ", ", round(.[, 2], 3), "]"),
-            imp       = c("-", round(importance(c3d_m0favg), 3)))
+            CI        = paste0("[", round(.[, 1], 3), ", ", round(.[, 2], 3), "]"))
 pander(coeftbl)
 ```
 
