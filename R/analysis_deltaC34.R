@@ -302,8 +302,10 @@ names(c34sum)
 
 # yearly climate
 yearly_climate <- c34sum %>% 
-  group_by(year, co2) %>% 
-  summarise_each(funs(mean), s_logmoist, s_temp, s_logpar)
+  group_by(year) %>% 
+  summarise_each(funs(mean), s_logmoist, s_temp, s_logpar, totalmoist, annual_temp2m, PAR)
+yearly_climate_df <- rbind(cbind(yearly_climate, co2 = "amb"), cbind(yearly_climate, co2 = "elev"))
+
 
 # number of C4 spp per plot
 c34_spn <- C3grassC4 %>% 
@@ -322,8 +324,8 @@ c34_spn <- C3grassC4 %>%
 
 
 
-yearly_pred <- predict(c4d_m0_bs_lm, yearly_climate, interval = "confidence")
-yearly_pred_df <- data.frame(yearly_climate, yearly_pred) %>% 
+yearly_pred <- predict(c4d_m0_bs_lm, yearly_climate_df, interval = "confidence", level = .9)
+yearly_pred_df <- data.frame(yearly_climate_df, yearly_pred) %>% 
   mutate(r_moist = exp(rev_ztrans(s_logmoist, xsd = moist_sd, xmean = moist_m)),
          r_temp  = rev_ztrans(s_temp, xsd = temp_sd, xmean = temp_m),
          r_par   = exp(rev_ztrans(s_logpar, xsd = par_sd, xmean = par_m)),
@@ -331,11 +333,18 @@ yearly_pred_df <- data.frame(yearly_climate, yearly_pred) %>%
          r_fit   = exp(rev_ztrans(fit, c4d_sd, c4d_m)),
          r_upr   = exp(rev_ztrans(upr, c4d_sd, c4d_m))) %>% 
   left_join(c34_spn) %>% 
-  mutate(lwr_persp = r_lwr^(1/c4_spn), 
-         upr_persp = r_upr^(1/c4_spn), 
-         fit_persp = r_fit^(1/c4_spn))
+  mutate(lwr_persp = r_lwr^(1/4), 
+         upr_persp = r_upr^(1/4), 
+         fit_persp = r_fit^(1/4)) %>% 
+  arrange(year, co2)
 
-
+ggplot(yearly_pred_df, aes(x = year, y = log(r_fit)))+
+  geom_point(aes(col = co2), position = position_dodge(.5))+
+  geom_point(data = c34sum, aes(y = c4_ddiff, shape = co2), col = "gray", 
+             position = position_dodge(.5))+
+  geom_errorbar(aes(ymin = log(r_lwr), ymax = log(r_upr), col = co2), width = .1, 
+                position = position_dodge(.5))+
+  geom_hline(yintercept = 0)
 
 # > regression lines ------------------------------------------------------
 
@@ -416,14 +425,14 @@ c4d_p_l <- llply(c4d_m0_preddf_rv_l, function(x){
     science_theme+
     theme(legend.position = "none")+
     scale_color_manual(values = c("blue", "red"),labels = c("Ambient", expression(eCO[2])))+
-    labs(y = expression(ln(Delta*C[4])))
+    labs(y = expression(Delta*C[4]))
 })
 
 
 
 c4d_p_l[[1]] <- c4d_p_l[[1]] + 
   geom_point(data = c34sum, aes(x = log(totalmoist), y = c4_ddiff), size = 2, alpha = .7)+
-  labs(x = "ln(Soil moisture (%))") +
+  labs(x = "ln(Soil moisture)") +
   theme(legend.position = c(.25, .85))
 c4d_p_l[[2]] <- c4d_p_l[[2]] + 
   geom_point(data = c34sum, aes(x = annual_temp2m, y = c4_ddiff), size = 2, alpha = .7)+
@@ -443,6 +452,36 @@ for(i in 1:3){
 
 
 
+
+# >partial regression plot ------------------------------------------------
+
+deltac4_regplt <- function(){
+  par(mfrow = c(1, 3))
+  par(mar = c(5, 4, 1, 0))
+  avPlot(c4d_m0_bs_lm, variable = "s_logmoist", marginal.scale = TRUE, grid = FALSE, 
+         xlab = "Adjusted ln(soil moisture)", ylab = expression(Adjusted~Delta*C[4]), 
+         main = "", cex = 2, col.lines = "black", lwd = 3, col = "gray50", cex.lab = 1)
+  par(mar = c(5, 3, 1, 1))
+  avPlot(c4d_m0_bs_lm, variable = "s_temp", marginal.scale = TRUE, grid = FALSE, 
+         xlab = expression(Adjusted~tempearture~(degree*C)), 
+         ylab = "", main = "", 
+         cex = 2, col.lines = "black", lwd = 3, col = "gray50", cex.lab = 1)
+  par(mar = c(5, 2, 1, 2))
+  avPlot(c4d_m0_bs_lm, variable = "s_logpar", marginal.scale = TRUE, grid = FALSE, 
+         xlab = expression(Adjusted~ln(understorey~PAR*','~mu*mol~s^'-1'~m^"-2")), 
+         cex = 2, col.lines = "black", lwd = 3, col = "gray50", ylab = "", main = "",
+         cex.lab = 1)
+  
+}
+
+pdf(file = "output/figs/deltaC4_partial_regression_plot.pdf", width = 6.5, height = 2.5)
+deltac4_regplt()
+dev.off()
+
+
+png("output/figs/deltaC4_partial_regression_plot.png", width = 6.5, height = 2.5, res = 600, units = "in")
+deltac4_regplt()
+dev.off()
 
 # C3 abundance ------------------------------------------------------------
 
@@ -519,9 +558,9 @@ c3d_p <- ggplot(c3d_preddf_rv, aes(x = r_par, y = r_fit))+
   science_theme+
   theme(legend.position = "none")+
   scale_color_manual(values = c("blue", "red"),labels = c("Ambient", expression(eCO[2])))+
-  labs(x = expression(ln(Understorey~PAR~(mu*mol~s^'-1'~m^"-2"))), 
-       y = expression(ln(Delta*C[3])))+
-  annotate("text", label = "(d)", x = -Inf, y = Inf, hjust = -.5, vjust = 1.5, 
+  labs(x = expression(ln(Understorey~PAR*','~mu*mol~s^'-1'~m^"-2")), 
+       y = expression(Delta*C[3]))+
+  annotate("text", label = "(b)", x = -Inf, y = Inf, hjust = -.5, vjust = 1.5, 
            fontface = "bold")
 
 
@@ -529,12 +568,10 @@ c3d_p <- ggplot(c3d_preddf_rv, aes(x = r_par, y = r_fit))+
 
 # merge figures -----------------------------------------------------------
 
-topfig <- cbind(ggplotGrob(c4d_p_l[[1]]), ggplotGrob(c4d_p_l[[2]]))
-bomfig <- cbind(ggplotGrob(c4d_p_l[[3]]), ggplotGrob(c3d_p))
-deltaC34_fig <- rbind(topfig, bomfig)
+deltaC34_fig <- cbind(ggplotGrob(c4d_p_l[[1]]), ggplotGrob(c3d_p))
 grid.newpage()
 grid.draw(deltaC34_fig)
 
 ggsavePP(filename = "output/figs/delta_C34_envvar", plot = deltaC34_fig,
-         width = 6.5, height = 5.5)
+         width = 6.5, height = 3)
 
