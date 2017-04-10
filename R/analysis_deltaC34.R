@@ -283,7 +283,7 @@ c4_m1_nest  <- subset(c4d_m1_full, !nested(.))
     # interaction was driven by the outlier
     # now there is no no indication of interaction, so refit the model only with main effects
 c4d_m2      <- lmer(s_c4_ddiff ~ co2 + s_logmoist+s_temp+s_logpar+(1|ring)+(1|RY)+(1|id), data = c34sum[-40, ])
-confint(c4d_m2, method = "boot", level = .9)
+c4_coef <- confint(c4d_m2, method = "boot", level = .9)
 
 
 exp(-m4coef[2]/m4coef[3]) # miosture required for delta C4 to be positive in eCO2 relative to ambient (ignoring temp and par as their coeeficients are close to 0)
@@ -321,6 +321,7 @@ qqnorm(resid(c3d_m0))
 qqline(resid(c3d_m0))
 
 c3d_m0full <- dredge(c3d_m0, REML = F, extra = "r.squaredGLMM")
+confint(model.avg(get.models(c3d_m0full, subset = delta <= 4)))
 c3nest   <- subset(c3d_m0full, !nested(.))
     # no interaction is indicated
 
@@ -340,7 +341,7 @@ c3nest1
 # coefficient
 c3d_m2     <- lmer(s_c3_ddiff ~ co2 + s_logmoist+s_temp+s_logpar + (1|ring) + (1|RY) +(1|id), data = c34sum2)
 summary(c3d_m2)
-confint(c3d_m2, method = "boot", level = .9)
+c3_coef <- confint(c3d_m2, method = "boot", level = .9)
 
 
 
@@ -378,3 +379,4 @@ deltac3_regplt()
 dev.off()
 
 
+write.csv(c3d_m0full, file = "output/table/delta_c3_modelsel.csv", na = "-")
