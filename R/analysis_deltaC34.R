@@ -72,7 +72,6 @@ underpar <- Lightdf %>%
   ungroup() %>% 
   mutate(year = factor(year, labels = paste0("Year", 1:3)))
 
-
 ## Murphy 2007. For C 3 grasses, growth was considered possible in any month 
 ## where the daily minimum temperature was ≥ −1 oC, and the daily maximum 
 ## temperature was ≥ 10 oC and < 24 oC. For C 4 grasses, growth was considered 
@@ -251,8 +250,8 @@ xyplot(s_c4_ddiff ~ s_temp | year, group = RY, data = c34sum, type=c("p", "r")) 
 xyplot(s_c4_ddiff ~ s_temp, group = year, data = c34sum, type=c("p", "r"))      # not run
 
 c4d_m0 <- lmer(s_c4_ddiff ~ co2*(s_logmoist+s_temp+s_logpar)+(1|ring)+(1|RY)+(1|id), data = c34sum)
-c4d_m0 <- lmer(s_c4_ddiff ~ co2*(log(totalmoist)+annual_temp2m+log(PAR))+(1|ring)+(1|RY)+(1|id), data = c34sum)
 summary(c4d_m0)
+
 tt <- getME(c4d_m0,"theta")
 ll <- getME(c4d_m0,"lower")
 min(tt[ll==0])
@@ -265,24 +264,26 @@ qqline(resid(c4d_m0))
 c4d_m0_full <- dredge(c4d_m0, REML = F, extra = "r.squaredGLMM")
 c4nest <- subset(c4d_m0_full, !nested(.))
 c4d_m0_avg  <- model.avg(get.models(c4nest, subset = delta <= 2))
+confint(c4d_m0_avg, level = .9, full = TRUE)
 c4d_m0_bs   <- get.models(c4d_m0_full, subset = 1)[[1]]
 summary(c4d_m0_avg)
-confint(c4d_m0_avg, full = TRUE, level = .9)
-summary(c4d_m0_bs)
-Anova(c4d_m0_bs, test.statistic = "F")
-confint(c4d_m0_bs, method = "boot", nsim = 999)
-  ## convergence problem
-summary(c4d_m0_bs)
-## noone of the random factor explain any variace so refit the fixed factors to
-## a linear model and get 95% CI fo coefficients
-c4d_m0_bs_lm <- lm(s_c4_ddiff ~ co2 + s_logmoist + s_logpar + s_temp, data = c34sum)
-coef(c4d_m0_bs_lm)
-confint(c4d_m0_bs_lm)
 
-m4coef <- coef(c4d_m0_bs_lm)
-moist_sd <- sd(log(c34sum$totalmoist))
-moist_m  <- mean(log(c34sum$totalmoist))
-exp(-m4coef[2] * moist_sd / m4coef[3])
+# remove potential outlier
+plot(c4d_m0)
+qqnorm(resid(c4d_m0))
+qqline(resid(c4d_m0))
+which.min(resid(c4d_m0))
+boxplot(c34sum$s_c4_ddiff)
+points(c34sum$s_c4_ddiff[40], col = "red", pch = 19)
+c34sum[40, ]
+
+c4d_m1      <- lmer(s_c4_ddiff ~ co2*(s_logmoist+s_temp+s_logpar)+(1|ring)+(1|RY)+(1|id), data = c34sum[-40, ])
+c4d_m1_full <- dredge(c4d_m1, REML = F, extra = "r.squaredGLMM")
+c4_m1_nest  <- subset(c4d_m1_full, !nested(.))
+    # interaction was driven by the outlier
+    # now there is no no indication of interaction, so refit the model only with main effects
+c4d_m2      <- lmer(s_c4_ddiff ~ co2 + s_logmoist+s_temp+s_logpar+(1|ring)+(1|RY)+(1|id), data = c34sum[-40, ])
+confint(c4d_m2, method = "boot", level = .9)
 
 
 exp(-m4coef[2]/m4coef[3]) # miosture required for delta C4 to be positive in eCO2 relative to ambient (ignoring temp and par as their coeeficients are close to 0)
@@ -295,13 +296,11 @@ write.csv(c4d_m0_full, file = "output/table/delta_c4_modelsel.csv", na = "-")
 # . predicted values ------------------------------------------------------
 
 
-
-
 # > Use each year climate conditions --------------------------------------
 names(c34sum)
 
 # yearly climate
-yearly_climate <- c34sum %>% 
+yearly_climate <- c34sum[-40, ] %>% 
   group_by(year) %>% 
   summarise_each(funs(mean), s_logmoist, s_temp, s_logpar, totalmoist, annual_temp2m, PAR)
 yearly_climate_df <- rbind(cbind(yearly_climate, co2 = "amb"), cbind(yearly_climate, co2 = "elev"))
@@ -376,16 +375,27 @@ newdf_par<- data.frame(co2 = c("amb", "elev"),
                     s_logmoist = median(c34sum$s_logmoist),
                     s_logpar   = seq(min(c34sum$s_logpar), max(c34sum$s_logpar), length.out = 1000))
 
-newdf_l <- list(moist = newdf_moist, 
-                temp  = newdf_temp,
-                par   = newdf_par)
+newdf_l <- list(moist = newdf_moist, temp = newdf_temp, par = newdf_par)
 
-predval_l <- llply(newdf_l, function(x){
-  pred   <- predict(c4d_m0_bs_lm, x, interval = "confidence")
-  preddf <- cbind(x, pred)
-  return(preddf)
-  })
-  
+
+# remove uninformative random factors to avoid convergence problem
+c4d_m3 <- lmer(s_c4_ddiff ~ co2 + s_logmoist+s_temp+s_logpar+(1|RY), data = c34sum[-40, ])
+
+
+# perform bootstrap and 90% CI
+
+pred_df_l <- llply(names(newdf_l), function(x){
+  print(x)
+  rm(envd)
+  envd <<- newdf_l[[x]]
+  pred_bb <- bootMer(c4d_m3,
+                     FUN = function(y) predict(y, envd, re.form = NA),
+                     nsim = 999)
+  pred_df <- cbind(get_ci(pred_bb, a = .1), envd)
+  return(pred_df)
+})
+names(pred_df_l) <- names(newdf_l)
+
 
 # reverse transform
 moist_sd <- sd(log(c34sum$totalmoist))
@@ -399,24 +409,24 @@ c4d_m    <- mean(c34sum$c4_ddiff)
 
 
 
-c4d_m0_preddf_rv_l <- llply(predval_l, function(x){
+c4d_m2_preddf_rv_l <- llply(pred_df_l, function(x){
   x %>% 
     mutate(r_moist = rev_ztrans(s_logmoist, xsd = moist_sd, xmean = moist_m),
-           r_temp  = rev_ztrans(s_temp, xsd = temp_sd, xmean = temp_m),
-           r_par   = rev_ztrans(s_logpar, xsd = par_sd, xmean = par_m),
+           r_temp  = rev_ztrans(s_temp    , xsd = temp_sd , xmean = temp_m),
+           r_par   = rev_ztrans(s_logpar  , xsd = par_sd  , xmean = par_m),
            r_fit   = rev_ztrans(fit, c4d_sd, c4d_m),
            r_lwr   = rev_ztrans(lwr, c4d_sd, c4d_m), 
            r_upr   = rev_ztrans(upr, c4d_sd, c4d_m))
 })
-names(c4d_m0_preddf_rv_l)
-c4d_m0_preddf_rv_l[[1]]$xval <- c4d_m0_preddf_rv_l[[1]]$r_moist
-c4d_m0_preddf_rv_l[[2]]$xval <- c4d_m0_preddf_rv_l[[2]]$r_temp
-c4d_m0_preddf_rv_l[[3]]$xval <- c4d_m0_preddf_rv_l[[3]]$r_par
+names(c4d_m2_preddf_rv_l)
+c4d_m2_preddf_rv_l[[1]]$xval <- c4d_m2_preddf_rv_l[[1]]$r_moist
+c4d_m2_preddf_rv_l[[2]]$xval <- c4d_m2_preddf_rv_l[[2]]$r_temp
+c4d_m2_preddf_rv_l[[3]]$xval <- c4d_m2_preddf_rv_l[[3]]$r_par
 
 
 
-llply(c4d_m0_preddf_rv_l, summary)
-c4d_p_l <- llply(c4d_m0_preddf_rv_l, function(x){
+llply(c4d_m2_preddf_rv_l, summary)
+c4d_p_l <- llply(c4d_m2_preddf_rv_l, function(x){
   ggplot(x, aes(x = xval, y = r_fit, col = co2)) +
     geom_hline(yintercept = 0, col = "gray")+
     geom_line(size = 1)+
@@ -450,36 +460,40 @@ for(i in 1:3){
               fontface = "bold")
   }
 
+c4d_p_l[[1]]
+c4d_p_l[[3]]
 
 
-
-# >partial regression plot ------------------------------------------------
+# >partial residual plot ------------------------------------------------
 
 deltac4_regplt <- function(){
-  par(mfrow = c(1, 3))
-  par(mar = c(5, 4, 1, 0))
-  avPlot(c4d_m0_bs_lm, variable = "s_logmoist", marginal.scale = TRUE, grid = FALSE, 
-         xlab = "Adjusted ln(soil moisture)", ylab = expression(Adjusted~Delta*C[4]), 
-         main = "", cex = 2, col.lines = "black", lwd = 3, col = "gray50", cex.lab = 1)
-  par(mar = c(5, 3, 1, 1))
-  avPlot(c4d_m0_bs_lm, variable = "s_temp", marginal.scale = TRUE, grid = FALSE, 
-         xlab = expression(Adjusted~tempearture~(degree*C)), 
-         ylab = "", main = "", 
-         cex = 2, col.lines = "black", lwd = 3, col = "gray50", cex.lab = 1)
-  par(mar = c(5, 2, 1, 2))
-  avPlot(c4d_m0_bs_lm, variable = "s_logpar", marginal.scale = TRUE, grid = FALSE, 
-         xlab = expression(Adjusted~ln(understorey~PAR*','~mu*mol~s^'-1'~m^"-2")), 
-         cex = 2, col.lines = "black", lwd = 3, col = "gray50", ylab = "", main = "",
-         cex.lab = 1)
+
+  par(mfrow = c(2, 2), mar = c(4.5, 4.5, .5, .5))
+  visreg(c4d_m2, xvar = "s_logpar", ylab = expression(Adj.~LAR[C4]), 
+         xlab = expression(Adj.~ln(PAR,~mu*mol~s^'-1'~m^"-2")),
+         alpha = .1)
+  
+  visreg(c4d_m2, xvar = "s_logmoist", ylab = expression(Adj.~LAR[C4]), 
+         xlab = "Adj. ln(Soil moisture)",
+         alpha = .1)
+  
+  visreg(c4d_m2, xvar = "s_temp", ylab = expression(Adj.~LAR[C4]), 
+         xlab = expression(Adj.~Temperature~(degree*C)),
+         alpha = .1)
+  
+  visreg(c4d_m2, xvar = "co2", ylab = expression(Adj.~LAR[C4]), 
+         xlab = expression(CO[2]),
+         alpha = .1)
+  
   
 }
 
-pdf(file = "output/figs/deltaC4_partial_regression_plot.pdf", width = 6.5, height = 2.5)
+pdf(file = "output/figs/deltaC4_partial_regression_plot.pdf", width = 5, height = 5)
 deltac4_regplt()
 dev.off()
 
 
-png("output/figs/deltaC4_partial_regression_plot.png", width = 6.5, height = 2.5, res = 600, units = "in")
+png("output/figs/deltaC4_partial_regression_plot.png", width = 5, height = 5, res = 600, units = "in")
 deltac4_regplt()
 dev.off()
 
@@ -505,26 +519,76 @@ boxplot(c34sum$s_c3_ddiff)
 c34sum2 <- c34sum %>% 
   filter(s_c3_ddiff != max(s_c3_ddiff))
 
-c3d_m0     <- lmer(s_c3_ddiff ~ co2 * (s_logmoist+s_temp+s_logpar) + (1|ring) + (1|RY) + (1|id), data = c34sum2)
+c3d_m0     <- lmer(s_c3_ddiff ~ co2 * (s_logmoist+s_temp+s_logpar) + (1|ring) + (1|RY) +(1|id), data = c34sum2)
+plot(c3d_m0)
+qqnorm(resid(c3d_m0))
+qqline(resid(c3d_m0))
+
 c3d_m0full <- dredge(c3d_m0, REML = F, extra = "r.squaredGLMM")
 c3nest   <- subset(c3d_m0full, !nested(.))
-c3d_m0bs <- get.models(c3d_m0full, subset = 1)[[1]]
-summary(c3d_m0bs)
-Anova(c3d_m0bs, test.statistic = "F")
-confint(c3d_m0bs, method = "boot")
-dc3_confint <- confint(c3d_m0bs, method = "boot", nsim = 999)
-c3d_m0favg <- model.avg(get.models(c3d_m0full, subset = delta <= 2))
-summary(c3d_m0favg)
-confint(c3d_m0favg, full = TRUE)
-coef(c3d_m0favg, full = TRUE)
-write.csv(c3d_m0full, file = "output/table/delta_c3_modelsel.csv", na = "-")
+    # no interaction is indicated
+
+
+# remove potential outlier
+which.min(resid(c3d_m0))
+c3d_m1     <- lmer(s_c3_ddiff ~ co2 * (s_logmoist+s_temp+s_logpar) + (1|ring) + (1|RY) +(1|id), data = c34sum2[-48, ])
+plot(c3d_m1)
+qqnorm(resid(c3d_m1))
+qqline(resid(c3d_m1))
+c3d_m1full <- dredge(c3d_m1, REML = F, extra = "r.squaredGLMM")
+c3nest1   <- subset(c3d_m1full, !nested(.))
+c3nest1
+  # similar to the above
+
+
+# coefficient
+c3d_m2     <- lmer(s_c3_ddiff ~ co2 + s_logmoist+s_temp+s_logpar + (1|ring) + (1|RY) +(1|id), data = c34sum2)
+summary(c3d_m2)
+confint(c3d_m2, method = "boot", level = .9)
+
+
+
+# > partial residual plot ---------------------------------------------------
+
+deltac3_regplt <- function(){
+  
+  par(mfrow = c(2, 2), mar = c(4.5, 4.5, .5, .5))
+  visreg(c3d_m2, xvar = "s_logpar", ylab = expression(Adj.~LAR[C3]), 
+         xlab = expression(Adj.~ln(PAR,~mu*mol~s^'-1'~m^"-2")),
+         alpha = .1)
+  
+  visreg(c3d_m2, xvar = "s_logmoist", ylab = expression(Adj.~LAR[C3]), 
+         xlab = "Adj. ln(Soil moisture)",
+         alpha = .1)
+  
+  visreg(c3d_m2, xvar = "s_temp", ylab = expression(Adj.~LAR[C3]), 
+         xlab = expression(Adj.~Temperature~(degree*C)),
+         alpha = .1)
+  
+  visreg(c3d_m2, xvar = "co2", ylab = expression(Adj.~LAR[C3]), 
+         xlab = expression(CO[2]),
+         alpha = .1)
+  
+  
+}
+
+pdf(file = "output/figs/deltaC3_partial_regression_plot.pdf", width = 5, height = 5)
+deltac3_regplt()
+dev.off()
+
+
+png("output/figs/deltaC3_partial_regression_plot.png", width = 5, height = 5, res = 600, units = "in")
+deltac3_regplt()
+dev.off()
+
+
 
 
 # predicted values --------------------------------------------------------
 
 
 # get 95% CI by parametric bootstrap
-par_df <- data.frame(s_logpar = with(c34sum2, seq(min(s_logpar), 
+par_df <- data.frame(s_logpar = with(c3d_m2, seq(min(s_logpar), 
                                                   max(s_logpar), length.out = 1000)))
 bb <- bootMer(c3d_m0bs,
               FUN=function(x) predict(x, par_df, re.form = NA),
