@@ -1,7 +1,7 @@
 ---
 title: "EucFACE understorey vegetation -Summary of stats-"
 author: "Shun Hasegawa"
-date: "30 March 2016"
+date: "10 Apr 2016"
 output:
   html_document:
     toc: true
@@ -14,6 +14,7 @@ library(grid)
 library(plyr)
 library(dplyr)
 library(MuMIn)
+library(visreg)
 knitr::opts_chunk$set(echo = TRUE)
 load("../output/Data/summary_analysis.RData")
 load("../output/Data/AllObj.RData")
@@ -160,25 +161,20 @@ pander(mds_envfit_d, caption = "Summary of environmental variables fitted to the
 # Annual changes in C4 and C3 abundance
 Here, I examined the effects of eCO$_2$ on annual changes in C3 and C4 abundance ($\Delta$C4, C3) in relation to understorey temperature, PAR and soil moisture. I tested CO$_2$ and interactions between CO$_2$ and the others. I selected those models with $\Delta AIC <= 2$ as plausible candidates, and employed model averaging over them.  
 
-```{r deltaC34_fig, echo=FALSE, fig.width=6.5, fig.height=5.5, fig.cap="Regression analysis for delta C3 and C4"}
-grid.newpage()
-grid.draw(deltaC34_fig)
-```
-
 
 
 ## C4 graminoid
 ```{r c4_model_selection, echo=FALSE, results='markup', message=FALSE}
-glbm <- get.models(c4d_m0_full, subset = "128")[[1]]  # global model
-nulm <- get.models(c4d_m0_full, subset = "1")[[1]]    # null model
+glbm <- get.models(c4d_m1_full, subset = "128")[[1]]  # global model
+nulm <- get.models(c4d_m1_full, subset = "1")[[1]]    # null model
 
-subset(c4d_m0_full, delta <= 2)
+subset(c4d_m1_full, delta <= 2)
 model.sel(glbm, nulm, rank = AICc, rank.args = alist(REML = F), extra = "r.squaredGLMM")
 ```
 
 
 ```{r c4_model_summary, echo=FALSE, results='asis'}
-coefc4 <- cbind(coef(c4d_m0_bs_lm), confint(c4d_m0_bs_lm))
+coefc4 <- cbind(summary(c4d_m2)$coef[, "Estimate"], c4_coef[5:9, ])
 colnames(coefc4) <- c("estimate", "lwr", "upr")
 coefc4 <- data.frame(coefc4) %>% 
   mutate(predictor = row.names(.)) %>% 
@@ -188,6 +184,9 @@ pander(coefc4)
 ```
 
 
+```{r c4_partial_regerssion_plot, echo=FALSE, results='asis', fig.width=5, fig.height=5}
+deltac4_regplt()
+```
 
 
 ## C3 graminoid
@@ -201,14 +200,18 @@ model.sel(glbm, nulm, rank = AICc, rank.args = alist(REML = F), extra = "r.squar
 
 
 ```{r c3_model_summary, echo=FALSE, results='asis'}
-coeftbl <- data.frame(cbind(dc3_confint[-(1:4), ], 
-                            estimate = coef(summary(c3d_m0bs))[, "Estimate"])) %>% 
+coeftbl <- data.frame(cbind(c3_coef[-(1:4), ], 
+                            estimate = coef(summary(c3d_m2))[, "Estimate"])) %>% 
   transmute(predictor = row.names(.),
             estimate  = round(estimate, 3),
             CI        = paste0("[", round(.[, 1], 3), ", ", round(.[, 2], 3), "]"))
 pander(coeftbl)
 ```
 
+
+```{r c3_partial_regerssion_plot, echo=FALSE, results='asis', fig.width=5, fig.height=5}
+deltac3_regplt()
+```
 
 
 
