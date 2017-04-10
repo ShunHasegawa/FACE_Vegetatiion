@@ -293,61 +293,6 @@ write.csv(c4d_m0_full, file = "output/table/delta_c4_modelsel.csv", na = "-")
 
 
 
-# . predicted values ------------------------------------------------------
-
-
-# > Use each year climate conditions --------------------------------------
-names(c34sum)
-
-# yearly climate
-yearly_climate <- c34sum[-40, ] %>% 
-  group_by(year) %>% 
-  summarise_each(funs(mean), s_logmoist, s_temp, s_logpar, totalmoist, annual_temp2m, PAR)
-yearly_climate_df <- rbind(cbind(yearly_climate, co2 = "amb"), cbind(yearly_climate, co2 = "elev"))
-
-
-# number of C4 spp per plot
-c34_spn <- C3grassC4 %>% 
-  group_by(year, co2, PFG, id, variable) %>% 
-  summarise(value = sum(value)) %>% 
-  group_by(year, co2, PFG, id) %>% 
-  summarise(sp_n = sum(value > 0)) %>% 
-  group_by(year, co2, PFG) %>% 
-  summarise(spn_plt = round(mean(sp_n), 0), sample_n = sum(!is.na(sp_n))) %>% 
-  ungroup() %>% 
-  select(-sample_n) %>% 
-  spread(PFG, spn_plt) %>% 
-  filter(year != "Year0") %>% 
-  rename(c3_spn = c3, c4_spn = c4)
-
-
-
-
-yearly_pred <- predict(c4d_m0_bs_lm, yearly_climate_df, interval = "confidence", level = .9)
-yearly_pred_df <- data.frame(yearly_climate_df, yearly_pred) %>% 
-  mutate(r_moist = exp(rev_ztrans(s_logmoist, xsd = moist_sd, xmean = moist_m)),
-         r_temp  = rev_ztrans(s_temp, xsd = temp_sd, xmean = temp_m),
-         r_par   = exp(rev_ztrans(s_logpar, xsd = par_sd, xmean = par_m)),
-         r_lwr   = exp(rev_ztrans(lwr, c4d_sd, c4d_m)), 
-         r_fit   = exp(rev_ztrans(fit, c4d_sd, c4d_m)),
-         r_upr   = exp(rev_ztrans(upr, c4d_sd, c4d_m))) %>% 
-  left_join(c34_spn) %>% 
-  mutate(lwr_persp = r_lwr^(1/4), 
-         upr_persp = r_upr^(1/4), 
-         fit_persp = r_fit^(1/4)) %>% 
-  arrange(year, co2)
-
-ggplot(yearly_pred_df, aes(x = year, y = log(r_fit)))+
-  geom_point(aes(col = co2), position = position_dodge(.5))+
-  geom_point(data = c34sum, aes(y = c4_ddiff, shape = co2), col = "gray", 
-             position = position_dodge(.5))+
-  geom_errorbar(aes(ymin = log(r_lwr), ymax = log(r_upr), col = co2), width = .1, 
-                position = position_dodge(.5))+
-  geom_hline(yintercept = 0)
-
-
-
-
 # C3 abundance ------------------------------------------------------------
 
 
