@@ -174,12 +174,16 @@ model.sel(glbm, nulm, rank = AICc, rank.args = alist(REML = F), extra = "r.squar
 
 
 ```{r c4_model_summary, echo=FALSE, results='asis'}
+
+c4_coef_imp_df <- data.frame(RI = c4_coef_imp) %>% 
+  mutate(predictor = dplyr::recode(row.names(.), co2 = 'co2elev'))
 coefc4 <- cbind(summary(c4d_m2)$coef[, "Estimate"], c4_coef[5:9, ])
 colnames(coefc4) <- c("estimate", "lwr", "upr")
 coefc4 <- data.frame(coefc4) %>% 
   mutate(predictor = row.names(.)) %>% 
-  mutate_each(funs(round(., 3)), estimate, lwr, upr) %>% 
-  transmute(predictor, coefs = paste0(estimate, " [", lwr, ", ", upr, "]"))
+  left_join(c4_coef_imp_df) %>% 
+  mutate_each(funs(round(., 3)), estimate, lwr, upr, RI) %>% 
+  transmute(predictor, coefs = paste0(estimate, " [", lwr, ", ", upr, "]"), RI)
 pander(coefc4)
 ```
 
@@ -200,11 +204,16 @@ model.sel(glbm, nulm, rank = AICc, rank.args = alist(REML = F), extra = "r.squar
 
 
 ```{r c3_model_summary, echo=FALSE, results='asis'}
+c3_coef_imp_df <- data.frame(RI = c3_coef_impo) %>% 
+  mutate(predictor = dplyr::recode(row.names(.), co2 = 'co2elev'))
 coeftbl <- data.frame(cbind(c3_coef[-(1:4), ], 
                             estimate = coef(summary(c3d_m2))[, "Estimate"])) %>% 
-  transmute(predictor = row.names(.),
+  mutate(predictor = row.names(.)) %>% 
+  left_join(c3_coef_imp_df) %>% 
+  transmute(predictor, 
             estimate  = round(estimate, 3),
-            CI        = paste0("[", round(.[, 1], 3), ", ", round(.[, 2], 3), "]"))
+            CI        = paste0("[", round(.[, 1], 3), ", ", round(.[, 2], 3), "]"), 
+            RI        = round(RI, 3))
 pander(coeftbl)
 ```
 

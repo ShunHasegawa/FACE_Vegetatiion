@@ -283,7 +283,10 @@ c4_m1_nest  <- subset(c4d_m1_full, !nested(.))
     # interaction was driven by the outlier
     # now there is no no indication of interaction, so refit the model only with main effects
 c4d_m2      <- lmer(s_c4_ddiff ~ co2 + s_logmoist+s_temp+s_logpar+(1|ring)+(1|RY)+(1|id), data = c34sum[-40, ])
+c4d_m2_full <- dredge(c4d_m2, REML = F, extra = "r.squaredGLMM")
 c4_coef <- confint(c4d_m2, method = "boot", level = .9)
+c4_coef_imp <- importance(c4d_m2_full)
+
 
 
 exp(-m4coef[2]/m4coef[3]) # miosture required for delta C4 to be positive in eCO2 relative to ambient (ignoring temp and par as their coeeficients are close to 0)
@@ -340,9 +343,11 @@ c3nest1
 
 # coefficient
 c3d_m2     <- lmer(s_c3_ddiff ~ co2 + s_logmoist+s_temp+s_logpar + (1|ring) + (1|RY) +(1|id), data = c34sum2)
+c3d_m2_full <- dredge(c3d_m2, REML = F)
+
 summary(c3d_m2)
 c3_coef <- confint(c3d_m2, method = "boot", level = .9)
-
+c3_coef_impo <- importance(c3d_m2_full)
 
 
 # > partial residual plot ---------------------------------------------------
