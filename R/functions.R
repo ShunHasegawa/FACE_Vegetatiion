@@ -965,3 +965,13 @@ get_n <- function(x){
 rev_ztrans <- function(x, xsd, xmean){
   x * xsd + xmean
 }
+
+
+# get CI from bootMer objects
+get_ci <- function(bb, a = .05){
+  # bb: bootMer object
+  lwr <- apply(bb$t, 2, quantile, a / 2)
+  upr <- apply(bb$t, 2, quantile, 1 - a / 2)
+  fit <- bb$t0
+  cbind(lwr, upr, fit)
+}
