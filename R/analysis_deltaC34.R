@@ -296,6 +296,56 @@ write.csv(c4d_m0_full, file = "output/table/delta_c4_modelsel.csv", na = "-")
 
 
 
+
+# . level plot ------------------------------------------------------------
+
+
+# predict values
+c4_envdf <- with(c34sum, expand.grid(s_logmoist = seq(-2.5, 2.5, length.out = 100),
+                                     s_logpar   = seq(-2.5, 2.5, length.out = 100),
+                                     s_temp     = median(s_temp),
+                                     co2        = c("amb", "elev"), 
+                                     ring = 1, id = "1:1", RY = "1:Year1"))
+
+
+c4_pred <- predict(c4d_m2, c4_envdf, re.form = NA)
+
+
+# reverse transform
+moist_sd <- sd(log(c34sum$totalmoist))
+moist_m  <- mean(log(c34sum$totalmoist))
+temp_sd  <- sd(c34sum$annual_temp2m)
+temp_m   <- mean(c34sum$annual_temp2m)
+par_sd   <- sd(log(c34sum$PAR))
+par_m    <- mean(log(c34sum$PAR))
+c4d_sd   <- sd(c34sum$c4_ddiff)
+c4d_m    <- mean(c34sum$c4_ddiff)
+
+
+c4_pred_df <- cbind(fit = c4_pred, c4_envdf) %>% 
+  mutate(r_moist = rev_ztrans(s_logmoist, xsd = moist_sd, xmean = moist_m),
+         r_temp  = rev_ztrans(s_temp, xsd = temp_sd, xmean = temp_m),
+         r_par   = rev_ztrans(s_logpar, xsd = par_sd, xmean = par_m),
+         r_fit   = rev_ztrans(fit, c4d_sd, c4d_m),
+         co2     = mapvalues(co2, c("amb", "elev"), c("Ambient", "eCO[2]")))
+
+c34sum_temp <- c34sum %>% 
+  mutate(co2     = mapvalues(co2, c("amb", "elev"), c("Ambient", "eCO[2]")))
+
+c4_levelplot <- ggplot(c4_pred_df, aes(x = r_moist, y = r_par)) + 
+  geom_tile(aes(fill = r_fit)) +
+  scale_fill_gradient2(expression(LAR[C4]), low = "blue",high = "red", mid = "white")+
+  stat_ellipse(data = c34sum_temp, aes(x = log(totalmoist), y = log(PAR), linetype = year), 
+               type = "norm", level = .7)+
+  geom_point(data = c34sum_temp, aes(x = log(totalmoist), y = log(PAR), shape = year), size = 2)+
+  scale_shape_manual("Year", values = c(0:2), label = 2013:2015)+
+  scale_linetype_manual("Year", values = c(1:3), label = 2013:2015)+
+  facet_grid(. ~ co2, labeller = label_parsed)+
+  labs(x = "ln(Moist)", y = expression(ln(PAR,~mu*mol~s^'-1'~m^"-2")))
+ggsavePP(filename = "output/figs/LARC4_levelplot_byMoistPAR", plot = c4_levelplot, 
+         width = 6.5, height = 3)
+
+
 # C3 abundance ------------------------------------------------------------
 
 
