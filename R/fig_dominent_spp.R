@@ -52,15 +52,16 @@ mic_df <- dominentsp_year0 %>%
          logv0   = log(value0 + 1), 
          sqrtv0  = sqrt(value0))
 
-mic_m1 <- lmer(logitv ~ co2 * year + logitv0 + (1|block) + (1|ring) + (1|id) + (1|RY), data = mic_df, REML = F)
-mic_m2 <- lmer(logitv ~ co2 * year + logv0   + (1|block) + (1|ring) + (1|id) + (1|RY), data = mic_df, REML = F)
-mic_m3 <- lmer(logitv ~ co2 * year + value0  + (1|block) + (1|ring) + (1|id) + (1|RY), data = mic_df, REML = F)
-mic_m4 <- lmer(logitv ~ co2 * year + sqrtv0  + (1|block) + (1|ring) + (1|id) + (1|RY), data = mic_df, REML = F)
-model.sel(mic_m1, mic_m2, mic_m3, mic_m4, extra = "r.squaredGLMM")
+mic_m1 <- lmer(logitv ~ co2 * year + logitv0 + (1|block) + (1|ring) + (1|id) + (1|RY), data = mic_df)
+mic_m2 <- lmer(logitv ~ co2 * year + logv0   + (1|block) + (1|ring) + (1|id) + (1|RY), data = mic_df)
+mic_m3 <- lmer(logitv ~ co2 * year + value0  + (1|block) + (1|ring) + (1|id) + (1|RY), data = mic_df)
+mic_m4 <- lmer(logitv ~ co2 * year + sqrtv0  + (1|block) + (1|ring) + (1|id) + (1|RY), data = mic_df)
+model.sel(mic_m1, mic_m2, mic_m3, mic_m4, extra = "r.squaredGLMM", rank = AICc, rank.args = alist(REML = F))
 
 mic_m5 <- lmer(logitv ~ co2 * year + sqrtv0  + (1|block) + (1|ring) + (1|id) + (1|RY), data = mic_df)
 mic_m6 <- lmer(logitv ~ co2 * year + sqrtv0  + (1|ring) + (1|id) + (1|RY), data = mic_df)
 model.sel(mic_m5, mic_m6)
+  # no blocking
 plot(mic_m6)
 qqnorm(resid(mic_m6))
 qqline(resid(mic_m6))
@@ -134,8 +135,8 @@ qqnorm(resid(cyn_m4))
 qqline(resid(cyn_m4))
 ### use this model
 cyn_m_fin <- cyn_m4
-
-
+  # no blocking
+  # sprt transformation
 
 
 # > C4 abundance ------------------------------------------------------------
@@ -229,7 +230,7 @@ qqnorm(resid(c3ab_m2))
 qqline(resid(c3ab_m2))
 Anova(c3ab_m2, test.statistic = "F")
 c3ab_m_fin <- c3ab_m2
-
+ # no blocking
 
 
 

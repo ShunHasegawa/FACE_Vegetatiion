@@ -46,8 +46,9 @@ div_m_list <- llply(DivDF_year0_list, function(x){
   })
 
 div_m_list <- unlist(div_m_list, recursive = FALSE)
-summary(div_m_list)  
-
+summary(div_m_list) 
+llply(div_m_list, VarCorr)
+ # block is not included in the any of the models
 
 # . model diagnosis -------------------------------------------------------
 

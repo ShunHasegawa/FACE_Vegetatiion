@@ -101,7 +101,7 @@ plot(m2)
 llply(list(m1, m2), function(x) Anova(x, test.statistic = "F"))
 # not much difference, so leave it as it is
 
-
+llply(pfgprop_m_list, VarCorr)
 
 
 # CI and postdoc test -----------------------------------------------------
