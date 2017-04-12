@@ -31,7 +31,8 @@ site_temp2 <- site_temp2[complete.cases(site_temp2), ]
 site_temp <- bind_rows(site_temp1, site_temp2)
 plot(Annual ~ Year, data = site_temp, type = "l")
 abline(coef(lm(Annual ~ Year, data = site_temp)))
-quantile(site_temp$Annual)
+quantile(site_temp$Annual, probs = c(.9, .95, .97))
+?quantile
 filter(site_temp, Year %in% c(2013:2015)) %>% 
   select(Year, Annual)
 boxplot(site_temp$Annual)
@@ -39,7 +40,9 @@ points(site_temp$Annual[site_temp$Year == 2013], col = "red", pch = 19, cex = 1.
 points(site_temp$Annual[site_temp$Year == 2014], col = "blue", pch = 19, cex = 1.5)
 points(site_temp$Annual[site_temp$Year == 2015], col = "orange", pch = 19, cex = 1.5)
 
+1 - pnorm(c(25.2, 24.9, 24.1), mean = mean(site_temp$Annual), sd = sd(site_temp$Annual))
 
+?qnorm
 
 summary(site_temp)
 summary(site_temp2)
@@ -54,5 +57,6 @@ site_clim <- left_join(site_rain2, site_temp2)
 site_clim <- site_clim[complete.cases(site_clim), ]
 plot(rain ~ temp, data = site_clim)
 points(rain ~ temp, data = site_clim, subset = Year %in% c(2013:2015), col = "red", pch = 19)
+
 
 msummary(site_temp1)
