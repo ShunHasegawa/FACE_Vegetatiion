@@ -264,7 +264,7 @@ qqline(resid(c4d_m0))
 c4d_m0_full <- dredge(c4d_m0, REML = F, extra = "r.squaredGLMM")
 c4nest <- subset(c4d_m0_full, !nested(.))
 c4d_m0_avg  <- model.avg(get.models(c4nest, subset = delta <= 2))
-confint(c4d_m0_avg, level = .9, full = TRUE)
+confint(c4d_m0_avg, full = TRUE)
 c4d_m0_bs   <- get.models(c4d_m0_full, subset = 1)[[1]]
 summary(c4d_m0_avg)
 
@@ -283,8 +283,11 @@ c4_m1_nest  <- subset(c4d_m1_full, !nested(.))
     # interaction was driven by the outlier
     # now there is no no indication of interaction, so refit the model only with main effects
 c4d_m2      <- lmer(s_c4_ddiff ~ co2 + s_logmoist+s_temp+s_logpar+(1|ring)+(1|RY)+(1|id), data = c34sum[-40, ])
+c4d_m3      <- lmer(s_c4_ddiff ~ co2 + s_logmoist+s_temp+s_logpar+(1|RY), data = c34sum[-40, ])
+summary(c4d_m2)
 c4d_m2_full <- dredge(c4d_m2, REML = F, extra = "r.squaredGLMM")
-c4_coef <- confint(c4d_m2, method = "boot", level = .9)
+c4_coef <- confint(c4d_m2, method = "boot", nsim = 999)
+c4_coef_90 <- confint(c4d_m2, method = "boot", level = .9, nsim = 999)
 c4_coef_imp <- importance(c4d_m2_full)
 
 
@@ -346,6 +349,40 @@ ggsavePP(filename = "output/figs/LARC4_levelplot_byMoistPAR", plot = c4_levelplo
          width = 6.5, height = 3)
 
 
+
+
+# >partial residual plot ------------------------------------------------
+
+deltac4_regplt <- function(){
+  
+  par(mfrow = c(2, 2), mar = c(4.5, 4.5, .5, .5))
+  visreg(c4d_m2, xvar = "s_logpar", ylab = expression(Adj.~LAR[C4]), 
+         xlab = expression(Adj.~ln(PAR,~mu*mol~s^'-1'~m^"-2")))
+  
+  visreg(c4d_m2, xvar = "s_logmoist", ylab = expression(Adj.~LAR[C4]), 
+         xlab = "Adj. ln(Soil moisture)")
+  
+  visreg(c4d_m2, xvar = "s_temp", ylab = expression(Adj.~LAR[C4]), 
+         xlab = expression(Adj.~Temperature~(degree*C)))
+  
+  visreg(c4d_m2, xvar = "co2", ylab = expression(Adj.~LAR[C4]), 
+         xlab = expression(CO[2]))
+  
+  
+}
+
+pdf(file = "output/figs/deltaC4_partial_regression_plot.pdf", width = 5, height = 5)
+deltac4_regplt()
+dev.off()
+
+
+png("output/figs/deltaC4_partial_regression_plot.png", width = 5, height = 5, res = 600, units = "in")
+deltac4_regplt()
+dev.off()
+
+
+
+
 # C3 abundance ------------------------------------------------------------
 
 
@@ -396,7 +433,8 @@ c3d_m2     <- lmer(s_c3_ddiff ~ co2 + s_logmoist+s_temp+s_logpar + (1|ring) + (1
 c3d_m2_full <- dredge(c3d_m2, REML = F)
 
 summary(c3d_m2)
-c3_coef <- confint(c3d_m2, method = "boot", level = .9)
+c3_coef <- confint(c3d_m2, method = "boot", nsim = 999)
+c3_coef_90 <- confint(c3d_m2, method = "boot", level = .9, nsim = 999)
 c3_coef_impo <- importance(c3d_m2_full)
 
 
@@ -406,20 +444,16 @@ deltac3_regplt <- function(){
   
   par(mfrow = c(2, 2), mar = c(4.5, 4.5, .5, .5))
   visreg(c3d_m2, xvar = "s_logpar", ylab = expression(Adj.~LAR[C3]), 
-         xlab = expression(Adj.~ln(PAR,~mu*mol~s^'-1'~m^"-2")),
-         alpha = .1)
+         xlab = expression(Adj.~ln(PAR,~mu*mol~s^'-1'~m^"-2")))
   
   visreg(c3d_m2, xvar = "s_logmoist", ylab = expression(Adj.~LAR[C3]), 
-         xlab = "Adj. ln(Soil moisture)",
-         alpha = .1)
+         xlab = "Adj. ln(Soil moisture)")
   
   visreg(c3d_m2, xvar = "s_temp", ylab = expression(Adj.~LAR[C3]), 
-         xlab = expression(Adj.~Temperature~(degree*C)),
-         alpha = .1)
+         xlab = expression(Adj.~Temperature~(degree*C)))
   
   visreg(c3d_m2, xvar = "co2", ylab = expression(Adj.~LAR[C3]), 
-         xlab = expression(CO[2]),
-         alpha = .1)
+         xlab = expression(CO[2]))
   
   
 }
