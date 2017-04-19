@@ -226,7 +226,7 @@ fig_prc_site <- ggplot(res_prc_site_co2, aes(x = as.numeric(year), y = CAP1,
   scale_x_continuous(labels = 0:3) +
   scale_linetype_manual(values = c("solid", "dashed"), 
                         labels = c("Ambient", expression(eCO[2]))) +
-  scale_shape_manual(values = c(16, 17), 
+scale_shape_manual(values = c(16, 15), 
                         labels = c("Ambient", expression(eCO[2]))) +
   annotate("text", x = -Inf, y = Inf, label = "(a)", hjust = -.5, vjust = 1.5, fontface = "bold")
 fig_prc_site
@@ -347,5 +347,10 @@ multiplot(plotlist = list(fig_prc_site, fig_prc_spp_byPfg), layout = lo)
 dev.off()
 
 save_png600(file = "output/figs/prc_merge_fig.png", width = 5.5, height = 3)
+multiplot(plotlist = list(fig_prc_site, fig_prc_spp_byPfg), layout = lo)
+dev.off()
+
+setEPS()
+postscript(file = "output/figs/prc_merge_fig.eps", width = 5.5, height = 3)
 multiplot(plotlist = list(fig_prc_site, fig_prc_spp_byPfg), layout = lo)
 dev.off()

@@ -292,7 +292,7 @@ c4_coef_imp <- importance(c4d_m2_full)
 
 
 
-exp(-m4coef[2]/m4coef[3]) # miosture required for delta C4 to be positive in eCO2 relative to ambient (ignoring temp and par as their coeeficients are close to 0)
+exp(-c4_coef[2]/c4_coef[3]) # miosture required for delta C4 to be positive in eCO2 relative to ambient (ignoring temp and par as their coeeficients are close to 0)
 
 write.csv(c4d_m0_full, file = "output/table/delta_c4_modelsel.csv", na = "-")
 

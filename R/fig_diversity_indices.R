@@ -181,7 +181,7 @@ div_plots <- dlply(ci_dd, .(Type, variable), function(x){
     
     
     # scaaling
-    scale_shape_manual(values = c(16, 17), 
+    scale_shape_manual(values = c(16, 15), 
                        labels = c("Ambient", expression(eCO[2]))) +
     scale_linetype_manual(values = c("solid", "dashed"), 
                           labels = c("Ambient", expression(eCO[2]))) +
@@ -213,9 +213,9 @@ names(div_plots)
 
 
 # add ylabels
-div_ylabs <- c(expression(italic("H'")~('2x2'~m^'-2')), 
-               expression(italic("J'")~('2x2'~m^'-2')),
-               expression(italic(S)~('2x2'~m^'-2')))
+div_ylabs <- c(expression(italic("H'")~(plot^'-1')), 
+               expression(italic("J'")~(plot^'-1')),
+               expression(italic(S)~(plot^'-1')))
 div_ylabs <- rep(div_ylabs, 2)
 
 for (i in 1:6){

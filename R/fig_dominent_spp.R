@@ -362,7 +362,7 @@ fig_domspp <- ggplot(ci_dd, aes(x = year, y = rlsmean)) +
   
   
   # scaling
-  scale_shape_manual(values = c(16, 17), 
+  scale_shape_manual(values = c(16, 15), 
                     labels = c("Ambient", expression(eCO[2]))) +
   scale_linetype_manual(values = c("solid", "dashed"), 
                         labels = c("Ambient", expression(eCO[2]))) +

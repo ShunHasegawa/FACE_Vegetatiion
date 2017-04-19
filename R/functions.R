@@ -97,6 +97,12 @@ ggsavePP <- function(filename, plot, width, height){
          width = width, 
          height = height, 
          dpi = 600)
+  
+  ggsave(filename = paste(filename, ".eps", sep = ""), 
+         plot = plot, 
+         width = width, 
+         height = height, 
+         encoding = "MacRoman.enc")
 }
 
 ####################
