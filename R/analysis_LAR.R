@@ -5,6 +5,10 @@
 # Compute total log annual change ratios (LAR) for C3 and C4 graminoids, and
 # merge with environmental variables
 
+env_data <- env_data %>% 
+  mutate(ring = as.character(ring), 
+         plot = as.character(plot))
+
 lar_data <- graminoid_pfg_df %>% 
   mutate(ring = as.character(ring), plot = as.character(plot)) %>% 
   arrange(variable, ring, plot, year) %>%
@@ -120,6 +124,9 @@ c4_levelplot <- ggplot(c4_pred_df, aes(x = r_moist, y = r_par)) +
   scale_linetype_manual("Year", values = c(1:3), label = 2013:2015)+
   facet_grid(. ~ co2, labeller = label_parsed)+
   labs(x = "ln(Moist)", y = expression(ln(PAR,~mu*mol~s^'-1'~m^"-2")))
+c4_levelplot
+
+
 
 
 # > LAR_C3 ------------------------------------------------------------------

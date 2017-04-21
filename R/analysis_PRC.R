@@ -1,5 +1,4 @@
 
-
 # Prepare data ------------------------------------------------------------
 
 graminoid_data <- arrange(graminoid_data, ring, plot, year)           # ensure the rows are ordered by ring, plot and year. this will matter when defining permutation with autocorrelation structure
