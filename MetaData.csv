@@ -1,41 +1,39 @@
-Souce of soil variables,,,,,,,
-,,,,,,,
-Variable,unit,Description,Year1(2013),Year2(2014),Year3(2015),Months,souce
-sand,%,Soil texture,TRUE,FALSE,FALSE,NA,soil GWC texture colour bulk density March 2013.xlsx
-silt,%,Soil texture,TRUE,FALSE,FALSE,NA,soil GWC texture colour bulk density March 2013.xlsx
-clay,%,Soil texture,TRUE,FALSE,FALSE,NA,soil GWC texture colour bulk density March 2013.xlsx
-TotalP,mg kg-1,,TRUE,FALSE,FALSE,Jun,ALS_Chem_anl_June2013_clean.xlsx
-OrganicMatter,%,,TRUE,FALSE,FALSE,Jun,ALS_Chem_anl_June2013_clean.xlsx
-OrganicC,%,,TRUE,FALSE,FALSE,Jun,ALS_Chem_anl_June2013_clean.xlsx
-Depth_HL,m,,TRUE,FALSE,FALSE,Jun,Hard layer.xlsx
-ph,pHunit,Fresh soil pH at 0-30 cm,TRUE,TRUE,FALSE,Jun,FACE_FreshSoil_pH.xlsx
-TotalC,%,Soil total Carbon at 0-10 cm,TRUE,TRUE,FALSE,Jun,Soil.TC.TN.xlsx
-TotalN,%,Soil total Nitrogen at 0-10 cm,TRUE,TRUE,FALSE,Jun,Soil.TC.TN.xlsx
-TotalP_CM,mg kg-1,Soil total Phosphorus determined by Cat,TRUE,FALSE,FALSE,Jun,EucAFCE P sum 30_05_14.xlsx
-Theta5,%,Soil moisture at 5 cm,TRUE,TRUE,TRUE,Aug-Dec,HIEv
-Theta30,%,Soil moisture at 30 cm,TRUE,TRUE,TRUE,Aug-Dec,HIEv
-ThetaHL,%,Soil moisture at hard layer,TRUE,TRUE,TRUE,Aug-Dec,HIEv
-Theta75,%,Soil moisture at 75 cm,TRUE,TRUE,TRUE,Aug-Dec,HIEv
-moist,content,Soil moisture content from TDR at 5-25 cm,TRUE,TRUE,TRUE,Aug-Dec,HIEv
-EC,,Electrical conductivity,TRUE,TRUE,TRUE,Aug-Dec,HIEv
-temp,oC,Soil temperature from TDR at 5-25 cm,TRUE,TRUE,TRUE,Aug-Dec,HIEv
-T5,oC,Soil temperature at 5 cm,TRUE,TRUE,TRUE,Aug-Dec,HIEv
-T10,oC,Soil temperature at 10 cm,TRUE,TRUE,TRUE,Aug-Dec,HIEv
-T20,oC,Soil temperature at 20 cm,TRUE,TRUE,TRUE,Aug-Dec,HIEv
-T30,oC,Soil temperature at 30 cm,TRUE,TRUE,TRUE,Aug-Dec,HIEv
-T50,oC,Soil temperature at 50 cm,TRUE,TRUE,TRUE,Aug-Dec,HIEv
-T100,oC,Soil temperature at 100 cm,TRUE,TRUE,TRUE,Aug-Dec,HIEv
-FloorPAR,umol s-1 m-2,Understorey PAR,TRUE,TRUE,TRUE,Nov-Dec,HIEv
-IEM_no,mg cm-2 d-1,IEM-adsorbed nitrate,TRUE,TRUE,FALSE,Nov-Jan,
-IEM_nh,mg cm-2 d-1,IEM-adsorbed ammonium,TRUE,TRUE,FALSE,Nov-Jan,
-IEM_p,mg cm-2 d-1,IEM-adsorbed phosphate,TRUE,TRUE,FALSE,Nov-Jan,
-Ext_no,mg kg-1,Soil-extractable nitrate,TRUE,TRUE,FALSE,Dec,
-Ext_nh,mg kg-1,Soil-extractable ammonium,TRUE,TRUE,FALSE,Dec,
-Ext_p,mg kg-1,Soil-extractable phosphate,TRUE,TRUE,FALSE,Dec,
-n.min,mg kg-1 d-1,N mineralisation rates,TRUE,TRUE,FALSE,Jan,
-nitrification,mg kg-1 d-1,Nitrification rates,TRUE,TRUE,FALSE,Jan,
-p.min,mg kg-1 d-1,P mineralisation rates,TRUE,TRUE,FALSE,Jan,
-,,,,,,,
-,,,,,,,
-Note,,,,,,,
-"Months  to be used to compute yearly mean. Overlapped months between years are used. Valuse measured on shown months in a year before are used. Ex. Jun Year1 is from Jun 2012, Dec Year2 is from Dec 2013, but Jan is the same year. Jan Year 2 is from Jan 2014.",,,,,,,
+filename,variable,unit,description
+graminoid_data.csv,year,,"Survey year: Year0 was conducted in September and December 2012, Year1 was January 2014, Year2 was January 2015 and Year3 was February 2016."
+graminoid_data.csv,co2,,CO2 treatment: ambient (amb) and elevated CO2 (elev)
+graminoid_data.csv,ring,,FACE ring
+graminoid_data.csv,plot,,Plots established within each ring
+graminoid_data.csv,species names,count plot-1,the number of 10 x 10 cm cells where the species were present per plot (2 x 2 m)
+forb_data.csv,year,,See for graminoid_data.csv
+forb_data.csv,co2,,See for graminoid_data.csv
+forb_data.csv,ring,,See for graminoid_data.csv
+forb_data.csv,plot,,See for graminoid_data.csv
+forb_data.csv,species names,count plot-1,See for graminoid_data.csv
+env_data.csv,year,,"Corresponding survey years for annual means of environmental variables. The means in 2013, 2014 and 2015 are for the surveys in Year1, Year2 and Year3, respectively. Also see Year for graminoid_data.csv"
+env_data.csv,co2,,See for graminoid_data.csv
+env_data.csv,ring,,See for graminoid_data.csv
+env_data.csv,plot,,See for graminoid_data.csv
+env_data.csv,Moist,,Annual mean of soil moisture (soil volumetric water content) at a depth of 5-25 cm
+env_data.csv,Temp,degree celcious,Annual mean of understorey temperature at 2 m above the ground
+env_data.csv,PAR,micromol s-1 m-2,Annual mean of understorey photosynthetically active radiation at 2 m above the ground
+graminoid_pfg.csv,variable,,Species names
+graminoid_pfg.csv,pfg,,Plant functional groups: C3 and C4
+,,,
+,,,
+,,,
+,,,
+,,,
+,,,
+,,,
+,,,
+,,,
+,,,
+,,,
+,,,
+,,,
+,,,
+,,,
+,,,
+,,,
+,Note,,
+,"Months  to be used to compute yearly mean. Overlapped months between years are used. Valuse measured on shown months in a year before are used. Ex. Jun Year1 is from Jun 2012, Dec Year2 is from Dec 2013, but Jan is the same year. Jan Year 2 is from Jan 2014.",,
