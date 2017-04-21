@@ -981,3 +981,28 @@ get_ci <- function(bb, a = .05){
   fit <- bb$t0
   cbind(lwr, upr, fit)
 }
+
+
+# plot qqplot with random sampling
+qqfunc <- function(model){
+  
+  N <- length(resid(model))
+  sigma <- summary(model)$sigma
+  par(mfrow = c(3, 3))
+  rnum <- sample(1:9, 1)
+  for(i in 1:(rnum-1)){
+    x <- rnorm(N, 0, sigma)
+    qqnorm(x, main = i)
+    qqline(x)
+  }
+  
+  qqnorm(resid(model), main = rnum)
+  qqline(resid(model))
+  for(i in (rnum + 1):9){
+    x <- rnorm(N, 0, sigma)
+    qqnorm(x, main = i)
+    qqline(x)
+  }
+  return(rnum)
+  par(mfrow = c(1, 1))
+}
