@@ -29,6 +29,7 @@ sp_pfg         <- read.csv("output/Data/graminoid_pfg.csv")        # graminoid s
 
 
 
+
 # analysis ----------------------------------------------------------------
 
 source("R/analysis_diversity.R")  # analysis on diversity indices
