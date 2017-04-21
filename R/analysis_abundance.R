@@ -3,7 +3,6 @@
 
 # reshape graminoid_data to a long-format and combine with plant functional groups
 
-sp_pfg           <- read.csv("output/graminoid_pfg.csv")  # graminoid species and and their corresponding plant functional groups
 graminoid_pfg_df <- graminoid_data %>% 
   gather(key = variable, value = value, one_of(SppName_gram)) %>% 
   left_join(sp_pfg)

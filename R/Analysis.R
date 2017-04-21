@@ -25,7 +25,7 @@ site_data      <- graminoid_data[ ,site_var]                  # data frame for s
 SppName_gram   <- setdiff(names(graminoid_data), site_var)    # graminoid species names
 SppName_forb   <- setdiff(names(forb_data), site_var)         # forb species names
 env_data       <- read.csv("output/Data/env_data.csv")        # environmental variables (moisture, temperature and PAR)
-
+sp_pfg         <- read.csv("output/Data/graminoid_pfg.csv")        # graminoid species and and their corresponding plant functional groups
 
 
 
