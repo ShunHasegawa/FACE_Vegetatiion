@@ -1,329 +1,104 @@
-# Here we will:
-# 1) download moisture and understorey air temperature data from HIEv
-# 2) identify growing season for each of C3 and C4 species according to Murphy 2007
-# 3) Fit moisture and temperature to delta C3 and C4 (annual change in abundance)
+
+# prepare data frame ------------------------------------------------------
 
 
+# Compute total log annual change ratios (LAR) for C3 and C4 graminoids, and
+# merge with environmental variables
 
-# download from HIEv ------------------------------------------------------
-
-
-# # setToken(tokenfile = "Data/token.txt")
-# # 
-# # airvar_raw <- downloadTOA5(filename = "FACE_.*_AirVars_.*dat",
-# #                           topath    = "Data/hievdata/raw_data/",
-# #                           maxnfiles = 999)
-# # 
-# # save(airvar_raw, file = "output/Data/FACE_airvar_raw.RData")
-# load("output/Data/FACE_airvar_raw.RData")
-# 
-# 
-# 
-# 
-# # process HIEv data -------------------------------------------------------
-# 
-# 
-# # get daily mean, min and max temparater at two layers (at a height of 2m and 15m)
-# boxplot(airvar_raw$AirTC_1_Avg)
-# airvar_day <- airvar_raw %>%
-#   filter(Date        > as.Date("2012-09-18"),         # when co2 treatment was commenced
-#          Date        < as.Date("2016-2-15"),
-#          AirTC_1_Avg > -10) %>%                       # remove obviously weird value
-#   distinct() %>%                                      # remove duplicates
-#   mutate(ring = factor(substring(Source, 7, 7)),      # add ring number
-#          year = factor(year(Date))) %>%
-#   group_by(year, Date, ring) %>% 
-#   summarise_each(funs(Mean = mean(., na.rm = TRUE), 
-#                       Min  = min(., na.rm = TRUE),
-#                       Max  = max(., na.rm = TRUE),
-#                       N    = sum(!is.na(.))), 
-#                  airtemp2m = AirTC_1_Avg, airtemp15m = AirTC_2_Avg) %>% 
-#   group_by(year, ring) %>% 
-#   mutate(annual_temp2m = mean(airtemp2m_Mean),
-#          T = max(27, 1.745 * annual_temp2m  + 11.143)[1]) %>% 
-#   ungroup() %>% 
-#   mutate(c3growth = airtemp2m_Min >= -1 & airtemp2m_Max >= 10 & airtemp2m_Max < 24,  # c3 growing dates
-#          c4growth = airtemp2m_Max >= 21 & airtemp2m_Max < T & month(Date))           # c4 growtin dates
-# save(airvar_day, file = "output/Data/FACE_air_variables.RData")
-
-load("output/Data/FACE_air_variables.RData")  # airvar_day; run the above to obtain up-to-date data from HIEv
-
-c34growthdate <- airvar_day %>% 
-  select(year, Date, ring, c3growth, c4growth, annual_temp2m)
-
-
-## understorey temperature
-annualtemp <- c34growthdate %>% 
-  select(year, ring, annual_temp2m) %>% 
-  distinct() %>% 
-  filter(!year %in% c("2012", "2016")) %>% 
-  mutate(year = mapvalues(year, c(2013, 2014, 2015), paste0("Year", 1:3)))
-
-
-## understorey PAR
-load("output/Data/FACE_FloorPAR.RData")
-
-Lightdf$PAR <- rowMeans(Lightdf[, c("PAR_Den_1_Avg", "PAR_Den_2_Avg", "PAR_Den_3_Avg")], na.rm = TRUE)
-underpar <- Lightdf %>% 
-  mutate(year = year(DateTime)) %>% 
-  filter(year %in% c(2013:2015)) %>% 
-  group_by(year, ring) %>% 
-  summarise(PAR = mean(PAR, na.rm = TRUE)) %>% 
-  ungroup() %>% 
-  mutate(year = factor(year, labels = paste0("Year", 1:3)))
-
-## Murphy 2007. For C 3 grasses, growth was considered possible in any month 
-## where the daily minimum temperature was ≥ −1 oC, and the daily maximum 
-## temperature was ≥ 10 oC and < 24 oC. For C 4 grasses, growth was considered 
-## possible in months where the daily maximum temperature was ≥ 21 °C and less 
-## than the tem- perature define (Murphy and Bowman 2007).
-
-
-
-
-# assign moisture data to each vegetation plot based on their corrdinates --------
-
-
-# soil moisture for each vegetation plot assined based probe coordinates
-load("Data/FACE_TDR_ProbeDF.RData")
-veg_moist <- FACE_TDR_ProbeDF %>%
-  filter(Date        > as.Date("2012-09-18"),         # when co2 treatment was commenced
-         Date        < as.Date("2016-2-15"),
-         Sample == "vegetation") %>% 
-  mutate(year = factor(year(Date)), plot = factor(plot)) %>% 
-  select(year, Date, ring, plot, Moist) 
-
-
-# merge
-summary(c34growthdate)
-summary(veg_moist)
-summary(Lightdf)
-
-
-## survey dates: 2012-12-15 (Year0), 2014-1-15 (Year1), 2015-1-30 (Year2), 2016 (Year3)
-
-c34growth_moist <- left_join(veg_moist, c34growthdate) %>% 
-  filter(year %in% 2013:2015) %>% 
-  mutate(year     = factor(year, labels = paste0("Year", 1:3)),
-         plot     = factor(plot)) %>% 
-  group_by(year, ring, plot) %>%
-  summarise_each(funs(c3moist = sum(.[c3growth]),
-                      c4moist = sum(.[c4growth]),
-                      totalmoist = mean), 
-                 Moist) %>% 
-  ungroup() %>% 
-  mutate(swa_c3 = c3moist / (c3moist + c4moist),  # seasonal water availability
-         swa_c4 = c4moist / (c3moist + c4moist),
-         plot = factor(plot)) %>% 
-  left_join(annualtemp) %>% 
-  left_join(underpar)
-
-
-
-
-# C4/3 proprtion change ---------------------------------------------
-
-c34_prop <- PfgRDF$C3vsC4 %>% 
-  arrange(id, year) %>% 
-  group_by(id) %>% 
-  mutate_each(funs(rat_diff = . - lag(., 1),             # Year1-Year0 and etc.
-                   rat_prop = (. + 1) / lag(. + 1, 1)),  # Year1/Year0 and etc.
-              ratios) 
-    
-# move year0 to a new column so that it can be used as a covariate
-c34_prop_year0 <- c34_prop %>% 
-  select(year, id, ratios) %>% 
-  filter(year == "Year0") %>% 
-  rename(ratios0 = ratios) %>%
-  select(-year) %>% 
-  right_join(c34_prop) %>% 
-  left_join(c34growth_moist) %>% 
-  filter(year != "Year0")
-
-
-
-# > rat_diff  --------------------------------------------------------------
-names(c34_prop_year0)
-summary(c34_prop_year0)
-ratd_m1 <- lmer(rat_diff ~ co2 * (swa_c4     + annual_temp2m) + (1|ring) + (1|RY) + (1|id), data = c34_prop_year0)
-ratd_m2 <- lmer(rat_diff ~ co2 * (c4moist    + annual_temp2m) + (1|ring) + (1|RY) + (1|id), data = c34_prop_year0)
-ratd_m3 <- lmer(rat_diff ~ co2 * (totalmoist + annual_temp2m) + (1|ring) + (1|RY) + (1|id), data = c34_prop_year0)
-ratd_init <- list(ratd_m1, ratd_m2, ratd_m3)
-model.sel(llply(ratd_init, function(x) update(x, REML = F)))
-plot(ratd_m2)
-qqnorm(resid(ratd_m2))
-qqline(resid(ratd_m2))
-
-Anova(ratd_m2, test.statistic = "F")
-ratd_m2_full <- dredge(ratd_m2, REML = F)
-ratd_m2_avg <- model.avg(get.models(ratd_m2_full, subset = cumsum(weight) <= .95))
-summary(ratd_m2_avg)
-confint(ratd_m2_avg)
-# delta AICc for null model is only 2.39
-
-
-
-
-# > rat_prop  --------------------------------------------------------------
-names(c34_prop_year0)
-summary(c34_prop_year0)
-ratp_m1 <- lmer(rat_prop ~ co2 * (swa_c4     + annual_temp2m) + (1|ring) + (1|RY) + (1|id), data = c34_prop_year0)
-ratp_m2 <- lmer(rat_prop ~ co2 * (c4moist    + annual_temp2m) + (1|ring) + (1|RY) + (1|id), data = c34_prop_year0)
-ratp_m3 <- lmer(rat_prop ~ co2 * (totalmoist + annual_temp2m) + (1|ring) + (1|RY) + (1|id), data = c34_prop_year0)
-ratp_init <- list(ratp_m1, ratp_m2, ratp_m3)
-model.sel(llply(ratp_init, function(x) update(x, REML = F)))
-plot(ratp_m2)
-qqnorm(resid(ratp_m2))
-qqline(resid(ratp_m2))
-
-Anova(ratp_m2, test.statistic = "F")
-ratp_m2_full <- dredge(ratp_m2, REML = F)
-# delta AICc for null model is only 1.69
-
-
-
-
-# abundance change ------------------------------------------------------------
-
-
-c34sum <- C3grassC4 %>%
-  group_by(year, block, ring, plot, co2, id, PFG, RY, variable) %>% 
-  summarise(value = sum(value)) %>%
-  # filter(variable != "Cynodon.dactylon") %>%
-  mutate(value = log(value + 1)) %>% 
-  group_by(year, block, ring, plot, co2, id, PFG, RY) %>% 
-  summarise(value = sum(value)) %>% 
-  spread(key = PFG, value = value) %>% 
-  ungroup() %>% 
-  arrange(id, year) %>%
-  group_by(id) %>%
-  mutate_each(funs(ddiff = . - lag(., 1),             # Year1-Year0 and etc.
-                   dprop = (. + 1) / lag(. + 1, 1)),  # Year1/Year0 and etc.
-                   c3, c4) %>%
+lar_data <- graminoid_pfg_df %>% 
+  mutate(ring = as.character(ring), plot = as.character(plot)) %>% 
+  arrange(variable, ring, plot, year) %>%
+  mutate(value = value + 1) %>%                 # some speceis were absent, so add 1
+  group_by(co2, ring, plot, pfg, variable) %>%  
+  mutate(lar = log(value / lag(value, 1))) %>%  # comput LAR for each species
   filter(year != "Year0") %>%
-  left_join(c34growth_moist) %>% 
+  group_by(year, co2, ring, plot, pfg) %>% 
+  summarise(total_lar = sum(lar)) %>%           # compute total LAR for each PFG
   ungroup() %>% 
-  mutate(s_c4_ddiff = scale(c4_ddiff)[, 1],
-         s_c3_ddiff = scale(c3_ddiff)[, 1],
-         s_logmoist = scale(log(totalmoist))[, 1],
-         s_c3       = scale(log(c3))[, 1],
-         s_temp     = scale(annual_temp2m)[, 1],
-         s_logpar   = scale(log(PAR))[, 1])
-
-plot(s_c4_ddiff ~ log(totalmoist), data = c34sum, pch = 19, col = co2)
-plot(s_c4_ddiff ~ annual_temp2m, data = c34sum, pch = 19, col = co2)
-plot(s_c4_ddiff ~ log(PAR), data = c34sum, pch = 19, col = co2)
-
-which.max(c34sum$c4_dprop)
-plot(log(c4_dprop) ~ log(totalmoist), data = c34sum, pch = 19, col = co2, subset = -5)
-plot(log(c4_dprop) ~ annual_temp2m, data = c34sum, pch = 19, col = co2, subset = -5)
-plot(log(c4_dprop) ~ log(PAR), data = c34sum, pch = 19, col = co2, subset = -5)
+  spread(key = pfg, value = total_lar) %>% 
+  rename(lar_c3 = c3, lar_c4 = c4) %>% 
+  left_join(env_data) %>% 
+  mutate(s_lar_c3    = scale(lar_c3)[, 1],         # Z-standardize numeric variables
+         s_lar_c4    = scale(lar_c4)[, 1],
+         s_logmoist  = scale(log(Moist))[, 1],
+         s_temp      = scale(Temp)[, 1],
+         s_logpar    = scale(log(PAR))[, 1])
 
 
+# analysis  ------------------------------------------------------------
 
-# c4 abundance ------------------------------------------------------------
-
-
-
-# > diff ------------------------------------------------------------------
-names(c34sum)
+options(na.action = "na.fail")
 
 
+# > LAR_C4 ----------------------------------------------------------------
 
 
-# . random slopes ---------------------------------------------------------
+# test interactions
+lar_c4_m1 <- lmer(s_lar_c4 ~ co2 * (s_logmoist+s_temp+s_logpar) + 
+                    (1|ring)+(1|ring:plot)+(1|ring:year), data = lar_data)
 
-# moisture
-xyplot(s_c4_ddiff ~ s_logmoist | ring, group = id, data = c34sum, type=c("p", "r"))
-  # this should be included
-xyplot(s_c4_ddiff ~ s_logmoist, group = ring, data = c34sum, type=c("p", "r"))
-  # this is probably required
-xyplot(c4_ddiff ~ s_logmoist | ring, group = RY, data = c34sum, type=c("p", "r"))
-  # this should be included 
-xyplot(c4_ddiff ~ s_logmoist, group = year, data = c34sum, type=c("p", "r"))
+dredge(lar_c4_m1, REML = F, fixed = c("co2", "s_logmoist", "s_temp", "s_logpar"))
+dredge(lar_c4_m1, REML = F)
+  # no interaction is suggested
 
 
-# temperature
-xyplot(s_c4_ddiff ~ s_temp | ring, group = id, data = c34sum, type=c("p", "r"))
-xyplot(s_c4_ddiff ~ s_temp, group = ring, data = c34sum, type=c("p", "r"))
-xyplot(s_c4_ddiff ~ s_temp | year, group = RY, data = c34sum, type=c("p", "r")) # not run
-xyplot(s_c4_ddiff ~ s_temp, group = year, data = c34sum, type=c("p", "r"))      # not run
-
-c4d_m0 <- lmer(s_c4_ddiff ~ co2*(s_logmoist+s_temp+s_logpar)+(1|ring)+(1|RY)+(1|id), data = c34sum)
-summary(c4d_m0)
-
-tt <- getME(c4d_m0,"theta")
-ll <- getME(c4d_m0,"lower")
-min(tt[ll==0])
-## it has a singularity problem
-
-plot(c4d_m0)
-qqnorm(resid(c4d_m0))
-qqline(resid(c4d_m0))
-
-c4d_m0_full <- dredge(c4d_m0, REML = F, extra = "r.squaredGLMM")
-c4nest <- subset(c4d_m0_full, !nested(.))
-c4d_m0_avg  <- model.avg(get.models(c4nest, subset = delta <= 2))
-confint(c4d_m0_avg, full = TRUE)
-c4d_m0_bs   <- get.models(c4d_m0_full, subset = 1)[[1]]
-summary(c4d_m0_avg)
-
-# remove potential outlier
-plot(c4d_m0)
-qqnorm(resid(c4d_m0))
-qqline(resid(c4d_m0))
-which.min(resid(c4d_m0))
-boxplot(c34sum$s_c4_ddiff)
-points(c34sum$s_c4_ddiff[40], col = "red", pch = 19)
-c34sum[40, ]
-
-c4d_m1      <- lmer(s_c4_ddiff ~ co2*(s_logmoist+s_temp+s_logpar)+(1|ring)+(1|RY)+(1|id), data = c34sum[-40, ])
-c4d_m1_full <- dredge(c4d_m1, REML = F, extra = "r.squaredGLMM")
-c4_m1_nest  <- subset(c4d_m1_full, !nested(.))
-    # interaction was driven by the outlier
-    # now there is no no indication of interaction, so refit the model only with main effects
-c4d_m2      <- lmer(s_c4_ddiff ~ co2 + s_logmoist+s_temp+s_logpar+(1|ring)+(1|RY)+(1|id), data = c34sum[-40, ])
-c4d_m3      <- lmer(s_c4_ddiff ~ co2 + s_logmoist+s_temp+s_logpar+(1|RY), data = c34sum[-40, ])
-summary(c4d_m2)
-c4d_m2_full <- dredge(c4d_m2, REML = F, extra = "r.squaredGLMM")
-c4_coef <- confint(c4d_m2, method = "boot", nsim = 999)
-c4_coef_90 <- confint(c4d_m2, method = "boot", level = .9, nsim = 999)
-c4_coef_imp <- importance(c4d_m2_full)
+# test main effects
+lar_c4_m2 <- lmer(s_lar_c4 ~ co2 + s_logmoist + s_temp +  s_logpar + 
+                    (1|ring)+(1|ring:plot)+(1|ring:year), data = lar_data)
 
 
+# model diagnosis
+plot(lar_c4_m2)
+qqnorm(resid(lar_c4_m2))
+qqline(resid(lar_c4_m2))
 
-exp(-c4_coef[2]/c4_coef[3]) # miosture required for delta C4 to be positive in eCO2 relative to ambient (ignoring temp and par as their coeeficients are close to 0)
 
-write.csv(c4d_m0_full, file = "output/table/delta_c4_modelsel.csv", na = "-")
+# non-normality of the data was suggested
+lar_c4_m3 <- update(lar_c4_m2, subset = -which.min(resid(lar_c4_m2)))
+plot(lar_c4_m3)
+qqnorm(resid(lar_c4_m3))
+qqline(resid(lar_c4_m3))
 
+
+# get 95% and 90% CI for coefficients
+summary(lar_c4_m3)
+r.squaredGLMM(lar_c4_m3)
+confint(lar_c4_m3, method = "boot", nsim = 999)
+confint(lar_c4_m3, method = "boot", level = .9, nsim = 999)
 
 
 
 
 # . level plot ------------------------------------------------------------
 
+# plot predicted values from the model above on a level plot to show the
+# relations of LAR_C4 to soil moisture and PAR at a given temperature
 
 # predict values
-c4_envdf <- with(c34sum, expand.grid(s_logmoist = seq(-2.5, 2.5, length.out = 100),
+c4_envdf <- with(lar_data, expand.grid(s_logmoist = seq(-2.5, 2.5, length.out = 100),
                                      s_logpar   = seq(-2.5, 2.5, length.out = 100),
                                      s_temp     = median(s_temp),
                                      co2        = c("amb", "elev"), 
                                      ring = 1, id = "1:1", RY = "1:Year1"))
 
 
-c4_pred <- predict(c4d_m2, c4_envdf, re.form = NA)
+c4_pred <- predict(lar_c4_m3, c4_envdf, re.form = NA)
 
 
 # reverse transform
-moist_sd <- sd(log(c34sum$totalmoist))
-moist_m  <- mean(log(c34sum$totalmoist))
-temp_sd  <- sd(c34sum$annual_temp2m)
-temp_m   <- mean(c34sum$annual_temp2m)
-par_sd   <- sd(log(c34sum$PAR))
-par_m    <- mean(log(c34sum$PAR))
-c4d_sd   <- sd(c34sum$c4_ddiff)
-c4d_m    <- mean(c34sum$c4_ddiff)
 
+rev_ztrans <- function(x, xsd, xmean){
+  x * xsd + xmean
+}
+
+moist_sd <- sd(log(lar_data$Moist))
+moist_m  <- mean(log(lar_data$Moist))
+temp_sd  <- sd(lar_data$Temp)
+temp_m   <- mean(lar_data$Temp)
+par_sd   <- sd(log(lar_data$PAR))
+par_m    <- mean(log(lar_data$PAR))
+c4d_sd   <- sd(lar_data$lar_c4)
+c4d_m    <- mean(lar_data$lar_c4)
 
 c4_pred_df <- cbind(fit = c4_pred, c4_envdf) %>% 
   mutate(r_moist = rev_ztrans(s_logmoist, xsd = moist_sd, xmean = moist_m),
@@ -332,140 +107,56 @@ c4_pred_df <- cbind(fit = c4_pred, c4_envdf) %>%
          r_fit   = rev_ztrans(fit, c4d_sd, c4d_m),
          co2     = mapvalues(co2, c("amb", "elev"), c("Ambient", "eCO[2]")))
 
-c34sum_temp <- c34sum %>% 
+lar_data_temp <- lar_data %>% 
   mutate(co2     = mapvalues(co2, c("amb", "elev"), c("Ambient", "eCO[2]")))
 
 c4_levelplot <- ggplot(c4_pred_df, aes(x = r_moist, y = r_par)) + 
   geom_tile(aes(fill = r_fit)) +
   scale_fill_gradient2(expression(LAR[C4]), low = "blue",high = "red", mid = "white")+
-  stat_ellipse(data = c34sum_temp, aes(x = log(totalmoist), y = log(PAR), linetype = year), 
+  stat_ellipse(data = lar_data_temp, aes(x = log(Moist), y = log(PAR), linetype = year), 
                type = "norm", level = .7)+
-  geom_point(data = c34sum_temp, aes(x = log(totalmoist), y = log(PAR), shape = year), size = 2)+
+  geom_point(data = lar_data_temp, aes(x = log(Moist), y = log(PAR), shape = year), size = 2)+
   scale_shape_manual("Year", values = c(0:2), label = 2013:2015)+
   scale_linetype_manual("Year", values = c(1:3), label = 2013:2015)+
   facet_grid(. ~ co2, labeller = label_parsed)+
   labs(x = "ln(Moist)", y = expression(ln(PAR,~mu*mol~s^'-1'~m^"-2")))
-ggsavePP(filename = "output/figs/LARC4_levelplot_byMoistPAR", plot = c4_levelplot, 
-         width = 6.5, height = 3)
 
 
+# > LAR_C3 ------------------------------------------------------------------
 
 
-# >partial residual plot ------------------------------------------------
-
-deltac4_regplt <- function(){
-  
-  par(mfrow = c(2, 2), mar = c(4.5, 4.5, .5, .5))
-  visreg(c4d_m2, xvar = "s_logpar", ylab = expression(Adj.~LAR[C4]), 
-         xlab = expression(Adj.~ln(PAR,~mu*mol~s^'-1'~m^"-2")))
-  
-  visreg(c4d_m2, xvar = "s_logmoist", ylab = expression(Adj.~LAR[C4]), 
-         xlab = "Adj. ln(Soil moisture)")
-  
-  visreg(c4d_m2, xvar = "s_temp", ylab = expression(Adj.~LAR[C4]), 
-         xlab = expression(Adj.~Temperature~(degree*C)))
-  
-  visreg(c4d_m2, xvar = "co2", ylab = expression(Adj.~LAR[C4]), 
-         xlab = expression(CO[2]))
-  
-  
-}
-
-pdf(file = "output/figs/deltaC4_partial_regression_plot.pdf", width = 5, height = 5)
-deltac4_regplt()
-dev.off()
+# test interaction
+lar_c3_m1 <- lmer(s_lar_c3 ~ co2 * (s_logmoist+s_temp+s_logpar) 
+                  + (1|ring) + (1|ring:plot) +(1|ring:year), data = lar_data)
+plot(lar_c3_m1)
+qqnorm(resid(lar_c3_m1))
+qqline(resid(lar_c3_m1))
+  # one large outlier
+which.max(resid(lar_c3_m1))
 
 
-png("output/figs/deltaC4_partial_regression_plot.png", width = 5, height = 5, res = 600, units = "in")
-deltac4_regplt()
-dev.off()
+lar_c3_m2 <- lmer(s_lar_c3 ~ co2 * (s_logmoist+s_temp+s_logpar) 
+                  + (1|ring) + (1|ring:plot) +(1|ring:year),  
+                  data = lar_data[-56, ])
+plot(lar_c3_m2)
+qqnorm(resid(lar_c3_m2))
+qqline(resid(lar_c3_m2))
 
 
+dredge(lar_c3_m1, REML = F, fixed = c("co2", "s_logmoist", "s_temp", "s_logpar"))
+dredge(lar_c3_m2, REML = F, fixed = c("co2", "s_logmoist", "s_temp", "s_logpar"))
+  # no interaction is suggsted
 
 
-# C3 abundance ------------------------------------------------------------
+# test main effects
+lar_c3_m3 <- lmer(s_lar_c3 ~ co2 + s_logmoist + s_temp + s_logpar 
+                  + (1|ring) + (1|ring:plot) +(1|ring:year), 
+                  data = lar_data[-56, ])
 
 
+# get 95% and 90% CI for coefficients
+summary(lar_c3_m3)
+r.squaredGLMM(lar_c3_m3)
+confint(lar_c3_m3, method = "boot", nsim = 999)
+confint(lar_c3_m3, method = "boot", level = .9, nsim = 999)
 
-# > diff ------------------------------------------------------------------
-
-# moisture
-xyplot(s_c3_ddiff ~ s_logmoist | ring, group = id, data = c34sum, type=c("p", "r"))
-xyplot(s_c3_ddiff ~ s_logmoist, group = ring, data = c34sum, type=c("p", "r"))
-xyplot(s_c3_ddiff ~ s_logmoist, group = RY, data = c34sum, type=c("p", "r"))
-xyplot(s_c3_ddiff ~ s_logmoist, group = year, data = c34sum, type=c("p", "r"))
-
-# temperature
-xyplot(s_c3_ddiff ~ s_temp | ring, group = id, data = c34sum, type=c("p", "r"))
-xyplot(s_c3_ddiff ~ s_temp, group = ring, data = c34sum, type=c("p", "r"))
-
-
-# remove outlier
-boxplot(c34sum$s_c3_ddiff)
-c34sum2 <- c34sum %>% 
-  filter(s_c3_ddiff != max(s_c3_ddiff))
-
-c3d_m0     <- lmer(s_c3_ddiff ~ co2 * (s_logmoist+s_temp+s_logpar) + (1|ring) + (1|RY) +(1|id), data = c34sum2)
-plot(c3d_m0)
-qqnorm(resid(c3d_m0))
-qqline(resid(c3d_m0))
-
-c3d_m0full <- dredge(c3d_m0, REML = F, extra = "r.squaredGLMM")
-confint(model.avg(get.models(c3d_m0full, subset = delta <= 4)))
-c3nest   <- subset(c3d_m0full, !nested(.))
-    # no interaction is indicated
-
-
-# remove potential outlier
-which.min(resid(c3d_m0))
-c3d_m1     <- lmer(s_c3_ddiff ~ co2 * (s_logmoist+s_temp+s_logpar) + (1|ring) + (1|RY) +(1|id), data = c34sum2[-48, ])
-plot(c3d_m1)
-qqnorm(resid(c3d_m1))
-qqline(resid(c3d_m1))
-c3d_m1full <- dredge(c3d_m1, REML = F, extra = "r.squaredGLMM")
-c3nest1   <- subset(c3d_m1full, !nested(.))
-c3nest1
-  # similar to the above
-
-
-# coefficient
-c3d_m2     <- lmer(s_c3_ddiff ~ co2 + s_logmoist+s_temp+s_logpar + (1|ring) + (1|RY) +(1|id), data = c34sum2)
-c3d_m2_full <- dredge(c3d_m2, REML = F)
-
-summary(c3d_m2)
-c3_coef <- confint(c3d_m2, method = "boot", nsim = 999)
-c3_coef_90 <- confint(c3d_m2, method = "boot", level = .9, nsim = 999)
-c3_coef_impo <- importance(c3d_m2_full)
-
-
-# > partial residual plot ---------------------------------------------------
-
-deltac3_regplt <- function(){
-  
-  par(mfrow = c(2, 2), mar = c(4.5, 4.5, .5, .5))
-  visreg(c3d_m2, xvar = "s_logpar", ylab = expression(Adj.~LAR[C3]), 
-         xlab = expression(Adj.~ln(PAR,~mu*mol~s^'-1'~m^"-2")))
-  
-  visreg(c3d_m2, xvar = "s_logmoist", ylab = expression(Adj.~LAR[C3]), 
-         xlab = "Adj. ln(Soil moisture)")
-  
-  visreg(c3d_m2, xvar = "s_temp", ylab = expression(Adj.~LAR[C3]), 
-         xlab = expression(Adj.~Temperature~(degree*C)))
-  
-  visreg(c3d_m2, xvar = "co2", ylab = expression(Adj.~LAR[C3]), 
-         xlab = expression(CO[2]))
-  
-  
-}
-
-pdf(file = "output/figs/deltaC3_partial_regression_plot.pdf", width = 5, height = 5)
-deltac3_regplt()
-dev.off()
-
-
-png("output/figs/deltaC3_partial_regression_plot.png", width = 5, height = 5, res = 600, units = "in")
-deltac3_regplt()
-dev.off()
-
-
-write.csv(c3d_m0full, file = "output/table/delta_c3_modelsel.csv", na = "-")
