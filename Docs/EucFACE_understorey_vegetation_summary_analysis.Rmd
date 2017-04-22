@@ -1,7 +1,7 @@
 ---
 title: "EucFACE understorey vegetation -Summary of stats-"
 author: "Shun Hasegawa"
-date: "18 Apr 2016"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
 output:
   html_document:
     toc: true
@@ -133,7 +133,7 @@ l[[4]]
 
 
 
-# Multivariate analysis (PRC and MDS)
+# Multivariate analysis (PRC)
 
 Log transformation (log(n + 1)) was applied to species data to improve asymmetric distribution of species abundance.
 
@@ -145,17 +145,6 @@ multiplot(plotlist = prc_figs[1:2], layout = lo)
 ```{r prc_res, echo=FALSE, results='markup'}
 prc_res
 ```
-
-
-
-
-```{r mds_env_tbl, echo=FALSE, results='asis'}
-emphasize.italics.cols(5)
-emphasize.strong.cells(cbind(which(mds_envfit_d$p <= .1), 5))
-pander(mds_envfit_d, caption = "Summary of environmental variables fitted to the first two MDS axes")
-```
-
-
 
 
 # Annual changes in C4 and C3 abundance
@@ -192,6 +181,11 @@ coefc4 <- llply(list(c4_coef, c4_coef_90), function(x){
 pander(coefc4[[1]], caption = "LARC4 estimates[95% CI]")
 pander(coefc4[[2]], caption = "LARC4 estimates[90% CI]")
 ```
+
+```{r larc4_levelplot, echo=FALSE, results='asis', fig.width=6.5, fig.height=3}
+c4_levelplot
+```
+
 
 
 ```{r c4_partial_regerssion_plot, echo=FALSE, results='asis', fig.width=5, fig.height=5}
