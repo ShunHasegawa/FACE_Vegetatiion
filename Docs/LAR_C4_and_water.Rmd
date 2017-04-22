@@ -12,7 +12,7 @@ $y_A = a + b * M_s + c * T_s +  d * P_s$
 
 $y_E = a +a' + b * M_s + c * T_s +  d * P_s$
 
-, where $y_A and y_E$ are LAR~C4~ under ambient and eCO~2~, respectively. $M_s$, $T_s$ and $P_s$ are Z-standardized ln(moisture), temperature and ln(PAR), respectively. $M_s$ is defined as below.
+, where $y_A$ and $y_E$ are LAR~C4~ under ambient and eCO~2~, respectively. $M_s$, $T_s$ and $P_s$ are Z-standardized ln(moisture), temperature and ln(PAR), respectively. $M_s$ is defined as below.
 
 
 $M_s = \dfrac{LM - \overline{LM}}{SD_{LM}}$
