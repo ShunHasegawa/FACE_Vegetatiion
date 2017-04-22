@@ -133,15 +133,18 @@ Anova(cyn_m4, test.statistic = "F")
 plot(cyn_m4)
 qqnorm(resid(cyn_m4))
 qqline(resid(cyn_m4))
+summary(cyn_m4)
 ### use this model
-cyn_m_fin <- cyn_m4
+cyn_m_fin <- lmer(sqrt(value) ~ co2 * year + value0 + (1|ring) + (1|id) + (1|RY), 
+                  data = cyn_df)
   # no blocking
   # sprt transformation
+Anova(cyn_m_fin, test.statistic = "F")
+
+
 
 
 # > C4 abundance ------------------------------------------------------------
-
-
 
 c4ab_df <- dominentsp_year0 %>%
   filter(variable == "c4_total") %>% 
@@ -151,47 +154,9 @@ c4ab_df <- dominentsp_year0 %>%
          sqrtv0  = sqrt(value0))
 
 
-# determin the "best" xtransformation for each of variaous y tranformtion to
-# express linearity
-c4ab_df_p <- ldply(xtrans, function(x){
-  f <- formula(paste("I(value + 1) ~ co2 * year +", x))
-  a <- boxcox(f, data = c4ab_df, plotit = FALSE)
-  p <- a$x[which.max(a$y)]
-  return(data.frame(xt = x, p))
-})
-
-
-# inspect the above-suggested transformation
-c4ab_df_ms <- mlply(c4ab_df_p, function(xt, p){
-  f <- formula(paste("value^(", p, ") ~ co2 * year +", xt, 
-                     "+ (1|block) + (1|ring) + (1|id) + (1|RY)"))
-  m <- lmer(f, data = c4ab_df)
-  return(m)
-})
-llply(c4ab_df_ms, function(x) Anova(x, test.statistic = "F"))
-
-plot(c4ab_df_ms[[1]])  # not bad
-plot(c4ab_df_ms[[2]])  # bad
-plot(c4ab_df_ms[[3]])  # bad
-plot(c4ab_df_ms[[4]])  # not bad
-par(mfrow = c(2, 2))
-l_ply(c4ab_df_ms, function(x){
-  qqnorm(resid(x))
-  qqline(resid(x))
-})
-## model 1 or 4
-
-# check model1
-c4ab_m1 <- c4ab_df_ms[[1]]
-c4ab_m2 <- update(c4ab_df_ms[[1]], ~ . - (1|block))
-AICc(c4ab_m1, c4ab_m2)
-Anova(c4ab_m2, test.statistic = "F")
-plot(c4ab_m2)
-qqnorm(resid(c4ab_m2))
-qqline(resid(c4ab_m2))
-## this looks good
-c4ab_m_fin <- c4ab_m2
-
+c4ab_m_fin <- lmer(value ~ co2 * year + value0 + (1|ring) + (1|RY) + (1|id), 
+                   data = c4ab_df)
+Anova(c4ab_m_fin, test.statistic = "F")
 
 
 
@@ -257,7 +222,7 @@ sapply(dom_m_list, function(x) x@call)
   ## Microlaena: logit
   ## Cynodon: 0.5
   ## C3: no transforamtion
-  ## C4: 0.5
+  ## C4: no transformation
 
 CI_ll[["Microlaena.stipoides"]] <- CI_ll[["Microlaena.stipoides"]] %>% 
   mutate_each(funs(r = boot::inv.logit(.)*100/4), lsmean, lower.CL, upper.CL)
@@ -266,7 +231,7 @@ CI_ll[["Cynodon.dactylon"]]     <- CI_ll[["Cynodon.dactylon"]] %>%
   mutate_each(funs(r = (.^2)/4), lsmean, lower.CL, upper.CL)
 
 CI_ll[["C4 abundance"]]         <- CI_ll[["C4 abundance"]] %>% 
-  mutate_each(funs(r = (.^2)/4), lsmean, lower.CL, upper.CL)
+  mutate_each(funs(r = (.)/4), lsmean, lower.CL, upper.CL)
 
 CI_ll[["C3 abundance"]]         <- CI_ll[["C3 abundance"]] %>% 
   mutate_each(funs(r = ./4), lsmean, lower.CL, upper.CL)
@@ -426,3 +391,4 @@ writeWorksheetToFile(file  = "output/table/summary_tbl_dom_spp.xlsx",  # define 
                      data  = domsp_tbl_l,                              # writeWorksheetToFile doesn't take dplyr object so turn them into data frames using as.data.frame
                      sheet = names(domsp_tbl_l),                       # sheet names in excel are defined by object names a list
                      clearSheets = TRUE)
+
