@@ -290,9 +290,9 @@ c4_coef <- confint(c4d_m2, method = "boot", nsim = 999)
 c4_coef_90 <- confint(c4d_m2, method = "boot", level = .9, nsim = 999)
 c4_coef_imp <- importance(c4d_m2_full)
 
-
-
-exp(-c4_coef[2]/c4_coef[3]) # miosture required for delta C4 to be positive in eCO2 relative to ambient (ignoring temp and par as their coeeficients are close to 0)
+# miosture required for delta C4 to be positive in eCO2 relative to ambient (ignoring temp and par as their coeeficients are close to 0)
+c4_estimate <- summary(c4d_m2)$coeff[, "Estimate"]
+exp(-c4_estimate[2] * sd(log(c34sum$totalmoist))/c4_estimate[3])
 
 write.csv(c4d_m0_full, file = "output/table/delta_c4_modelsel.csv", na = "-")
 
@@ -344,7 +344,7 @@ c4_levelplot <- ggplot(c4_pred_df, aes(x = r_moist, y = r_par)) +
   scale_shape_manual("Year", values = c(0:2), label = 2013:2015)+
   scale_linetype_manual("Year", values = c(1:3), label = 2013:2015)+
   facet_grid(. ~ co2, labeller = label_parsed)+
-  labs(x = "ln(Moist)", y = expression(ln(PAR,~mu*mol~s^'-1'~m^"-2")))
+  labs(x = expression(Log[e](Moist)), y = expression(Log[e](PAR,~mu*mol~s^'-1'~m^"-2")))
 ggsavePP(filename = "output/figs/LARC4_levelplot_byMoistPAR", plot = c4_levelplot, 
          width = 6.5, height = 3)
 
@@ -357,13 +357,13 @@ deltac4_regplt <- function(){
   
   par(mfrow = c(2, 2), mar = c(4.5, 4.5, .5, .5))
   visreg(c4d_m2, xvar = "s_logpar", ylab = expression(Adj.~LAR[C4]), 
-         xlab = expression(Adj.~ln(PAR,~mu*mol~s^'-1'~m^"-2")))
+         xlab = expression(Adj.~Log[e](PAR,~mu*mol~s^'-1'~m^"-2")))
   
   visreg(c4d_m2, xvar = "s_logmoist", ylab = expression(Adj.~LAR[C4]), 
-         xlab = "Adj. ln(Soil moisture)")
+         xlab = expression(Adj.~Log[e](Moist)))
   
   visreg(c4d_m2, xvar = "s_temp", ylab = expression(Adj.~LAR[C4]), 
-         xlab = expression(Adj.~Temperature~(degree*C)))
+         xlab = expression(Adj.~Temp~(degree*C)))
   
   visreg(c4d_m2, xvar = "co2", ylab = expression(Adj.~LAR[C4]), 
          xlab = expression(CO[2]))
@@ -444,13 +444,13 @@ deltac3_regplt <- function(){
   
   par(mfrow = c(2, 2), mar = c(4.5, 4.5, .5, .5))
   visreg(c3d_m2, xvar = "s_logpar", ylab = expression(Adj.~LAR[C3]), 
-         xlab = expression(Adj.~ln(PAR,~mu*mol~s^'-1'~m^"-2")))
+         xlab = expression(Adj.~Log[e](PAR,~mu*mol~s^'-1'~m^"-2")))
   
   visreg(c3d_m2, xvar = "s_logmoist", ylab = expression(Adj.~LAR[C3]), 
-         xlab = "Adj. ln(Soil moisture)")
+         xlab = expression(Adj.~Log[e](Moist)))
   
   visreg(c3d_m2, xvar = "s_temp", ylab = expression(Adj.~LAR[C3]), 
-         xlab = expression(Adj.~Temperature~(degree*C)))
+         xlab = expression(Adj.~Temp~(degree*C)))
   
   visreg(c3d_m2, xvar = "co2", ylab = expression(Adj.~LAR[C3]), 
          xlab = expression(CO[2]))
