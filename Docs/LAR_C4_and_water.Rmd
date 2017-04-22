@@ -34,7 +34,7 @@ $LM_E = M_{SE} * SD_{LM} + \overline{LM}$
 
 $LM_A = M_{SA} * SD_{LM} + \overline{LM}$
 
-$LM_E - LM_A = (M_E - M_A) * SD_{LM} = (M_A - \dfrac{a'}{b} - M_A)*SD_{LM} = -\dfrac{a'}{b}*SD_{LM}$
+$LM_E - LM_A = (M_{SE} - M_{SA}) * SD_{LM} = (M_{SA} - \dfrac{a'}{b} - M_{SA})*SD_{LM} = -\dfrac{a'}{b}*SD_{LM}$
 
 Thus, $x$ is given as:
 
