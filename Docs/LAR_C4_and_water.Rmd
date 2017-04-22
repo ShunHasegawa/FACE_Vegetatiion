@@ -1,0 +1,42 @@
+---
+title: "LAR~C4~ and water availability under CO~2~ treatments"
+author: "Shun Hasegawa"
+date: "22/04/2017"
+output: html_document
+---
+
+Here, I show you how to compute how much more water is required for LAR~C4~ to be positive under eCO2 compared to ambient. The results of multiple regression analysis are given as below.
+
+
+$y_A = a + b * M_s + c * T_s +  d * P_s$
+
+$y_E = a +a' + b * M_s + c * T_s +  d * P_s$
+
+, where $y_A and y_E$ are LAR~C4~ under ambient and eCO~2~, respectively. $M_s$, $T_s$ and $P_s$ are Z-standardized ln(moisture), temperature and ln(PAR), respectively. $M_s$ is defined as below.
+
+
+$M_s = \dfrac{LM - \overline{LM}}{SD_{LM}}$
+
+, where LM is ln(Moist), $\overline{LM}$ and $SD_{LM}$ are mean and standard deviation of LM.
+
+When $y_A = 0$ and $y_E = 0$, standardized soil moisture at each CO~2~ treatments are given as:
+
+$M_{SA} = \dfrac{-(a + cT_s + dP_s)}{b}$
+
+$M_{SE} = \dfrac{-(a +a' + cT_s + dP_s)}{b} = M_A - \dfrac{a'}{b}$
+
+I would like to obtain raiotios of soil miosture at ambient and eCO~2~ treatments ($x$):
+
+$x = \dfrac{Moist_E}{Moist_A} = \dfrac{e^{LM_E}}{e^{LM_A}} = {e^{LM_E-LM_A}}$
+
+
+$LM_E = M_{SE} * SD_{LM} + \overline{LM}$
+
+$LM_A = M_{SA} * SD_{LM} + \overline{LM}$
+
+$LM_E - LM_A = (M_E - M_A) * SD_{LM} = (M_A - \dfrac{a'}{b} - M_A)*SD_{LM} = -\dfrac{a'}{b}*SD_{LM}$
+
+Thus, $x$ is given as:
+
+$x = e^{(\dfrac{-a' * SD_{LM}}{b})}$
+

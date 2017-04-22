@@ -292,7 +292,8 @@ c4_coef_imp <- importance(c4d_m2_full)
 
 # miosture required for delta C4 to be positive in eCO2 relative to ambient (ignoring temp and par as their coeeficients are close to 0)
 c4_estimate <- summary(c4d_m2)$coeff[, "Estimate"]
-exp(-c4_estimate[2] * sd(log(c34sum$totalmoist))/c4_estimate[3])
+exp(-c4_estimate[2] * sd(log(c34sum$totalmoist))/c4_estimate[3]) # See Docs/LAR_C4_and_water.html for calculation
+
 
 write.csv(c4d_m0_full, file = "output/table/delta_c4_modelsel.csv", na = "-")
 
