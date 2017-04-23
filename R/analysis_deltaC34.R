@@ -305,8 +305,8 @@ write.csv(c4d_m0_full, file = "output/table/delta_c4_modelsel.csv", na = "-")
 
 
 # predict values
-c4_envdf <- with(c34sum, expand.grid(s_logmoist = seq(-2.5, 2.5, length.out = 100),
-                                     s_logpar   = seq(-2.5, 2.5, length.out = 100),
+c4_envdf <- with(c34sum, expand.grid(s_logmoist = seq(-2.5, 2.5, length.out = 200),
+                                     s_logpar   = seq(-2.5, 2.5, length.out = 200),
                                      s_temp     = median(s_temp),
                                      co2        = c("amb", "elev"), 
                                      ring = 1, id = "1:1", RY = "1:Year1"))
