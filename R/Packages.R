@@ -41,5 +41,6 @@ library(parallel)
 library(foreach)
 library(doParallel)
 library(scales)
+library(mgcv)
 
 library(HIEv)

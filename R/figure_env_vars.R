@@ -5,6 +5,7 @@
 load("output/Data/FACE_FloorPAR.RData")
 Lightdf$PAR <- rowMeans(Lightdf[, c("PAR_Den_1_Avg", "PAR_Den_2_Avg", "PAR_Den_3_Avg")], na.rm = TRUE)
 
+
 light_dayly_co2 <- Lightdf %>% 
   filter(Date >= as.Date("2012-10-15")) %>% 
   mutate(co2 = factor(ifelse(ring %in% c("1", "4", "5"), "eCO2", "Ambient"))) %>% 
@@ -19,7 +20,7 @@ suevey_date <- data.frame(Date = as.Date(c("2012-09-15", "2012-12-15", "2014-1-1
 fig_light <- ggplot() +
   geom_point(data = light_dayly_co2, aes(x = Date, y = PAR), col = "grey") +
   geom_smooth(data = light_dayly_co2, aes(x = Date, y = PAR, col = co2),
-              method = "loess", span = .02, n = 2648, se = FALSE, size = .6)+
+              method = "gam", formula = y ~ s(x), se = FALSE, size = .6)+
   geom_point(data = suevey_date, aes(x = Date, y = 270), shape = 25, size = 3, fill = "black") +
   labs(y = expression(PAR~(mu*mol~s^'-1'~m^'-2')), x = NULL) +
   science_theme +
@@ -45,7 +46,7 @@ temp_daily_co2 <- airvar_day %>%
 fig_temp <- ggplot()+
   geom_point(data = temp_daily_co2, aes(x = Date, y = temp), col = "grey") +
   geom_smooth(data = temp_daily_co2, aes(x = Date, y = temp, col = co2, linetype = co2),
-              method = "loess", span = .02, n = 2648, se = FALSE, size = .6)+
+              method = "gam", formula = y ~ s(x), size = .6, se = FALSE)+
   scale_color_manual(values = c("blue", "red"), labels = c("Ambient", expression(eCO[2]))) +
   geom_vline(xintercept = as.numeric(as.Date("2012-09-18")), linetype = "dashed") +
   labs(x = NULL, y = expression(Temperature~(degree*C))) +
