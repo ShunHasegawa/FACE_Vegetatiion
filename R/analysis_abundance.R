@@ -60,15 +60,13 @@ mcr_m1 <- lmer(I(car::logit(value / 100)) ~ co2 * year + I(sqrt(value0)) + (1|ri
 
 # model diagnosis
 plot(mcr_m1)
-qqnorm(resid(mcr_m1))
-qqline(resid(mcr_m1))
+qqPlot(residuals(mcr_m1))
 
 
 # non-normality of the data is suggested
 mcr_m2 <- update(mcr_m1, subset = -c(order(resid(mcr_m1))[1:3]))
 plot(mcr_m2)
-qqnorm(resid(mcr_m2))
-qqline(resid(mcr_m2))
+qqPlot(residuals(mcr_m2))
 
 
 # F test
@@ -105,8 +103,7 @@ cyn_m1 <- lmer(sqrt(value) ~ co2 * year + value0 + (1|ring) + (1|ring:plot) + (1
 
 # model diagnosis
 plot(cyn_m1)
-qqnorm(resid(cyn_m1))
-qqline(resid(cyn_m1))
+qqPlot(residuals(cyn_m1))
 
 
 # F test
@@ -143,15 +140,13 @@ c3_m1 <- lmer(value ~ co2 * year + I(log(value0)) + (1|ring) + (1|ring:plot) + (
 
 # model diagnosis
 plot(c3_m1)
-qqnorm(resid(c3_m1))
-qqline(resid(c3_m1))
+qqPlot(residuals(c3_m1))
 
 
 # non-normality of the data is sugested
 c3_m2 <- update(c3_m1, subset = -which(abs(resid(c3_m1)) > 20))
 plot(c3_m2)
-qqnorm(resid(c3_m2))
-qqline(resid(c3_m2))
+qqPlot(residuals(c3_m2))
 
 
 # F test
@@ -185,8 +180,7 @@ c4_m1 <- lmer(value ~ co2 * year + value0 + (1|ring) + (1|ring:plot) + (1|ring:y
 
 # model diagnosis
 plot(c4_m1)
-qqnorm(resid(c4_m1))
-qqline(resid(c4_m1))
+qqPlot(residuals(c4_m1))
 
 
 # F test

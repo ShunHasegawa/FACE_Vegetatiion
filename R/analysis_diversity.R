@@ -58,8 +58,7 @@ gr_h_m1 <- lmer(value ~ co2 * year + value0 + (1|ring) + (1|ring:plot) + (1|ring
 
 # model diagnosis
 plot(gr_h_m1)
-qqnorm(resid(gr_h_m1))
-qqline(resid(gr_h_m1))
+qqPlot(residuals(gr_h_m1))
 
 
 # F test
@@ -90,15 +89,13 @@ gr_j_m1 <- lmer(value ~ co2 * year + value0 + (1|ring) + (1|ring:plot) + (1|ring
 
 # model diagnosis
 plot(gr_j_m1)
-qqnorm(resid(gr_j_m1))
-qqline(resid(gr_j_m1))
+qqPlot(residuals(gr_j_m1))
 
 
 # non-normality of the data is suggested
 gr_j_m2 <- update(gr_j_m1, subset = -which.min(resid(gr_j_m1)))
 plot(gr_j_m2)
-qqnorm(resid(gr_j_m2))
-qqline(resid(gr_j_m2))
+qqPlot(residuals(gr_j_m2))
 
 
 # F test
@@ -130,8 +127,7 @@ gr_s_m1 <- lmer(value ~ co2 * year + value0 + (1|ring) + (1|ring:plot) + (1|ring
 
 # model diagnosis
 plot(gr_s_m1)
-qqnorm(resid(gr_s_m1))
-qqline(resid(gr_s_m1))
+qqPlot(residuals(gr_s_m1))
 
 
 # F test
@@ -169,15 +165,13 @@ fo_h_m1 <- lmer(value ~ co2 * year + value0 + (1|ring) + (1|ring:plot) + (1|ring
 
 # model diagnosis
 plot(fo_h_m1)
-qqnorm(resid(fo_h_m1))
-qqline(resid(fo_h_m1))
+qqPlot(residuals(fo_h_m1))
 
 
 # non-normality of the data is suggested
 fo_h_m2 <- update(fo_h_m1, subset = -which.max(resid(fo_h_m1)))
 plot(fo_h_m2)
-qqnorm(resid(fo_h_m2))
-qqline(resid(fo_h_m2))
+qqPlot(residuals((fo_h_m2)))
 
 
 # F test
@@ -209,8 +203,7 @@ fo_j_m1 <- lmer(value ~ co2 * year + value0 + (1|ring) + (1|ring:plot) + (1|ring
 
 # model diagnosis
 plot(fo_j_m1)
-qqnorm(resid(fo_j_m1))
-qqline(resid(fo_j_m1))
+qqPlot(residuals((fo_j_m1)))
 
 
 # F test
@@ -240,8 +233,7 @@ fo_s_m1 <- lmer(value ~ co2 * year + value0 + (1|ring) + (1|ring:plot) + (1|ring
 
 # model diagnosis
 plot(fo_s_m1)
-qqnorm(resid(fo_s_m1))
-qqline(resid(fo_s_m1))
+qqPlot(residuals(fo_s_m1))
 
 
 # F test
