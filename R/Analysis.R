@@ -12,7 +12,7 @@ library(tidyr)
 library(lsmeans)
 library(visreg)
 library(MuMIn)
-
+library(LMERConvenienceFunctions)
 
 
 
