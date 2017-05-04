@@ -40,28 +40,35 @@ options(na.action = "na.fail")
 # test interactions
 lar_c4_m1 <- lmer(s_lar_c4 ~ co2 * (s_logmoist+s_temp+s_logpar) + 
                     (1|ring)+(1|ring:plot)+(1|ring:year), data = lar_data)
+plot(lar_c4_m1)
+qqPlot(resid(lar_c4_m1))
+mcp.fnc(lar_c4_m1)
+oldf_c4 <- romr.fnc(lar_c4_m1, data = data.frame(lar_data))
+dplyr::setdiff(oldf$data0, oldf$data)
+  # one outlier is indicated
 
-dredge(lar_c4_m1, REML = F, fixed = c("co2", "s_logmoist", "s_temp", "s_logpar"))
-dredge(lar_c4_m1, REML = F)
+
+# remove the outlier
+lar_c4_m2 <- update(lar_c4_m1, data = oldf_c4$data)
+plot(lar_c4_m2)
+qqPlot(resid(lar_c4_m2))
+mcp.fnc(lar_c4_m2)
+
+
+dredge(lar_c4_m2, REML = F, fixed = c("co2", "s_logmoist", "s_temp", "s_logpar"))
+dredge(lar_c4_m2, REML = F)
   # no interaction is suggested
 
 
 # test main effects
-lar_c4_m2 <- lmer(s_lar_c4 ~ co2 + s_logmoist + s_temp +  s_logpar + 
-                    (1|ring)+(1|ring:plot)+(1|ring:year), data = lar_data)
+lar_c4_m3 <- lmer(s_lar_c4 ~ co2 + s_logmoist + s_temp +  s_logpar + 
+                    (1|ring)+(1|ring:plot)+(1|ring:year), data = oldf_c4$data)
 
 
 # model diagnosis
-plot(lar_c4_m2)
-qqnorm(resid(lar_c4_m2))
-qqline(resid(lar_c4_m2))
-
-
-# non-normality of the data was suggested
-lar_c4_m3 <- update(lar_c4_m2, subset = -which.min(resid(lar_c4_m2)))
 plot(lar_c4_m3)
-qqnorm(resid(lar_c4_m3))
-qqline(resid(lar_c4_m3))
+qqPlot(resid(lar_c4_m3))
+mcp.fnc(lar_c4_m3)
 
 
 # get 95% and 90% CI for coefficients
@@ -136,29 +143,27 @@ c4_levelplot
 lar_c3_m1 <- lmer(s_lar_c3 ~ co2 * (s_logmoist+s_temp+s_logpar) 
                   + (1|ring) + (1|ring:plot) +(1|ring:year), data = lar_data)
 plot(lar_c3_m1)
-qqnorm(resid(lar_c3_m1))
-qqline(resid(lar_c3_m1))
+qqPlot(resid(lar_c3_m1))
+mcp.fnc(lar_c3_m1)
+oldf_c3 <- romr.fnc(lar_c3_m1, data = data.frame(lar_data))
+dplyr::setdiff(oldf_c3$data0, oldf_c3$data)
   # one large outlier
-which.max(resid(lar_c3_m1))
 
-
-lar_c3_m2 <- lmer(s_lar_c3 ~ co2 * (s_logmoist+s_temp+s_logpar) 
-                  + (1|ring) + (1|ring:plot) +(1|ring:year),  
-                  data = lar_data[-56, ])
+# remove the outlier
+lar_c3_m2 <- update(lar_c3_m1, data = oldf_c3$data)
 plot(lar_c3_m2)
-qqnorm(resid(lar_c3_m2))
-qqline(resid(lar_c3_m2))
+qqPlot(resid(lar_c3_m2))
+mcp.fnc(lar_c3_m2)
 
-
-dredge(lar_c3_m1, REML = F, fixed = c("co2", "s_logmoist", "s_temp", "s_logpar"))
 dredge(lar_c3_m2, REML = F, fixed = c("co2", "s_logmoist", "s_temp", "s_logpar"))
+dredge(lar_c3_m2, REML = F)
   # no interaction is suggsted
 
 
 # test main effects
 lar_c3_m3 <- lmer(s_lar_c3 ~ co2 + s_logmoist + s_temp + s_logpar 
                   + (1|ring) + (1|ring:plot) +(1|ring:year), 
-                  data = lar_data[-56, ])
+                  data = oldf_c3$data)
 
 
 # get 95% and 90% CI for coefficients
