@@ -44,7 +44,7 @@ plot(lar_c4_m1)
 qqPlot(resid(lar_c4_m1))
 mcp.fnc(lar_c4_m1)
 oldf_c4 <- romr.fnc(lar_c4_m1, data = data.frame(lar_data))
-dplyr::setdiff(oldf$data0, oldf$data)
+dplyr::setdiff(oldf_c4$data0, oldf_c4$data)
   # one outlier is indicated
 
 
