@@ -121,68 +121,6 @@ c34growth_moist <- left_join(veg_moist, c34growthdate) %>%
 
 
 
-# C4/3 proprtion change ---------------------------------------------
-
-c34_prop <- PfgRDF$C3vsC4 %>% 
-  arrange(id, year) %>% 
-  group_by(id) %>% 
-  mutate_each(funs(rat_diff = . - lag(., 1),             # Year1-Year0 and etc.
-                   rat_prop = (. + 1) / lag(. + 1, 1)),  # Year1/Year0 and etc.
-              ratios) 
-    
-# move year0 to a new column so that it can be used as a covariate
-c34_prop_year0 <- c34_prop %>% 
-  select(year, id, ratios) %>% 
-  filter(year == "Year0") %>% 
-  rename(ratios0 = ratios) %>%
-  select(-year) %>% 
-  right_join(c34_prop) %>% 
-  left_join(c34growth_moist) %>% 
-  filter(year != "Year0")
-
-
-
-# > rat_diff  --------------------------------------------------------------
-names(c34_prop_year0)
-summary(c34_prop_year0)
-ratd_m1 <- lmer(rat_diff ~ co2 * (swa_c4     + annual_temp2m) + (1|ring) + (1|RY) + (1|id), data = c34_prop_year0)
-ratd_m2 <- lmer(rat_diff ~ co2 * (c4moist    + annual_temp2m) + (1|ring) + (1|RY) + (1|id), data = c34_prop_year0)
-ratd_m3 <- lmer(rat_diff ~ co2 * (totalmoist + annual_temp2m) + (1|ring) + (1|RY) + (1|id), data = c34_prop_year0)
-ratd_init <- list(ratd_m1, ratd_m2, ratd_m3)
-model.sel(llply(ratd_init, function(x) update(x, REML = F)))
-plot(ratd_m2)
-qqnorm(resid(ratd_m2))
-qqline(resid(ratd_m2))
-
-Anova(ratd_m2, test.statistic = "F")
-ratd_m2_full <- dredge(ratd_m2, REML = F)
-ratd_m2_avg <- model.avg(get.models(ratd_m2_full, subset = cumsum(weight) <= .95))
-summary(ratd_m2_avg)
-confint(ratd_m2_avg)
-# delta AICc for null model is only 2.39
-
-
-
-
-# > rat_prop  --------------------------------------------------------------
-names(c34_prop_year0)
-summary(c34_prop_year0)
-ratp_m1 <- lmer(rat_prop ~ co2 * (swa_c4     + annual_temp2m) + (1|ring) + (1|RY) + (1|id), data = c34_prop_year0)
-ratp_m2 <- lmer(rat_prop ~ co2 * (c4moist    + annual_temp2m) + (1|ring) + (1|RY) + (1|id), data = c34_prop_year0)
-ratp_m3 <- lmer(rat_prop ~ co2 * (totalmoist + annual_temp2m) + (1|ring) + (1|RY) + (1|id), data = c34_prop_year0)
-ratp_init <- list(ratp_m1, ratp_m2, ratp_m3)
-model.sel(llply(ratp_init, function(x) update(x, REML = F)))
-plot(ratp_m2)
-qqnorm(resid(ratp_m2))
-qqline(resid(ratp_m2))
-
-Anova(ratp_m2, test.statistic = "F")
-ratp_m2_full <- dredge(ratp_m2, REML = F)
-# delta AICc for null model is only 1.69
-
-
-
-
 # abundance change ------------------------------------------------------------
 
 
@@ -227,27 +165,6 @@ plot(log(c4_dprop) ~ log(PAR), data = c34sum, pch = 19, col = co2, subset = -5)
 
 # > diff ------------------------------------------------------------------
 names(c34sum)
-
-
-
-
-# . random slopes ---------------------------------------------------------
-
-# moisture
-xyplot(s_c4_ddiff ~ s_logmoist | ring, group = id, data = c34sum, type=c("p", "r"))
-  # this should be included
-xyplot(s_c4_ddiff ~ s_logmoist, group = ring, data = c34sum, type=c("p", "r"))
-  # this is probably required
-xyplot(c4_ddiff ~ s_logmoist | ring, group = RY, data = c34sum, type=c("p", "r"))
-  # this should be included 
-xyplot(c4_ddiff ~ s_logmoist, group = year, data = c34sum, type=c("p", "r"))
-
-
-# temperature
-xyplot(s_c4_ddiff ~ s_temp | ring, group = id, data = c34sum, type=c("p", "r"))
-xyplot(s_c4_ddiff ~ s_temp, group = ring, data = c34sum, type=c("p", "r"))
-xyplot(s_c4_ddiff ~ s_temp | year, group = RY, data = c34sum, type=c("p", "r")) # not run
-xyplot(s_c4_ddiff ~ s_temp, group = year, data = c34sum, type=c("p", "r"))      # not run
 
 c4d_m0 <- lmer(s_c4_ddiff ~ co2*(s_logmoist+s_temp+s_logpar)+(1|ring)+(1|RY)+(1|id), data = c34sum)
 summary(c4d_m0)
@@ -338,14 +255,15 @@ c34sum_temp <- c34sum %>%
 
 c4_levelplot <- ggplot(c4_pred_df, aes(x = r_moist, y = r_par)) + 
   geom_tile(aes(fill = r_fit)) +
-  scale_fill_gradient2(expression(LAR[C4]), low = "blue",high = "red", mid = "white")+
+  scale_fill_gradient2("Log annual\nchange \nrates of C4", low = "blue",high = "red", mid = "white")+
   stat_ellipse(data = c34sum_temp, aes(x = log(totalmoist), y = log(PAR), linetype = year), 
                type = "norm", level = .7)+
   geom_point(data = c34sum_temp, aes(x = log(totalmoist), y = log(PAR), shape = year), size = 2)+
   scale_shape_manual("Year", values = c(0:2), label = 2013:2015)+
   scale_linetype_manual("Year", values = c(1:3), label = 2013:2015)+
   facet_grid(. ~ co2, labeller = label_parsed)+
-  labs(x = expression(Log[e](Moist)), y = expression(Log[e](PAR,~mu*mol~s^'-1'~m^"-2")))
+  labs(x = expression(Log[e](Moist)), y = expression(Log[e](PAR,~mu*mol~s^'-1'~m^"-2")))+
+  theme(legend.title = element_text(size = 8))
 ggsavePP(filename = "output/figs/LARC4_levelplot_byMoistPAR", plot = c4_levelplot, 
          width = 6.5, height = 3)
 
