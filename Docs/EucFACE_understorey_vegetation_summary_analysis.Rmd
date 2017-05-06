@@ -16,8 +16,8 @@ library(dplyr)
 library(MuMIn)
 library(visreg)
 knitr::opts_chunk$set(echo = TRUE)
-load("../output/Data/AllObj.RData")
 load("../output/Data/summary_analysis.RData")
+load("../output/Data/AllObj.RData")
 theme_set(theme_bw() + 
             theme(panel.grid.major = element_blank(), 
                   panel.grid.minor = element_blank()))
@@ -116,7 +116,7 @@ l[[4]]
 ## Proportions of plant functional groups
 
 
-```{r pfgprop_plot, echo=FALSE, fig.cap="Fig.3 C4:C3 ratio. Black points depict mean values adjusted by Year0 values with 95% CI. Gray points depict observed values for each FACE ring.",fig.height=5.5, fig.width=5}
+```{r pfgprop_plot, echo=FALSE, fig.cap="Fig.3 C4:C3 ratio. Black points depict mean values adjusted by Year0 values with 95% CI. Gray points depict observed values for each FACE ring.",fig.height=3, fig.width=3}
 fig_c43
 ```
 
