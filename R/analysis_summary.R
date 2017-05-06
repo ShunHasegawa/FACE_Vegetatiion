@@ -7,6 +7,7 @@ all_m_list <- list('diversity'   = div_m_list,
                    'grass_prop'  = grassprop_m,
                    'pfg_prop'    = pfgprop_m_list)
 all_m_list <- unlist(all_m_list)
+all_m_list$pfg_prop.c43ratio <- c43_m1
 
 
 
@@ -54,17 +55,18 @@ dom_tbl <- anova_df_ed %>%
          report   = "main") %>% 
   select(Type, term, variable, value, response, report)
 
+
 # PFG proportion
 pfg_tbl <- anova_df_ed %>% 
   filter(Type %in% c("grass_prop", "pfg_prop")) %>% 
   mutate(response = ifelse(.id == "grass_prop", "grass_prop", tstrsplit(.id, "[.]")[[2]]),
-         report   = ifelse(response == "C3vsC4", "main", "appendix")) %>% 
+         report   = ifelse(response == "c43ratio", "main", "appendix")) %>% 
   select(Type, term, variable, value, response, report) 
 
 # mege the above tables
 all_tbl <- rbind.fill(div_tbl, dom_tbl, pfg_tbl) %>% 
   mutate(tv       = paste(term, variable, sep = "_"),
-         response = dplyr::recode(response, C3vsC4 = 'C4 proportion')) %>% 
+         response = dplyr::recode(response, c43ratio = 'C43 ratio')) %>% 
   select(-term, -variable) %>% 
   spread(tv, value) %>% 
   select(response, starts_with("Baseline"), starts_with("CO2_"), starts_with("Year"),
