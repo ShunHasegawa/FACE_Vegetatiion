@@ -183,6 +183,22 @@ source("R/analysis_PRC_MDS.R")       # prncipal response curve analysis and MDS 
 source("R/analysis_deltaC34.R")      # process HIEv data for temp and moist, and perform multivple regression for delta C3 and C4 with temp, moist and PAR
 
 
+
+# Luke’s biomass harvest --------------------------------------------------
+
+lh <- read.csv("Data/luke_harvest.csv")
+lh %>% 
+  group_by(ring, form) %>% 
+  summarise(value = sum(Mass..g.)) %>% 
+  spread(form, value) %>% 
+  mutate(total = sum(f, g, na.rm = TRUE)) %>% 
+  ungroup() %>% 
+  mutate(f_p = sum(f, na.rm = TRUE) / sum(total),
+         g_p = sum(g)/ sum(total))
+
+
+
+
 # figs --------------------------------------------------------------------
 source("R//Figs.R")
 
