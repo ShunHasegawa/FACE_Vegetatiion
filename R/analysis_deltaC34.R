@@ -203,7 +203,7 @@ c4d_m2      <- lmer(s_c4_ddiff ~ co2 + s_logmoist+s_temp+s_logpar+(1|ring)+(1|RY
 c4d_m3      <- lmer(s_c4_ddiff ~ co2 + s_logmoist+s_temp+s_logpar+(1|RY), data = c34sum[-40, ])
 summary(c4d_m2)
 c4d_m2_full <- dredge(c4d_m2, REML = F, extra = "r.squaredGLMM")
-c4_coef <- confint(c4d_m2, method = "boot", nsim = 999)
+c4_coef    <- confint(c4d_m2, method = "boot", nsim = 999)
 c4_coef_90 <- confint(c4d_m2, method = "boot", level = .9, nsim = 999)
 c4_coef_imp <- importance(c4d_m2_full)
 
@@ -271,25 +271,34 @@ ggsavePP(filename = "output/figs/LARC4_levelplot_byMoistPAR", plot = c4_levelplo
 
 
 # >partial residual plot ------------------------------------------------
-
 deltac4_regplt <- function(){
+  yl <- expression(Adj.~annual~change~rates~of~C[4])
+  ylim <- c(-2, 2.5)
   
-  par(mfrow = c(2, 2), mar = c(4.5, 4.5, .5, .5))
+  par(mfrow = c(2, 2), mar = c(4.5, 3, .5, .5), oma = c(0, 2, 0, 0))
   visreg(c4d_m2, xvar = "s_logpar", 
-         ylab = expression(Adj.~annual~change~rates~of~C[4]), 
-         xlab = expression(Adj.~Log[e](PAR,~mu*mol~s^'-1'~m^"-2")))
+         xlab = expression(Adj.~Log[e](PAR,~mu*mol~s^'-1'~m^"-2")),
+         ylim = ylim)
   
   visreg(c4d_m2, xvar = "s_logmoist", 
-         expression(Adj.~annual~change~rates~of~C[4]), 
-         xlab = expression(Adj.~Log[e](Moist)))
+         ylab = yl, 
+         xlab = expression(Adj.~Log[e](Moist)),
+         ylim = ylim)
   
   visreg(c4d_m2, xvar = "s_temp", 
-         expression(Adj.~annual~change~rates~of~C[4]), 
-         xlab = expression(Adj.~Temp~(degree*C)))
+         ylab = yl, 
+         xlab = expression(Adj.~Temp~(degree*C)),
+         ylim = ylim)
   
-  visreg(c4d_m2, xvar = "co2", ylab = expression(Adj.~LAR[C4]), 
-         xlab = expression(CO[2]))
+  visreg(c4d_m2, xvar = "co2", 
+         ylab = yl, 
+         ylim = ylim,
+         xlab = expression(CO[2]),
+         xaxt="n")
+  axis(side = 1, labels = c("Ambient", expression(eCO[2])), 
+       at = c(.25, .75))
   
+  mtext(yl, outer = TRUE, cex = 1, side = 2)
   
 }
 
@@ -355,31 +364,36 @@ c3d_m2     <- lmer(s_c3_ddiff ~ co2 + s_logmoist+s_temp+s_logpar + (1|ring) + (1
 c3d_m2_full <- dredge(c3d_m2, REML = F)
 
 summary(c3d_m2)
-c3_coef <- confint(c3d_m2, method = "boot", nsim = 999)
+c3_coef    <- confint(c3d_m2, method = "boot", nsim = 999)
 c3_coef_90 <- confint(c3d_m2, method = "boot", level = .9, nsim = 999)
 c3_coef_impo <- importance(c3d_m2_full)
 
 
 # > partial residual plot ---------------------------------------------------
-
 deltac3_regplt <- function(){
+  yl <- expression(Adj.~annual~change~rates~of~C[3])
+  ylim <- c(-2.5, 1.5)
   
-  par(mfrow = c(2, 2), mar = c(4.5, 4.5, .5, .5))
+  par(mfrow = c(2, 2), mar = c(4.5, 3, .5, .5), oma = c(0, 2, 0, 0))
   visreg(c3d_m2, xvar = "s_logpar", 
-         expression(Adj.~annual~change~rates~of~C[3]),
+         ylim = ylim,
          xlab = expression(Adj.~Log[e](PAR,~mu*mol~s^'-1'~m^"-2")))
   
   visreg(c3d_m2, xvar = "s_logmoist", 
-         expression(Adj.~annual~change~rates~of~C[3]), 
+         ylim = ylim, 
          xlab = expression(Adj.~Log[e](Moist)))
   
   visreg(c3d_m2, xvar = "s_temp", 
-         expression(Adj.~annual~change~rates~of~C[3]), 
+         ylim = ylim,
          xlab = expression(Adj.~Temp~(degree*C)))
   
-  visreg(c3d_m2, xvar = "co2", ylab = expression(Adj.~LAR[C3]), 
-         xlab = expression(CO[2]))
-  
+  visreg(c3d_m2, xvar = "co2", 
+         ylim = ylim,
+         xlab = expression(CO[2]),
+         xaxt="n")
+  axis(side = 1, labels = c("Ambient", expression(eCO[2])), 
+       at = c(.25, .75))
+  mtext(yl, outer = TRUE, cex = 1, side = 2)
   
 }
 
