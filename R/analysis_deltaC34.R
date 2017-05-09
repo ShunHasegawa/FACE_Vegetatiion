@@ -275,13 +275,16 @@ ggsavePP(filename = "output/figs/LARC4_levelplot_byMoistPAR", plot = c4_levelplo
 deltac4_regplt <- function(){
   
   par(mfrow = c(2, 2), mar = c(4.5, 4.5, .5, .5))
-  visreg(c4d_m2, xvar = "s_logpar", ylab = expression(Adj.~LAR[C4]), 
+  visreg(c4d_m2, xvar = "s_logpar", 
+         ylab = expression(Adj.~annual~change~rates~of~C[4]), 
          xlab = expression(Adj.~Log[e](PAR,~mu*mol~s^'-1'~m^"-2")))
   
-  visreg(c4d_m2, xvar = "s_logmoist", ylab = expression(Adj.~LAR[C4]), 
+  visreg(c4d_m2, xvar = "s_logmoist", 
+         expression(Adj.~annual~change~rates~of~C[4]), 
          xlab = expression(Adj.~Log[e](Moist)))
   
-  visreg(c4d_m2, xvar = "s_temp", ylab = expression(Adj.~LAR[C4]), 
+  visreg(c4d_m2, xvar = "s_temp", 
+         expression(Adj.~annual~change~rates~of~C[4]), 
          xlab = expression(Adj.~Temp~(degree*C)))
   
   visreg(c4d_m2, xvar = "co2", ylab = expression(Adj.~LAR[C4]), 
@@ -362,13 +365,16 @@ c3_coef_impo <- importance(c3d_m2_full)
 deltac3_regplt <- function(){
   
   par(mfrow = c(2, 2), mar = c(4.5, 4.5, .5, .5))
-  visreg(c3d_m2, xvar = "s_logpar", ylab = expression(Adj.~LAR[C3]), 
+  visreg(c3d_m2, xvar = "s_logpar", 
+         expression(Adj.~annual~change~rates~of~C[3]),
          xlab = expression(Adj.~Log[e](PAR,~mu*mol~s^'-1'~m^"-2")))
   
-  visreg(c3d_m2, xvar = "s_logmoist", ylab = expression(Adj.~LAR[C3]), 
+  visreg(c3d_m2, xvar = "s_logmoist", 
+         expression(Adj.~annual~change~rates~of~C[3]), 
          xlab = expression(Adj.~Log[e](Moist)))
   
-  visreg(c3d_m2, xvar = "s_temp", ylab = expression(Adj.~LAR[C3]), 
+  visreg(c3d_m2, xvar = "s_temp", 
+         expression(Adj.~annual~change~rates~of~C[3]), 
          xlab = expression(Adj.~Temp~(degree*C)))
   
   visreg(c3d_m2, xvar = "co2", ylab = expression(Adj.~LAR[C3]), 
