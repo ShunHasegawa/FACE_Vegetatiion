@@ -110,7 +110,7 @@ fig_c43 <- ggplot(c43_CI_dd, aes(x = year, y = rlsmean)) +
              size = 2.5, position = position_dodge(width = dodgeval)) +
   
     # scaling
-  scale_shape_manual(values = c(16, 17),
+  scale_shape_manual(values = c(16, 15),
                      labels = c("Ambient", expression(eCO[2]))) +
   scale_linetype_manual(values = c("solid", "dashed"),
                         labels = c("Ambient", expression(eCO[2]))) +
