@@ -80,7 +80,7 @@ pander(all_tbl, caption = "Summary of repeated measures ANOVA", justify = "right
 
 
 ```{r div_plot, echo=FALSE, fig.cap="Fig.1 Diversity indices. Black points depict mean values adjusted by Year0 values with 95% CI. Gray points depict observed values for each FACE ring.", fig.height=6, fig.width=6}
-grid.draw(grass_mplot)
+grid.draw(div_mplot)
 ```
 
 
