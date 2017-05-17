@@ -118,8 +118,10 @@ ci_dd <- left_join(CI_dd, contrast_dd, by = c(".id", "year", "co2")) %>%
          year       = factor(year, levels = paste0("Year", 0:3)),
          value_type = "adjusted",
          vt         = paste(Type, variable, sep = "_"),
-         plot_lab   = mapvalues(vt, c("Graminoid_H", "Graminoid_J", "Graminoid_S",
-                                      "Forb_H", "Forb_J", "Forb_S"), 
+         plot_lab   = mapvalues(vt, 
+                                c("Graminoid_H", "Forb_H", 
+                                  "Graminoid_J", "Forb_J",
+                                  "Graminoid_S", "Forb_S"), 
                                 paste0("(", letters[1:6], ")"))) %>%             # sub-plot label
   select(-vt) %>% 
   left_join(div_co2_pval, by = ".id")                                            # merge with pvalues for CO2 term
