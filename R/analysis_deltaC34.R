@@ -255,7 +255,7 @@ c34sum_temp <- c34sum %>%
 
 c4_levelplot <- ggplot(c4_pred_df, aes(x = r_moist, y = r_par)) + 
   geom_tile(aes(fill = r_fit)) +
-  scale_fill_gradient2("Log annual\nchange \nrates of C4", low = "blue",high = "red", mid = "white")+
+  scale_fill_gradient2("Log annual\nrates of\nchange in C4", low = "blue",high = "red", mid = "white")+
   stat_ellipse(data = c34sum_temp, aes(x = log(totalmoist), y = log(PAR), linetype = year), 
                type = "norm", level = .7)+
   geom_point(data = c34sum_temp, aes(x = log(totalmoist), y = log(PAR), shape = year), size = 2)+
@@ -272,7 +272,7 @@ ggsavePP(filename = "output/figs/LARC4_levelplot_byMoistPAR", plot = c4_levelplo
 
 # >partial residual plot ------------------------------------------------
 deltac4_regplt <- function(){
-  yl <- expression(Adj.~annual~change~rates~of~C[4])
+  yl <- expression(Adj.~annual~rates~of~change~"in"~C[4])
   ylim <- c(-2, 2.5)
   
   par(mfrow = c(2, 2), mar = c(4.5, 3, .5, .5), oma = c(0, 2, 0, 0))
@@ -371,7 +371,7 @@ c3_coef_impo <- importance(c3d_m2_full)
 
 # > partial residual plot ---------------------------------------------------
 deltac3_regplt <- function(){
-  yl <- expression(Adj.~annual~change~rates~of~C[3])
+  yl <- expression(Adj.~annual~rates~of~change~"in"~C[3])
   ylim <- c(-2.5, 1.5)
   
   par(mfrow = c(2, 2), mar = c(4.5, 3, .5, .5), oma = c(0, 2, 0, 0))
