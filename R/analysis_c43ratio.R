@@ -31,7 +31,7 @@ summary(c43_ratio_year0)
 c43_m1 <- lmer(I(log(c43_r + .01)) ~ co2 * year + I(log(ratios0 + .01)) + (1|ring) + (1|ring:plot) + (1|ring:year), data = c43_ratio_year0)
 plot(c43_m1)
 qqPlot(residuals(c43_m1))
-c43_m2 <- update(m1, subset = -order(resid(m1))[1:2])
+c43_m2 <- update(c43_m1, subset = -order(resid(c43_m1))[1:2])
 plot(c43_m2)
 qqPlot(residuals(c43_m2))
 
