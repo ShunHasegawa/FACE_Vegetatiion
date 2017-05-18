@@ -203,8 +203,8 @@ c4d_m2      <- lmer(s_c4_ddiff ~ co2 + s_logmoist+s_temp+s_logpar+(1|ring)+(1|RY
 c4d_m3      <- lmer(s_c4_ddiff ~ co2 + s_logmoist+s_temp+s_logpar+(1|RY), data = c34sum[-40, ])
 summary(c4d_m2)
 c4d_m2_full <- dredge(c4d_m2, REML = F, extra = "r.squaredGLMM")
-c4_coef    <- confint(c4d_m2, method = "boot", nsim = 999)
-c4_coef_90 <- confint(c4d_m2, method = "boot", level = .9, nsim = 999)
+# c4_coef    <- confint(c4d_m2, method = "boot", nsim = 999)
+# c4_coef_90 <- confint(c4d_m2, method = "boot", level = .9, nsim = 999)
 c4_coef_imp <- importance(c4d_m2_full)
 
 # miosture required for delta C4 to be positive in eCO2 relative to ambient (ignoring temp and par as their coeeficients are close to 0)
@@ -267,12 +267,14 @@ c4_levelplot <- ggplot(c4_pred_df, aes(x = r_moist, y = r_par)) +
 ggsavePP(filename = "output/figs/LARC4_levelplot_byMoistPAR", plot = c4_levelplot, 
          width = 6.5, height = 3)
 
+ggsave(filename = "output/figs/LARC4_levelplot_byMoistPAR.tiff", plot = c4_levelplot, 
+         width = 6.5, height = 3, dpi = 600)
 
 
 
 # >partial residual plot ------------------------------------------------
 deltac4_regplt <- function(){
-  yl <- expression(Adj.~annual~rates~of~change~"in"~C[4])
+  yl <- expression(Adj.~Log[e](annual~rates~of~change~"in"~C[4]))
   ylim <- c(-2, 2.5)
   
   par(mfrow = c(2, 2), mar = c(4.5, 3, .5, .5), oma = c(0, 2, 0, 0))
@@ -371,7 +373,7 @@ c3_coef_impo <- importance(c3d_m2_full)
 
 # > partial residual plot ---------------------------------------------------
 deltac3_regplt <- function(){
-  yl <- expression(Adj.~annual~rates~of~change~"in"~C[3])
+  yl <- expression(Adj.~Log[e](annual~rates~of~change~"in"~C[3]))
   ylim <- c(-2.5, 1.5)
   
   par(mfrow = c(2, 2), mar = c(4.5, 3, .5, .5), oma = c(0, 2, 0, 0))
