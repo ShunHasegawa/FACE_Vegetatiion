@@ -274,7 +274,7 @@ ggsave(filename = "output/figs/LARC4_levelplot_byMoistPAR.tiff", plot = c4_level
 
 # >partial residual plot ------------------------------------------------
 deltac4_regplt <- function(){
-  yl <- expression(Adj.~Log[e](annual~rates~of~change~"in"~C[4]))
+  yl <- expression(Adj.~annual~rates~of~change~"in"~C[4])
   ylim <- c(-2, 2.5)
   
   par(mfrow = c(2, 2), mar = c(4.5, 3, .5, .5), oma = c(0, 2, 0, 0))
@@ -373,7 +373,7 @@ c3_coef_impo <- importance(c3d_m2_full)
 
 # > partial residual plot ---------------------------------------------------
 deltac3_regplt <- function(){
-  yl <- expression(Adj.~Log[e](annual~rates~of~change~"in"~C[3]))
+  yl <- expression(Adj.~annual~rates~of~change~"in"~C[3])
   ylim <- c(-2.5, 1.5)
   
   par(mfrow = c(2, 2), mar = c(4.5, 3, .5, .5), oma = c(0, 2, 0, 0))
