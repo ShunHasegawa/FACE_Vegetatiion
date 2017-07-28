@@ -172,16 +172,18 @@ pfg_cov_summary
 
 # analysis and fig --------------------------------------------------------
 
-source("R/fig_diversity_indices.R")  # diversity indices
-source("R/fig_dominent_spp.R")       # dominent spp
-source("R/Stats_C3_4_Grass.R")       # C3vsC4, LegvsNonLeg, NativevsIntro
-source("R/PFG_Proportaion.R")        # Grass vs Forb
-source("R/analysis_c43ratio.R")      # C4:C3 ratios
-source("R/fig_pfg_propotion.R")      # combine grassn and PFG proportino results to create a figure
-source("R/analysis_summary.R")       # summarise above analyses
-source("R/analysis_PRC_MDS.R")       # prncipal response curve analysis and MDS analysis
-source("R/analysis_deltaC34.R")      # process HIEv data for temp and moist, and perform multivple regression for delta C3 and C4 with temp, moist and PAR
-
+source("R/fig_diversity_indices.R")                   # diversity indices
+source("R/fig_dominent_spp.R")                        # dominent spp
+source("R/Stats_C3_4_Grass.R")                        # C3vsC4, LegvsNonLeg, NativevsIntro
+source("R/PFG_Proportaion.R")                         # Grass vs Forb
+source("R/analysis_c43ratio.R")                       # C4:C3 ratios
+source("R/fig_pfg_propotion.R")                       # combine grassn and PFG proportino results to create a figure
+source("R/analysis_summary.R")                        # summarise above analyses
+source("R/analysis_PRC_MDS.R")                        # prncipal response curve analysis and MDS analysis
+source("R/analysis_deltaC34.R")                       # process HIEv data for temp and moist, and perform multivple regression for delta C3 and C4 with temp, moist and PAR
+source("R/analysis_dominant_subordinate.R")           # define subordinate and doiminant spp; analyse S:D ratios
+source("R/analysis_LAR_dominant_subordinate_env.R")   # LAR of subordinate and dominant C3 and C4 species against environmental variables
+source("R/analysis_LAR_dominant_subordinate_soil.R")  # LAR of subordinate and dominant C3 and C4 species against soil nutrients
 
 
 # Luke’s biomass harvest --------------------------------------------------
