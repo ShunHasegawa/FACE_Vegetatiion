@@ -23,7 +23,7 @@ names(grass_DS_acr)
 vi_dd <- grass_DS_acr %>% 
   filter(year == "Year1") %>% 
   group_by(year, ring, co2) %>% 
-  summarise_each(funs(mean), ends_with("_ddiff")) %>% 
+  summarise_each(funs(mean(.)), ends_with("_ddiff")) %>% 
   left_join(iem_raw) %>%
   ungroup() %>% 
   mutate(Year1_n  = Year1_no + Year1_nh,
@@ -33,20 +33,21 @@ names(grass_DS_acr)
 
 
 
+
 # analysis ----------------------------------------------------------------
 
 # subordinate C4
-plot(s_sc4_ddiff ~ log(Year1_p), data = vi_dd, col = co2, pch = 19)
-plot(s_sc4_ddiff ~ log(Year1_n), data = vi_dd, col = co2, pch = 19)
+plot(S_c4_ddiff ~ log(Year1_p), data = vi_dd, col = co2, pch = 19)
+plot(S_c4_ddiff ~ log(Year1_n), data = vi_dd, col = co2, pch = 19)
 sc4_m1 <- lm(s_sc4_ddiff ~ log(Year1_p) + log(Year1_n), data = vi_dd)
 Anova(sc4_m1, test.statistic = "F")
-par(mfrow = c(2, 2))
+par(mfrow = c(2, 2), mar = c(4, 3, 1, 1))
 plot(sc4_m1)
 
 
 # subordinate C3
-plot(s_sc3_ddiff ~ log(Year1_p), data = vi_dd, col = co2, pch = 19)
-plot(s_sc3_ddiff ~ log(Year1_n), data = vi_dd, col = co2, pch = 19)
+plot(S_c3_ddiff ~ log(Year1_p), data = vi_dd, col = co2, pch = 19)
+plot(S_c3_ddiff ~ log(Year1_n), data = vi_dd, col = co2, pch = 19)
 sc3_m1 <- lm(s_sc3_ddiff ~ log(Year1_p) + log(Year1_n), data = vi_dd)
 Anova(sc3_m1, test.statistic = "F")
 plot(sc3_m1)
