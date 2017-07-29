@@ -56,7 +56,7 @@ plot(sc3_m1)
 # dominant C4
 plot(s_dc4_ddiff ~ log(Year1_p), data = vi_dd, col = co2, pch = 19)
 plot(s_dc4_ddiff ~ log(Year1_n), data = vi_dd, col = co2, pch = 19)
-dc4_m1 <- lmer(s_dc4_ddiff ~ log(Year1_p) + log(Year1_n) + (1|ring), data = vi_dd)
+dc4_m1 <- lm(s_dc4_ddiff ~ log(Year1_p) + log(Year1_n), data = vi_dd)
 Anova(dc4_m1, test.statistic = "F")
 plot(dc4_m1)
 qqPlot(resid(dc4_m1))
@@ -70,3 +70,18 @@ Anova(dc3_m1, test.statistic = "F")
 plot(dc3_m1)
 
 
+
+
+# summary -----------------------------------------------------------------
+
+lar_sd_c34_soil_ml <- list(subordinate_c4 = sc4_m1, 
+                           dominant_c4    = dc4_m1,
+                           subordinate_c3 = sc3_m1,
+                           dominant_c3    = dc3_m1)
+
+lar_sd_c34_soil_aov <- ldply(lar_sd_c34_soil_ml, function(x) tidy(Anova(x, test.statistic = "F"))) %>% 
+  mutate(term = mapvalues(term, c("log(Year1_p)", "log(Year1_n)"), c("IEM-P", "IEM-N")),
+         p.value = round(p.value, 3),
+         statistic = round(statistic, 2)) %>% 
+  rename(Fval = statistic) %>% 
+  select(-sumsq)

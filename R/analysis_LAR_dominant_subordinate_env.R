@@ -36,93 +36,87 @@ grass_DS_acr <- grass_DS %>%
          s_sc3       = scale(log(S_c3 + 1))[, 1],
          s_sc4       = scale(log(S_c4 + 1))[, 1])
 
-plot(D_c4_ddiff ~ D_c3, data = grass_DS_acr)
-plot(D_c4_ddiff ~ S_c3, data = grass_DS_acr)
+
+# subordinate c4  -------------------------------------------------------------
+
+lar_sc4_m1 <- lmer(s_sc4_ddiff ~ co2 * (s_logmoist+s_temp + s_logpar) +(1|ring)+(1|RY)+(1|id), data = grass_DS_acr)
+lar_sc4_m1_full <- dredge(lar_sc4_m1, fixed = c("co2", "s_logmoist", "s_temp",  "s_logpar"))
+plot(lar_sc4_m1)
+qqPlot(resid(lar_sc4_m1))
+# no interaction is suggested
+lar_sc4_m2 <- lmer(s_sc4_ddiff ~ co2 + s_logmoist+s_temp + s_logpar +(1|ring)+(1|RY)+(1|id), data = grass_DS_acr)
+Anova(lar_sc4_m2, test.statistic = "F")
+plot(lar_sc4_m2)
+qqPlot(resid(lar_sc4_m2))
 
 
-# m0 <- lmer(s_dc4_ddiff ~ s_dc3 + s_sc4  + s_sc3 + s_logmoist+s_temp + s_logpar +(1|ring)+(1|RY)+(1|id), data = grass_DS_acr)
-m0 <- lmer(s_sc4_ddiff ~ s_dc3 + s_dc4  + s_sc3 + s_logmoist+s_temp + s_logpar +(1|ring)+(1|RY)+(1|id), data = grass_DS_acr)
-m0 <- lmer(s_sc4_ddiff ~ s_logmoist+s_temp + s_logpar +(1|ring)+(1|RY)+(1|id), data = grass_DS_acr)
-# m0 <- lmer(s_sc3_ddiff ~ s_dc3 + s_dc4  + s_sc4 + s_logmoist+s_temp + s_logpar +(1|ring)+(1|RY)+(1|id), data = grass_DS_acr[-32, ])
-# m0 <- lmer(s_dc3_ddiff ~ co2 + s_sc3 + s_dc4  + s_sc4 + s_logmoist+s_temp + s_logpar +(1|ring)+(1|RY)+(1|id), data = grass_DS_acr[-25, ])
-xvars <- c("s_dc3", "s_dc4", "s_sc3", "s_sc4", "s_logmoist", "s_temp", "s_logpar")
-par(mfrow = c(2, 4))
-l_ply(xvars[-1:-4], function(x) visreg(m0, xvar = x))
-m1 <- lmer(I(s_logmoist+s_temp+s_logpar) ~ co2 * year + (1|ring)+(1|RY)+(1|id), data = grass_DS_acr)
-Anova(m1, test.statistic = 'F')
-
-# m0 <- lmer(s_dc3_ddiff ~ co2 + s_logmoist+s_temp+s_logpar+(1|ring)+(1|RY)+(1|id), data = grass_DS_acr)
-# m0 <- lmer(s_sc4_ddiff ~ co2 + s_logmoist+s_temp+s_logpar + s_dc3 + s_dc4 + (1|ring)+(1|RY)+(1|id), data = grass_DS_acr)
-m0_full <- dredge(m0)
-
-
-
-m0 <- lmer(D_c4_ddiff ~ co2 * (s_logmoist + s_temp + s_logpar) + (1|ring)+(1|RY)+(1|id), data = grass_DS_acr)
-m0 <- lmer(S_c4_ddiff ~ co2 * (s_logmoist + s_temp + s_logpar) + (1|ring)+(1|RY)+(1|id), data = grass_DS_acr)
-m0 <- lmer(D_c3_ddiff ~ co2 * (s_logmoist + s_temp + s_logpar) + (1|ring)+(1|RY)+(1|id), data = grass_DS_acr)
-m0 <- lmer(S_c3_ddiff ~ co2 + s_logmoist + s_temp + s_logpar + (1|ring)+(1|RY)+(1|id), data = grass_DS_acr)
-
-
-m0 <- lmer(S_c4_ddiff ~ totalmoist + annual_temp2m + PAR + (1|ring)+(1|RY)+(1|id), data = grass_DS_acr)
-# m0 <- lmer(S_c3_ddiff ~ co2 * (s_logmoist + s_temp + s_logpar) + (1|ring)+(1|RY)+(1|id), data = grass_DS_acr)
-# m0 <- lmer(D_c3_ddiff ~ co2 * (s_logmoist + s_temp + s_logpar) + (1|ring)+(1|RY)+(1|id), data = grass_DS_acr)
-Anova(m0, test.statistic = "F")
-summary(m0)
-mfull <- dredge(m0)
-mbest <- get.models(mfull, subset = 1)[[1]]
-Anova(mbest, test.statistic = "F")
-visreg(mbest, xvar = "annual_temp2m")
-visreg(mbest, xvar = "PAR")
-
-r.squared(m0)
-rmean <- grass_DS_acr %>% 
-  group_by(year, co2) %>% 
-  summarise_each(funs(mean), totalmoist, annual_temp2m, PAR)
-# rmean <- cbind(rmean, grass_DS_acr[1, c("ring", "RY", "id")])
-
-bb <- bootMer(m0, 
-              FUN = function(x) predict(x, rmean, re.form = NA),
-              nsim = 499)
-lci     <- apply(bb$t, 2, quantile, 0.05)
-uci     <- apply(bb$t, 2, quantile, 0.95)
-predval <- bb$t0
-rmean %>% 
-  bind_cols(data.frame(lci, uci, predval))
-
-
-BtsCI <- function(model, MoistVal, TempVal, variable){
-  expDF <- data.frame(co2 = c("amb", "elev"),
-                      Moist = rep(MoistVal, 2),
-                      Temp_Mean = rep(TempVal, 2))
-  bb <- bootMer(model,
-                FUN=function(x) predict(x, expDF, re.form = NA),
-                nsim=500)
-  lci <- apply(bb$t, 2, quantile, 0.025)
-  uci <- apply(bb$t, 2, quantile, 0.975)
-  PredVal <- bb$t0
-  df <- cbind(lci, uci, PredVal, expDF, variable)
-  return(df)
-} 
+# dominant c4 -------------------------------------------------------------
+lar_dc4_m1 <- lmer(s_dc4_ddiff ~ co2 * (s_logmoist+s_temp + s_logpar) +(1|ring)+(1|RY)+(1|id), data = grass_DS_acr)
+lar_dc4_m1_full <- dredge(lar_dc4_m1, fixed = c("co2", "s_logmoist", "s_temp",  "s_logpar"))
+lar_dc4_m1_full
+plot(lar_dc4_m1)
+qqPlot(resid(lar_dc4_m1))
+# no interaction is suggested
+lar_dc4_m2 <- lmer(s_dc4_ddiff ~ co2 + s_logmoist+s_temp + s_logpar +(1|ring)+(1|RY)+(1|id), data = grass_DS_acr)
+Anova(lar_dc4_m2, test.statistic = "F")
 
 
 
 
+# subordinate c3 ----------------------------------------------------------
+
+lar_sc3_m1 <- lmer(s_sc3_ddiff ~ co2 * (s_logmoist+s_temp + s_logpar) +(1|ring)+(1|RY)+(1|id), data = grass_DS_acr)
+lar_sc3_m1_full <- dredge(lar_sc3_m1, fixed = c("co2", "s_logmoist", "s_temp",  "s_logpar"))
+lar_sc3_m1_full
+plot(lar_sc3_m1)
+qqPlot(resid(lar_sc3_m1))
+# no interaction is suggested
+lar_sc3_m2 <- lmer(s_sc3_ddiff ~ co2 + s_logmoist+s_temp + s_logpar +(1|ring)+(1|RY)+(1|id), data = grass_DS_acr)
+Anova(lar_sc3_m2, test.statistic = "F")
+plot(lar_sc3_m2)
+qqPlot(resid(lar_sc3_m2))
+
+
+# dominant c3 ----------------------------------------------------------
+
+lar_dc3_m1 <- lmer(s_dc3_ddiff ~ co2 * (s_logmoist+s_temp + s_logpar) +(1|ring)+(1|RY)+(1|id), data = grass_DS_acr)
+plot(lar_dc3_m1)
+qqPlot(resid(lar_dc3_m1))
+lar_dc3_m2 <- update(lar_dc3_m1, subset = -which.min(resid(lar_dc3_m1)))
+plot(lar_dc3_m2)
+qqPlot(resid(lar_dc3_m2))
+lar_dc3_m1_full <- dredge(lar_dc3_m2, fixed = c("co2", "s_logmoist", "s_temp",  "s_logpar"))
+lar_dc3_m1_full
+# no interaction is suggested
+
+lar_dc3_m3 <- lmer(s_dc3_ddiff ~ co2 + s_logmoist+s_temp + s_logpar +(1|ring)+(1|RY)+(1|id), data = grass_DS_acr)
+plot(lar_dc3_m3)
+qqPlot(resid(lar_dc3_m3))
+
+# potential outliers are suggested
+mcp.fnc(lar_dc3_m3)
+oldf_dc3 <- romr.fnc(lar_dc3_m3, data = data.frame(grass_DS_acr))
+dplyr::setdiff(oldf_dc3$data0, oldf_dc3$data)
+  # three outliers are indicated
+
+# remove the outlier
+lar_dc3_m4 <- update(lar_dc3_m3, data = oldf_dc3$data)
+plot(lar_dc3_m4)
+qqPlot(resid(lar_dc3_m4))
+Anova(lar_dc3_m4, test.statistic = "F")
 
 
 
 
+# summary -----------------------------------------------------------------
+lar_sd_c34_ml <- list(subordinate_c4 = lar_sc4_m2, 
+                      subordinate_c3 = lar_sc3_m2, 
+                      dominant_c4    = lar_dc4_m2, 
+                      dominant_c3    = lar_dc3_m3)
 
-
-
-
-?confint
-pd <- predict(m0, rmean)
-?predict
-?predict
-rmean$pred <- pd
-
-Anova(m0, test.statistic = "F")
-qqPlot(resid(m0))
-summary(m0)
-which.min(qqnorm(resid(m0))$y)
-
+lar_sd_c34_aov <- ldply(lar_sd_c34_ml, function(x) tidy(Anova(x, test.statistic = "F"))) %>% 
+  mutate(term = mapvalues(term, c("s_logmoist", "s_temp", "s_logpar"), c("Moist", "Temp", "PAR")),
+         Df.res = round(Df.res, 0),
+         p.value = round(p.value, 3),
+         statistic = round(statistic, 2)) %>% 
+  rename(Fval = statistic)
