@@ -1,0 +1,145 @@
+---
+title: "EucFACE understorey vegetation -dominant, subordinate species-"
+author: "Shun Hasegawa"
+date: "29/07/2017"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, dpi = 600)
+library(pander)
+library(ggplot2)
+library(grid)
+library(plyr)
+library(dplyr)
+library(visreg)
+library(tidyr)
+library(car)
+library(broom)
+library(lmerTest)
+knitr::opts_chunk$set(echo = TRUE)
+load("../output/Data/AllObj.RData")
+theme_set(theme_bw() + 
+            theme(panel.grid.major = element_blank(), 
+                  panel.grid.minor = element_blank()))
+
+```
+
+## Introduction
+As some of the reviewers of New Phytologist suggested, here I carried out additional analysis on dominant and subordinate species. I also analysed the relationship between annual rates of change and soil nutrient availability (ion exchange resin-extracted- N and P).
+
+## Define Dominant and subordinate species
+Species were classified into "Dominant", "Subordinate" or "Transient" following  Grime 1998 (Benefits of plant diversity to ecosystems: immediate filter and founder effects). "Dominant" or "Subordinate" species are deified as those that occur across all the study years (but no need to be in all rings). Species that were not present at least one of the study years are classified as "transient". Based on the figure below showing relative abundance, an arbitrary threshold is set between dominant and subordinate species at relative abundance of 0.1.
+
+
+```{r fig_relative_abund, echo=FALSE, results='asis', fig.width=6, fig.height=4}
+ggplot(grass_df, aes(x = as.numeric(species), y = r_abund, label = type))+
+  geom_path()+
+  geom_text(aes(col = type)) +
+  geom_hline(yintercept = .1, col = "blue", linetype = "dashed") +
+  scale_x_continuous(breaks = seq(1, nrow(grass_df), 1),
+                     labels =  as.character(grass_df$species[order(grass_df$abund, decreasing = TRUE)]))+
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))+
+  labs(x = NULL, y = "Relative abundance")
+```
+
+Thus, dominant and subordinate species were classified as below.
+
+```{r dom_sub_tbl, echo=FALSE, results='asis'}
+pander(grass_df %>% 
+  select(species, type), justify = "right")
+```
+
+## Subordinate:dominant ratio
+The effects of eCO2 on subordinate:dominant ratios were examined.
+
+```{r sd_ratio, echo=FALSE, results='asis', warning=FALSE}
+tbl_aov <- tidy(Anova(sd_m1, test.statistic = "F")) %>% 
+  mutate(Fval    = round(statistic, 2),
+         Df.res  = round(Df.res, 0),
+         p.value = round(p.value, 3)) %>% 
+  select(term, Fval, df, Df.res, p.value)
+emphasize.italics.cols(5)
+emphasize.strong.cells(cbind(which(tbl_aov$p.value < 0.1), 5))
+pander(tbl_aov, justify = "right")
+```
+
+There was a significant CO2 (*P* < 0.05) effect. eCO2 significantly decreased subordinate:dominant ratios.
+
+```{r sd_ratio_fig, echo=FALSE, fig.height=3, fig.width=3, results='asis'}
+fig_sd
+```
+
+## Abundance of C~3~ and C~4~ for dominant and subordinate species
+
+Here, the abundance of C~3~ and C~4~ species were examined for each of dominant and subordinate groups. Note that there was only single species of dominant C~3~ (i.e. Microlaena).
+
+```{r abund_c34_sub_dom, echo=FALSE, results='asis', message=FALSE, warning=FALSE}
+r <- ldply(sd_m_list, function(x) tidy(Anova(x, test.statistic = "F"))) %>% 
+  mutate(Fval    = round(statistic, 2),
+         Df.res  = round(Df.res, 0),
+         p.value = round(p.value, 3)) %>% 
+  select(.id, term, Fval, df, Df.res, p.value)
+
+empcell <- cbind(which(r$p.value < 0.1), 6)
+emphasize.italics.cols(6)
+emphasize.strong.cells(empcell)
+pander(r, justify = "right")
+
+```
+
+```{r abund_c34_sub_dom_fig, echo=FALSE, fig.width=4.5, fig.height=4.5}
+sd_abund_fig
+```
+
+Thus, eCO2 had negative effects on both dominant and subordinate C~4~ grasses, but the effect size was larger for the latter.
+
+
+
+```{r abund_c34_sub_dom_tbl, echo=FALSE, results='asis'}
+tbled <- sd_adjMean_tble %>% 
+  mutate(id = paste(PFG, type, sep = "_")) %>% 
+  rename(obs_amb = observed_amb,
+         obs_ele = observed_elev,
+         adj_amb = adjusted_amb,
+         adj_ele = adjusted_elev) %>% 
+  select(id, everything(), -type, -PFG)
+pander(tbled, justify = "right", split.table = Inf)
+```
+
+## Annual rates of change C~3~ and C~4~ for dominant and subordinate groups
+
+
+### Moisture, tempeature and light
+
+Here, annual rates of change was examined for dominant and subordinate species separately. It was previously analysed, but dominant, subordinate and transient species were combined and analysed together.
+
+```{r lar_c34_sub_dom, echo=FALSE, results='asis'}
+emphasize.italics.cols(6)
+emphcell <- cbind(which(lar_sd_c34_aov$p.value < 0.1), 6)
+emphasize.strong.cells(emphcell)
+pander(lar_sd_c34_aov, justify = "right")
+```
+
+Whilst there was a significant CO2 effect on annual change rates of change in C~4~ abundance (*P* < 0.1) when analysed all together, no evidence of CO2 effects was found for any of the groups when dominant and subordinate groups were analysed separately. 
+
+
+### Soil nutrients (N and P)
+Here, the role of soil nutrient in annual rates of change in C~3~ and C~4~ species using soil N and P data evaluated using ion exchange resin from Hasegawa et al. (2016). The IEM data are only available from the late 2012 to the early 2014. Hence, I only used the measurements from Nov 2013 to Feb 2014 when eCO2-induced P enhancement was observed and fitted to annual rates of change between Year0 (Dec 2012) and Year1 (Jan 2014). I obtained ring-means of annual rates of change for each group of species and fitted against ring-means of soil N and P (*n* = 6). 
+
+```{r lar_c34_sub_soil, echo=FALSE, results='asis'}
+emphasize.italics.cols(5)
+emphcell <- cbind(which(lar_sd_c34_soil_aov$p.value < 0.1), 5)
+emphasize.strong.cells(emphcell)
+pander(lar_sd_c34_soil_aov, justify = "right")
+```
+
+```{r lar_c34_sub_soil_fig, echo=FALSE, results='asis', fig.width=3, fig.height=3}
+visreg(sc4_m1, xvar = "Year1_n", xtrans = log)
+```
+
+There were only 6 data points from a single year, so this result is not very strong. However, Hasegawa et al. (2016) reports positive effects of CO2 on soil N availability. This negative correlation between IEM-N and annual rates of change in subordinate C~4~ species may explain negative effects of CO2 in part. 
+
+## Conclusion
+The analyses above showed that there were negative effects of CO2 on C~4~ species, especially for subordinate species. Subordinate C~4~ species were also positively correlated with moisture, light and soil N. Observed decreases in C~4~ abundance at eCO2 rings may be due to 1) eCO2-induced lower soil N and 2) resource competition (water and light).
+
