@@ -42,5 +42,7 @@ library(foreach)
 library(doParallel)
 library(scales)
 library(mgcv)
+library(lsmeans)
+library(LMERConvenienceFunctions)
 
 library(HIEv)
