@@ -7,6 +7,7 @@ output:
   #   toc: true
   word_document:
     toc: true
+    reference_docx: EucFACE_understorey_vegetation_summary_analysis_ed.docx
 ---
 
 ```{r setup, include=FALSE}
@@ -173,7 +174,7 @@ create_resplot(c4d_m2,
 
 ```{r c3_model_summary, echo=FALSE, results='asis', message=FALSE}
 lc3    <- dlply(filter(coeftbl_all, PFG == "c3"), .(type))
-lc3tbl <- llply(names(lc4), function(x) pander(lc4[[x]][, -c(1, 2)], caption = x, justify = "right"))
+lc3tbl <- llply(names(lc3), function(x) pander(lc3[[x]][, -c(1, 2)], caption = x, justify = "right"))
 lc3tbl[[1]]
 lc3tbl[[2]]
 lc3tbl[[3]]
