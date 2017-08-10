@@ -157,3 +157,65 @@ lar_dc3_m3_full <- dredge(lar_dc3_m3)
 dc3_coef_imp    <- importance(lar_dc3_m3_full)
 dc3_coef_imp
 
+
+# summary -----------------------------------------------------------------
+lar_sd_c34_ml <- list(subordinate_c4 = lar_sc4_m2, 
+                      subordinate_c3 = lar_sc3_m2, 
+                      dominant_c4    = lar_dc4_m2, 
+                      dominant_c3    = lar_dc3_m3)
+
+lar_sd_c34_aov <- ldply(lar_sd_c34_ml, function(x) tidy(Anova(x, test.statistic = "F"))) %>% 
+  mutate(term = mapvalues(term, c("s_logmoist", "s_temp", "s_logpar"), c("Moist", "Temp", "PAR")),
+         Df.res = round(Df.res, 0),
+         p.value = round(p.value, 3),
+         statistic = round(statistic, 2)) %>% 
+  rename(Fval = statistic)
+
+
+
+# . summary table of multiple regression analysis on LAR ------------------
+
+coef_imp_df <-ldply(list(c4.subordinate = sc4_coef_imp,
+                         c3.subordinate = sc3_coef_imp,
+                         c4.dominant    = dc4_coef_imp,
+                         c3.dominant    = dc3_coef_imp,
+                         c4.all         = c4_coef_imp,
+                         c3.all         = c3_coef_imp), 
+                    function(x) data.frame(RI = x) %>% 
+                      mutate(predictor = dplyr::recode(row.names(.), co2 = 'co2elev'),
+                             RI = round(RI, 3))) %>% 
+  mutate(type = tstrsplit(.id, split = "[.]")[[2]],
+         PFG  = tstrsplit(.id, split = "[.]")[[1]]) %>% 
+  select(-.id)
+
+create_smmry_coeftbl <- function(coefaval, model){
+  d <- cbind(summary(model)$coef[, "Estimate"], coefaval[5:9, ])
+  colnames(d) <- c("estimate", "lwr", "upr")
+  dd <- data.frame(d) %>% 
+    mutate(predictor = row.names(.)) %>% 
+    mutate_each(funs(round(., 3)), estimate, lwr, upr) %>% 
+    transmute(predictor, coefs = paste0(estimate, " [", lwr, ", ", upr, "]"))
+  return(dd)
+}
+
+coeftbl_c4  <- ldply(list('coef95CI' = c4_coef,  'coef90CI' = c4_coef_90),  create_smmry_coeftbl,  model = c4d_m2)
+coeftbl_sc4 <- ldply(list('coef95CI' = sc4_coef, 'coef90CI' = sc4_coef_90), create_smmry_coeftbl, model  = lar_sd_c34_ml$subordinate_c4)
+coeftbl_dc4 <- ldply(list('coef95CI' = dc4_coef, 'coef90CI' = dc4_coef_90), create_smmry_coeftbl, model  = lar_sd_c34_ml$dominant_c4)
+coeftbl_c3  <- ldply(list('coef95CI' = c3_coef,  'coef90CI' = c3_coef_90),  create_smmry_coeftbl,  model = c3d_m2)
+coeftbl_sc3 <- ldply(list('coef95CI' = sc3_coef, 'coef90CI' = sc3_coef_90), create_smmry_coeftbl, model  = lar_sd_c34_ml$subordinate_c3)
+coeftbl_dc3 <- ldply(list('coef95CI' = dc3_coef, 'coef90CI' = dc3_coef_90), create_smmry_coeftbl, model  = lar_sd_c34_ml$dominant_c3)
+
+
+
+coeftbl_all <- ldply(list('c4.all' = coeftbl_c4, 'c4.subordinate' = coeftbl_sc4, 
+                          'c4.dominant' = coeftbl_dc4, 'c3.all' = coeftbl_c3, 
+                          'c3.subordinate' = coeftbl_sc3, 'c3.dominant' = coeftbl_dc3),
+                     .id = "type") %>% 
+  mutate(PFG  = tstrsplit(type, split = "[.]")[[1]],
+         type = tstrsplit(type, split = "[.]")[[2]]) %>%
+  spread(.id, coefs) %>% 
+  left_join(coef_imp_df) %>% 
+  arrange(PFG, type, predictor) %>% 
+  select(PFG, type, predictor, everything())
+
+coeftbl_all
