@@ -49,6 +49,30 @@ Anova(lar_sc4_m2, test.statistic = "F")
 plot(lar_sc4_m2)
 qqPlot(resid(lar_sc4_m2))
 
+# coefficients and RI
+sc4_coef        <- confint(lar_sc4_m2, method = "boot", nsim = 999)
+sc4_coef_90     <- confint(lar_sc4_m2, method = "boot", level = .9, nsim = 999)
+lar_sc4_m2_full <- dredge(lar_sc4_m2)
+sc4_coef_imp    <- importance(lar_sc4_m2_full)
+
+
+# partial residual plot
+pdf(file = "output/figs/lar_sC4_partial_regression_plot.pdf", width = 5, height = 5)
+create_resplot(lar_sc4_m2, 
+               ylab = expression(Adj.~annual~rates~of~change~"in"~C[4]),
+               ylim <- c(-2, 2.6))
+
+dev.off()
+
+png(file = "output/figs/lar_sC4_partial_regression_plot.png", width = 5, height = 5, res = 600, units = "in")
+create_resplot(lar_sc4_m2, 
+               ylab = expression(Adj.~annual~rates~of~change~"in"~C[4]),
+               ylim <- c(-2, 2.6))
+
+dev.off()
+
+
+
 
 # dominant c4 -------------------------------------------------------------
 lar_dc4_m1 <- lmer(s_dc4_ddiff ~ co2 * (s_logmoist+s_temp + s_logpar) +(1|ring)+(1|RY)+(1|id), data = grass_DS_acr)
@@ -60,7 +84,12 @@ qqPlot(resid(lar_dc4_m1))
 lar_dc4_m2 <- lmer(s_dc4_ddiff ~ co2 + s_logmoist+s_temp + s_logpar +(1|ring)+(1|RY)+(1|id), data = grass_DS_acr)
 Anova(lar_dc4_m2, test.statistic = "F")
 
-
+# coefficients and RI
+dc4_coef        <- confint(lar_dc4_m2, method = "boot", nsim = 999)
+dc4_coef_90     <- confint(lar_dc4_m2, method = "boot", level = .9, nsim = 999)
+lar_dc4_m2_full <- dredge(lar_dc4_m2)
+dc4_coef_imp    <- importance(lar_dc4_m2_full)
+dc4_coef_imp
 
 
 # subordinate c3 ----------------------------------------------------------
@@ -76,47 +105,55 @@ Anova(lar_sc3_m2, test.statistic = "F")
 plot(lar_sc3_m2)
 qqPlot(resid(lar_sc3_m2))
 
+# coefficients and RI
+sc3_coef        <- confint(lar_sc3_m2, method = "boot", nsim = 999)
+sc3_coef_90     <- confint(lar_sc3_m2, method = "boot", level = .9, nsim = 999)
+lar_sc3_m2_full <- dredge(lar_sc3_m2)
+sc3_coef_imp    <- importance(lar_sc3_m2_full)
+sc3_coef_imp
+
+
+
 
 # dominant c3 ----------------------------------------------------------
 
 lar_dc3_m1 <- lmer(s_dc3_ddiff ~ co2 * (s_logmoist+s_temp + s_logpar) +(1|ring)+(1|RY)+(1|id), data = grass_DS_acr)
 plot(lar_dc3_m1)
 qqPlot(resid(lar_dc3_m1))
-lar_dc3_m2 <- update(lar_dc3_m1, subset = -which.min(resid(lar_dc3_m1)))
+
+# potential outliers are suggested
+mcp.fnc(lar_dc3_m1)
+oldf_dc3 <- romr.fnc(lar_dc3_m1, data = data.frame(grass_DS_acr))
+dplyr::setdiff(oldf_dc3$data0, oldf_dc3$data)
+  # three outliers are indicated
+
+lar_dc3_m2 <- update(lar_dc3_m1, data = oldf_dc3$data)
 plot(lar_dc3_m2)
 qqPlot(resid(lar_dc3_m2))
 lar_dc3_m1_full <- dredge(lar_dc3_m2, fixed = c("co2", "s_logmoist", "s_temp",  "s_logpar"))
 lar_dc3_m1_full
-# no interaction is suggested
+  # no interaction is suggested
 
 lar_dc3_m3 <- lmer(s_dc3_ddiff ~ co2 + s_logmoist+s_temp + s_logpar +(1|ring)+(1|RY)+(1|id), data = grass_DS_acr)
+lar_dc3_m4 <- lmer(s_dc3_ddiff ~ co2 + s_logmoist+s_temp + s_logpar +(1|ring)+(1|RY)+(1|id), data = oldf_dc3$data)
+
 plot(lar_dc3_m3)
 qqPlot(resid(lar_dc3_m3))
 
-# potential outliers are suggested
-mcp.fnc(lar_dc3_m3)
-oldf_dc3 <- romr.fnc(lar_dc3_m3, data = data.frame(grass_DS_acr))
-dplyr::setdiff(oldf_dc3$data0, oldf_dc3$data)
-  # three outliers are indicated
-
-# remove the outlier
-lar_dc3_m4 <- update(lar_dc3_m3, data = oldf_dc3$data)
 plot(lar_dc3_m4)
 qqPlot(resid(lar_dc3_m4))
-Anova(lar_dc3_m4, test.statistic = "F")
 
 
+# coefficients and RI
+dc3_coef_m3        <- confint(lar_dc3_m3, method = "boot", nsim = 999)
+dc3_coef_m4        <- confint(lar_dc3_m4, method = "boot", nsim = 999)
+  # removal of outliers did not chnage the final results, so just use the model
+  # withought removing the outliers
 
 
-# summary -----------------------------------------------------------------
-lar_sd_c34_ml <- list(subordinate_c4 = lar_sc4_m2, 
-                      subordinate_c3 = lar_sc3_m2, 
-                      dominant_c4    = lar_dc4_m2, 
-                      dominant_c3    = lar_dc3_m3)
+dc3_coef        <- dc3_coef_m3
+dc3_coef_90     <- confint(lar_dc3_m3, method = "boot", level = .9, nsim = 999)
+lar_dc3_m3_full <- dredge(lar_dc3_m3)
+dc3_coef_imp    <- importance(lar_dc3_m3_full)
+dc3_coef_imp
 
-lar_sd_c34_aov <- ldply(lar_sd_c34_ml, function(x) tidy(Anova(x, test.statistic = "F"))) %>% 
-  mutate(term = mapvalues(term, c("s_logmoist", "s_temp", "s_logpar"), c("Moist", "Temp", "PAR")),
-         Df.res = round(Df.res, 0),
-         p.value = round(p.value, 3),
-         statistic = round(statistic, 2)) %>% 
-  rename(Fval = statistic)
