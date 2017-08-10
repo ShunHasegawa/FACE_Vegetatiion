@@ -3,12 +3,9 @@
 
 
 all_m_list <- list('diversity'   = div_m_list,
-                   'dominentSpp' = dom_m_list,
-                   'grass_prop'  = grassprop_m,
-                   'pfg_prop'    = pfgprop_m_list)
+                   'sd_abund'    = sd_m_list,                                     # abundance of dominant/subordiante C3/C4 ratios
+                   'pfg_prop'    = list('sd_radio' = sd_m1, 'c43_ratio' = c43_m1))
 all_m_list <- unlist(all_m_list)
-all_m_list$pfg_prop.c43ratio <- c43_m1
-
 
 
 
@@ -48,25 +45,25 @@ div_tbl <- anova_df_ed %>%
   select(Type, term, variable, value, response, report) 
   
 
-# dominent species
-dom_tbl <- anova_df_ed %>% 
-  filter(Type == "dominentSpp") %>%
-  mutate(response = paste(tstrsplit(.id, "[.]| ")[[2]], tstrsplit(.id, "[.]| ")[[3]]),
+# abundance of each functional groups
+abund_tbl <- anova_df_ed %>% 
+  filter(Type == "sd_abund") %>%
+  mutate(response = tstrsplit(.id, "[.]| ")[[2]],
          report   = "main") %>% 
   select(Type, term, variable, value, response, report)
 
 
 # PFG proportion
 pfg_tbl <- anova_df_ed %>% 
-  filter(Type %in% c("grass_prop", "pfg_prop")) %>% 
-  mutate(response = ifelse(.id == "grass_prop", "grass_prop", tstrsplit(.id, "[.]")[[2]]),
-         report   = ifelse(response == "c43ratio", "main", "appendix")) %>% 
+  filter(Type == "pfg_prop") %>% 
+  mutate(response = tstrsplit(.id, "[.]| ")[[2]],
+         report   = "main") %>% 
   select(Type, term, variable, value, response, report) 
 
+
 # mege the above tables
-all_tbl <- rbind.fill(div_tbl, dom_tbl, pfg_tbl) %>% 
-  mutate(tv       = paste(term, variable, sep = "_"),
-         response = dplyr::recode(response, c43ratio = 'C43 ratio')) %>% 
+all_tbl <- rbind.fill(div_tbl, abund_tbl, pfg_tbl) %>% 
+  mutate(tv       = paste(term, variable, sep = "_")) %>% 
   select(-term, -variable) %>% 
   spread(tv, value) %>% 
   select(response, starts_with("Baseline"), starts_with("CO2_"), starts_with("Year"),
