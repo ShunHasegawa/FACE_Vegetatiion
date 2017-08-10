@@ -203,8 +203,8 @@ c4d_m2      <- lmer(s_c4_ddiff ~ co2 + s_logmoist+s_temp+s_logpar+(1|ring)+(1|RY
 c4d_m3      <- lmer(s_c4_ddiff ~ co2 + s_logmoist+s_temp+s_logpar+(1|RY), data = c34sum[-40, ])
 summary(c4d_m2)
 c4d_m2_full <- dredge(c4d_m2, REML = F, extra = "r.squaredGLMM")
-# c4_coef    <- confint(c4d_m2, method = "boot", nsim = 999)
-# c4_coef_90 <- confint(c4d_m2, method = "boot", level = .9, nsim = 999)
+c4_coef    <- confint(c4d_m2, method = "boot", nsim = 999)
+c4_coef_90 <- confint(c4d_m2, method = "boot", level = .9, nsim = 999)
 c4_coef_imp <- importance(c4d_m2_full)
 
 # miosture required for delta C4 to be positive in eCO2 relative to ambient (ignoring temp and par as their coeeficients are close to 0)
@@ -343,7 +343,7 @@ c3d_m2_full <- dredge(c3d_m2, REML = F)
 summary(c3d_m2)
 c3_coef    <- confint(c3d_m2, method = "boot", nsim = 999)
 c3_coef_90 <- confint(c3d_m2, method = "boot", level = .9, nsim = 999)
-c3_coef_impo <- importance(c3d_m2_full)
+c3_coef_imp <- importance(c3d_m2_full)
 
 
 
