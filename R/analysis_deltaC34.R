@@ -272,45 +272,20 @@ ggsave(filename = "output/figs/LARC4_levelplot_byMoistPAR.tiff", plot = c4_level
 
 
 
-# >partial residual plot ------------------------------------------------
-deltac4_regplt <- function(){
-  yl <- expression(Adj.~annual~rates~of~change~"in"~C[4])
-  ylim <- c(-2, 2.5)
-  
-  par(mfrow = c(2, 2), mar = c(4.5, 3, .5, .5), oma = c(0, 2, 0, 0))
-  visreg(c4d_m2, xvar = "s_logpar", 
-         xlab = expression(Adj.~Log[e](PAR,~mu*mol~s^'-1'~m^"-2")),
-         ylim = ylim)
-  
-  visreg(c4d_m2, xvar = "s_logmoist", 
-         ylab = yl, 
-         xlab = expression(Adj.~Log[e](Moist)),
-         ylim = ylim)
-  
-  visreg(c4d_m2, xvar = "s_temp", 
-         ylab = yl, 
-         xlab = expression(Adj.~Temp~(degree*C)),
-         ylim = ylim)
-  
-  visreg(c4d_m2, xvar = "co2", 
-         ylab = yl, 
-         ylim = ylim,
-         xlab = expression(CO[2]),
-         xaxt="n")
-  axis(side = 1, labels = c("Ambient", expression(eCO[2])), 
-       at = c(.25, .75))
-  
-  mtext(yl, outer = TRUE, cex = 1, side = 2)
-  
-}
 
-pdf(file = "output/figs/deltaC4_partial_regression_plot.pdf", width = 5, height = 5)
-deltac4_regplt()
+# >partial residual plot ------------------------------------------------
+
+pdf(file = "output/figs/lar_C4_partial_regression_plot.pdf", width = 5, height = 5)
+create_resplot(c4d_m2, 
+               ylab = expression(Adj.~annual~rates~of~change~"in"~C[4]),
+               ylim <- c(-2, 2.6))
 dev.off()
 
 
-png("output/figs/deltaC4_partial_regression_plot.png", width = 5, height = 5, res = 600, units = "in")
-deltac4_regplt()
+png("output/figs/lar_C4_partial_regression_plot.png", width = 5, height = 5, res = 600, units = "in")
+create_resplot(c4d_m2, 
+               ylab = expression(Adj.~annual~rates~of~change~"in"~C[4]),
+               ylim <- c(-2, 2.6))
 dev.off()
 
 
@@ -371,41 +346,21 @@ c3_coef_90 <- confint(c3d_m2, method = "boot", level = .9, nsim = 999)
 c3_coef_impo <- importance(c3d_m2_full)
 
 
-# > partial residual plot ---------------------------------------------------
-deltac3_regplt <- function(){
-  yl <- expression(Adj.~annual~rates~of~change~"in"~C[3])
-  ylim <- c(-2.5, 1.5)
-  
-  par(mfrow = c(2, 2), mar = c(4.5, 3, .5, .5), oma = c(0, 2, 0, 0))
-  visreg(c3d_m2, xvar = "s_logpar", 
-         ylim = ylim,
-         xlab = expression(Adj.~Log[e](PAR,~mu*mol~s^'-1'~m^"-2")))
-  
-  visreg(c3d_m2, xvar = "s_logmoist", 
-         ylim = ylim, 
-         xlab = expression(Adj.~Log[e](Moist)))
-  
-  visreg(c3d_m2, xvar = "s_temp", 
-         ylim = ylim,
-         xlab = expression(Adj.~Temp~(degree*C)))
-  
-  visreg(c3d_m2, xvar = "co2", 
-         ylim = ylim,
-         xlab = expression(CO[2]),
-         xaxt="n")
-  axis(side = 1, labels = c("Ambient", expression(eCO[2])), 
-       at = c(.25, .75))
-  mtext(yl, outer = TRUE, cex = 1, side = 2)
-  
-}
 
-pdf(file = "output/figs/deltaC3_partial_regression_plot.pdf", width = 5, height = 5)
-deltac3_regplt()
+
+# > partial residual plot ---------------------------------------------------
+
+pdf(file = "output/figs/lar_C3_partial_regression_plot.pdf", width = 5, height = 5)
+create_resplot(c3d_m2, 
+               ylab = expression(Adj.~annual~rates~of~change~"in"~C[3]),
+               ylim <- c(-2.5, 1.5))
 dev.off()
 
 
-png("output/figs/deltaC3_partial_regression_plot.png", width = 5, height = 5, res = 600, units = "in")
-deltac3_regplt()
+png("output/figs/lar_C3_partial_regression_plot.pdf.png", width = 5, height = 5, res = 600, units = "in")
+create_resplot(c3d_m2, 
+               ylab = expression(Adj.~annual~rates~of~change~"in"~C[3]),
+               ylim <- c(-2.5, 1.5))
 dev.off()
 
 
