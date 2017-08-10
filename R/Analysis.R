@@ -188,27 +188,27 @@ source("R/analysis_summary.R")                        # summarise above analyses
 
 # Luke’s biomass harvest --------------------------------------------------
 
-lh <- read.csv("Data/luke_harvest.csv")
-lh %>% 
-  group_by(ring, form) %>% 
-  summarise(value = sum(Mass..g.)) %>% 
-  spread(form, value) %>% 
-  mutate(total = sum(f, g, na.rm = TRUE)) %>% 
-  ungroup() %>% 
-  mutate(f_p = sum(f, na.rm = TRUE) / sum(total),
-         g_p = sum(g)/ sum(total))
-
-
-
-
-# figs --------------------------------------------------------------------
-source("R//Figs.R")
-
-
-
-
-# stats -------------------------------------------------------------------
-source("R/Stats.R")
+# lh <- read.csv("Data/luke_harvest.csv")
+# lh %>% 
+#   group_by(ring, form) %>% 
+#   summarise(value = sum(Mass..g.)) %>% 
+#   spread(form, value) %>% 
+#   mutate(total = sum(f, g, na.rm = TRUE)) %>% 
+#   ungroup() %>% 
+#   mutate(f_p = sum(f, na.rm = TRUE) / sum(total),
+#          g_p = sum(g)/ sum(total))
+# 
+# 
+# 
+# 
+# # figs --------------------------------------------------------------------
+# source("R//Figs.R")
+# 
+# 
+# 
+# 
+# # stats -------------------------------------------------------------------
+# source("R/Stats.R")
 
 # save all objects. This will be used when creating a summary document all
 # objects. This will be used when creating a summary document
