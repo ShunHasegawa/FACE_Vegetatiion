@@ -28,6 +28,8 @@ theme_set(theme_bw() +
 
 ```
 
+*Note that the coneficients presented here that were estimated using bootstarap were not finalised yet, so they should be checked again for convergent issues*
+
 # Introduction
 
 Here, I reanalysed understorey vegetation data, performing ANCOVA using Year0 values as a covariate for univariate analysis. Multivariate anlayses were removed now (PRC and MDS). I analysed the following variables for univariate analysis:
