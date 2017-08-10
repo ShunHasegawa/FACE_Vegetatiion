@@ -3,7 +3,9 @@ title: "EucFACE understorey vegetation -Summary of stats-"
 author: "Shun Hasegawa"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 output:
-  html_document:
+  # html_document:
+  #   toc: true
+  word_document:
     toc: true
 ---
 
@@ -13,8 +15,10 @@ library(ggplot2)
 library(grid)
 library(plyr)
 library(dplyr)
+library(tidyr)
 library(MuMIn)
 library(visreg)
+library(lmerTest)
 knitr::opts_chunk$set(echo = TRUE)
 load("../output/Data/summary_analysis.RData")
 load("../output/Data/AllObj.RData")
@@ -24,21 +28,30 @@ theme_set(theme_bw() +
 
 ```
 
-# Reanalysis
+# Introduction
 
-Here, I reanalysed understorey vegetation data, performing ANCOVA using Year0 values as a covariate for univariate analysis and principal response curve (PRC) and MDS for multivariate analysis. I analysed the following variables for univariate analysis:
+Here, I reanalysed understorey vegetation data, performing ANCOVA using Year0 values as a covariate for univariate analysis. Multivariate anlayses were removed now (PRC and MDS). I analysed the following variables for univariate analysis:
 
 * Diversity indices
     + Diversity (*H'*)
     + Evenness (*J'*)
     + Species richness (*S*)
-* Dominant species
-    + _Cynodon dactylon_
-    + _Microlaena stipoides_
-* Proportion of plant functional groups
-    + C~4\_grass
+* Abundance
+    + Subordinate C~4~
+    + Dominant C~4~
+    + Subordiante C~3~
+    + Dominant C~3~
+* Ratios of plant functional groups
+    + C4:C3 ratios
+    + Subordinate:dominant ratios
+* Multiple regression analysis 
+    + Log annual rates of change (LAR) with einvironmental variables (Moist, Temp, PAR)
+        + Subordinate C~4~
+        + Dominant C~4~
+        + Subordiante C~3~
+        + Dominant C~3~
+    +C4:C3 ratios against soil nitrogen and phorphorus availability
 
-Diversity indices and RDA were analysed for all species together, grass species only, and form species only. 
 
 
 
@@ -71,7 +84,7 @@ d[is.na(d)] <- 0
 
 emphasize.italics.cols(pcol)
 emphasize.strong.cells(which(d <= .1, arr.ind = TRUE))
-
+row.names(all_tbl) <- NULL
 pander(all_tbl, caption = "Summary of repeated measures ANOVA", justify = "right", split.table = Inf, keep.line.breaks = TRUE)
 ```
 
@@ -95,20 +108,21 @@ l[[3]]
 
 
 
-## Dominent species
+## Abundance of dominant, subordinate C3 and C4 species
 
 
-```{r dom_plot, echo=FALSE, fig.cap="Fig.2 Dominent species. Black points depict mean values adjusted by Year0 values with 95% CI. Gray points depict observed values for each FACE ring.", fig.height=5.5, fig.width=5}
-fig_domspp
+```{r abund_plot, echo=FALSE, fig.cap="Fig.2 Abundance of dominant and subordinate C3 and C4 species. Black points depict mean values adjusted by Year0 values with 95% CI. Gray points depict observed values for each FACE ring.", fig.height=5.5, fig.width=5}
+sd_abund_fig
 ```
 
 
-```{r dom_tbl, echo=FALSE}
-l <- llply(names(domsp_tbl_l), function(x) pander(domsp_tbl_l[[x]], caption = x, justify = "right"))
-l[[1]]
-l[[2]]
-l[[3]]
-l[[4]]
+```{r abund_tbl, echo=FALSE}
+l  <- dlply(sd_adjMean_tble, .(PFG, type), function(x) x[, -c(1, 2)])
+l2 <- llply(names(l), function(x) pander(l[[x]], caption = x, justify = "right"))
+l2[[1]]
+l2[[2]]
+l2[[3]]
+l2[[4]]
 ```
 
 
@@ -116,116 +130,98 @@ l[[4]]
 ## Proportions of plant functional groups
 
 
-```{r pfgprop_plot, echo=FALSE, fig.cap="Fig.3 C4:C3 ratio. Black points depict mean values adjusted by Year0 values with 95% CI. Gray points depict observed values for each FACE ring.",fig.height=3, fig.width=3}
+```{r pfgprop_plot, echo=FALSE, ,fig.cap="Fig.3 C4:C3 ratio. Black points depict mean values adjusted by Year0 values with 95% CI. Gray points depict observed values for each FACE ring.",fig.height=3, fig.width=2}
 fig_c43
+fig_sd
 ```
 
 
-```{r pfgprop_tbl, echo=FALSE}
-names(pfgprop_tbl_l) <- c("C4:C3", "Grass:Forb", "Legume:Non-legume", "Natvie:Introduced")
-l <- llply(names(pfgprop_tbl_l), function(x) pander(pfgprop_tbl_l[[x]], caption = x, justify = "right"))
-l[[1]]
-l[[2]]
-l[[3]]
-l[[4]]
-```
-
-
-
-
-# Multivariate analysis (PRC)
-
-Log transformation (log(n + 1)) was applied to species data to improve asymmetric distribution of species abundance.
-
-```{r fig_prc_mds, echo=FALSE, fig.width = 6.5, fig.height = 3, fig.cap="Results of PRC and MDS", warning=FALSE}
-multiplot(plotlist = prc_figs[1:2], layout = lo)
-```
-
-
-```{r prc_res, echo=FALSE, results='markup'}
-prc_res
-```
-
-
-# Annual changes in C4 and C3 abundance
-Here, I examined the effects of eCO$_2$ on annual changes in C3 and C4 abundance ($\Delta$C4, C3) in relation to understorey temperature, PAR and soil moisture. I tested CO$_2$ and interactions between CO$_2$ and the others. I selected those models with $\Delta AIC <= 2$ as plausible candidates, and employed model averaging over them.  
-
+# Annual rates of change in C~4~ and C~3~ abundance
+Here, I examined the effects of eCO~2~ on annual rates of change in C~3~ and C~4~ abundance in relation to understorey temperature, PAR and soil moisture. I tested CO~2~ and interactions between CO~2~ and the others.
 
 
 ## C4 graminoid
-```{r c4_model_selection, echo=FALSE, results='markup', message=FALSE}
-glbm <- get.models(c4d_m1_full, subset = "128")[[1]]  # global model
-nulm <- get.models(c4d_m1_full, subset = "1")[[1]]    # null model
-
-subset(c4d_m1_full, delta <= 2)
-model.sel(glbm, nulm, rank = AICc, rank.args = alist(REML = F), extra = "r.squaredGLMM")
-```
 
 
 ```{r c4_model_summary, echo=FALSE, results='asis', message=FALSE}
+lc4    <- dlply(filter(coeftbl_all, PFG == "c4"), .(type))
+lc4tbl <- llply(names(lc4), function(x) pander(lc4[[x]][, -c(1, 2)], caption = x, justify = "right"))
+lc4tbl[[1]]
+lc4tbl[[2]]
+lc4tbl[[3]]
 
-c4_coef_imp_df <- data.frame(RI = c4_coef_imp) %>% 
-  mutate(predictor = dplyr::recode(row.names(.), co2 = 'co2elev'))
+pander(ldply(list('all' = c4d_m2, 
+               'subordinate' = lar_sd_c34_ml$subordinate_c4,
+               'dominant' = lar_sd_c34_ml$dominant_c4),
+      r.squared), 
+      justify = "right", caption = "model summary")
 
-
-coefc4 <- llply(list(c4_coef, c4_coef_90), function(x){
-  d <- cbind(summary(c4d_m2)$coef[, "Estimate"], x[5:9, ])
-  colnames(d) <- c("estimate", "lwr", "upr")
-  dd <- data.frame(d) %>% 
-    mutate(predictor = row.names(.)) %>% 
-    left_join(c4_coef_imp_df) %>% 
-    mutate_each(funs(round(., 3)), estimate, lwr, upr, RI) %>% 
-    transmute(predictor, coefs = paste0(estimate, " [", lwr, ", ", upr, "]"), RI)
-  return(dd)
-})
-pander(coefc4[[1]], caption = "LARC4 estimates[95% CI]")
-pander(coefc4[[2]], caption = "LARC4 estimates[90% CI]")
 ```
-
-```{r larc4_levelplot, echo=FALSE, results='asis', fig.width=6.5, fig.height=3}
-c4_levelplot
-```
-
 
 
 ```{r c4_partial_regerssion_plot, echo=FALSE, results='asis', fig.width=5, fig.height=5}
-deltac4_regplt()
+create_resplot(c4d_m2, 
+               ylab = expression(Adj.~annual~rates~of~change~"in"~C[4]),
+               ylim <- c(-2, 2.6))
 ```
 
 
 ## C3 graminoid
-```{r c3_model_selection, echo=FALSE, results='markup', message=FALSE}
-glbm <- get.models(c3d_m0full, subset = "128")[[1]]  # global model
-nulm <- get.models(c3d_m0full, subset = "1")[[1]]    # null model
-
-subset(c3d_m0full, delta <= 2)
-model.sel(glbm, nulm, rank = AICc, rank.args = alist(REML = F), extra = "r.squaredGLMM")
-```
 
 
 ```{r c3_model_summary, echo=FALSE, results='asis', message=FALSE}
-c3_coef_imp_df <- data.frame(RI = c3_coef_impo) %>% 
-  mutate(predictor = dplyr::recode(row.names(.), co2 = 'co2elev'))
+lc3    <- dlply(filter(coeftbl_all, PFG == "c3"), .(type))
+lc3tbl <- llply(names(lc4), function(x) pander(lc4[[x]][, -c(1, 2)], caption = x, justify = "right"))
+lc3tbl[[1]]
+lc3tbl[[2]]
+lc3tbl[[3]]
 
+pander(ldply(list('all' = c3d_m2, 
+               'subordinate' = lar_sd_c34_ml$subordinate_c3,
+               'dominant' = lar_sd_c34_ml$dominant_c3),
+             r.squared),
+       justify = "right", caption = "model summary")
 
-coeftbl <- llply(list(c3_coef, c3_coef_90), function(x){
-  data.frame(cbind(x[-(1:4), ], estimate = coef(summary(c3d_m2))[, "Estimate"])) %>% 
-    mutate(predictor = row.names(.)) %>% 
-    left_join(c3_coef_imp_df) %>% 
-    transmute(predictor, 
-              estimate  = round(estimate, 3),
-              CI        = paste0("[", round(.[, 1], 3), ", ", round(.[, 2], 3), "]"), 
-              RI        = round(RI, 3))
-})
-  
-pander(coeftbl[[1]], caption = "Estimates [95% CI]")
-pander(coeftbl[[2]], caption = "Estimates [90% CI]")
 ```
 
 
 ```{r c3_partial_regerssion_plot, echo=FALSE, results='asis', fig.width=5, fig.height=5}
-deltac3_regplt()
+create_resplot(c3d_m2, 
+               ylab = expression(Adj.~annual~rates~of~change~"in"~C[3]),
+               ylim <- c(-2.5, 1.5))
 ```
+
+
+# Relationship between C~4~:C~3~ ratios and soil Na nd P availability
+```{r c43r_soilNP, echo=FALSE, results='asis', message=FALSE}
+rid <- data.frame(RI = c43_soil_coef_impo) %>% 
+  mutate(predictor = row.names(.),
+         RI = round(RI, 3))
+
+c43soil_tbl <- ldply(list('90CI' = c43_soil_coef_90, '95CI' = c43_soil_coef), function(x){
+  d <- cbind(summary(c43_soil)$coef[, "Estimate"], x[3:5, ])
+  colnames(d) <- c("estimate", "lwr", "upr")
+  dd <- data.frame(d) %>% 
+    mutate(predictor = row.names(.)) %>% 
+    mutate_each(funs(round(., 3)), estimate, lwr, upr) %>% 
+    transmute(predictor, coefs = paste0(estimate, " [", lwr, ", ", upr, "]"))
+  return(dd)
+}) %>% 
+  spread(.id, coefs) %>% 
+  left_join(rid)
+pander(c43soil_tbl, caption = "C4:C3 ratios vs soil N and P", justify = "right")
+
+
+pander(r.squared(c43_soil), caption = "model summary", justify = "right")
+
+```
+
+```{r c43soil_fig, fig.width=4, fig.height=4, echo=FALSE}
+plot(s_c43_r ~ s_n, c43_ratio_iem, col = co2, pch = 19, ylab = "C4:C3 ratios", 
+     xlab = "Soil N availability")
+legend("topright", legend = levels(c43_ratio_iem$co2), col = c(1, 2), pch = 19, bty = 'n')
+```
+
 
 
 
@@ -234,14 +230,5 @@ deltac3_regplt()
 ## Species coverage
 ```{r sp_cov_tbl, echo=FALSE, results='asis'}
 pander(spp_cov_summary)
-```
-
-
-
-## Species weight of PRC
-```{r sp_weight_prc, echo=FALSE, results='asis'}
-emphasize.italics.cols(1)
-pander(res_pric_sp_tbl)
-
 ```
 
