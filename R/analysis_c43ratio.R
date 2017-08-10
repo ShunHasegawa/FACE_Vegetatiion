@@ -196,16 +196,21 @@ c43_ratio_iem <- left_join(c43_ratio, iem_raw) %>%
          s_p = scale(log(p))[, 1])
 summary(c43_ratio_iem)
 plot(s_c43_r ~ log(nitr), c43_ratio_iem, col = factor(year), pch = 19)
+plot(s_c43_r ~ log(nitr), c43_ratio_iem, col = co2, pch = 19)
 plot(log(c43_r + .1) ~ log(p), c43_ratio_iem, col = co2, pch = 19)
 
 
 # anlaysis
-c43_soil <- lmer(s_c43_r ~ s_n + s_p + (1|ring) + (1|year), data = c43_ratio_iem)
+c43_soil <- lmer(s_c43_r ~ s_n + s_p + (1|ring), data = c43_ratio_iem)
 Anova(c43_soil, test.statistic = "F")
 summary(c43_soil)
 plot(c43_soil)
 qqPlot(resid(c43_soil))
-confint(c43_soil)
-visreg(c43_soil, xvar = "s_n")
-r.squared(c43_soil)
+
+# coefficient and RI
+c43_soil_coef      <- confint(c43_soil, method = "boot", nsim = 999)
+c43_soil_coef_90   <- confint(c43_soil, method = "boot", nsim = 999, level = .9)
+c43_soil_full      <- dredge(c43_soil)
+c43_soil_coef_impo <- importance(c43_soil_full)
+c43_soil_coef_impo
 
