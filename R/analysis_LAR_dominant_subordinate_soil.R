@@ -50,8 +50,13 @@ vi_dd <- grass_DS_acr %>%
   summarise_each(funs(mean(.)), ends_with("_ddiff")) %>% 
   left_join(iem_raw) %>%
   ungroup() %>% 
-  mutate(nitr = no + nh,
-         np   = nitr / p) %>% 
+  mutate(nitr      = no + nh,
+         np        = nitr / p,
+         s_nitr    = scale(nitr)[, 1],
+         s_logp    = scale(log(p))[, 1],
+         s_lognitr = scale(log(nitr))[, 1],
+         s_p    = scale(p)[, 1]
+         ) %>% 
   .[complete.cases(.), ]
 names(vi_dd)
 names(grass_DS_acr)
@@ -62,12 +67,15 @@ names(grass_DS_acr)
 # analysis ----------------------------------------------------------------
 
 # subordinate C4
-plot(S_c4_ddiff ~ nitr, data = vi_dd, col = factor(year), pch = 19)
-plot(S_c4_ddiff ~ p, data = vi_dd, col = factor(year), pch = 19)
+plot(S_c4_ddiff ~ s_nitr, data = vi_dd, col = factor(year), pch = 19)
+plot(S_c4_ddiff ~ s_lognitr, data = vi_dd, col = factor(year), pch = 19)
+plot(S_c4_ddiff ~ s_p, data = vi_dd, col = factor(year), pch = 19)
+plot(S_c4_ddiff ~ s_logp, data = vi_dd, col = factor(year), pch = 19)
 plot(S_c4_ddiff ~ log(np), data = vi_dd, col = factor(year), pch = 19)
 
 
-sc4_m1 <- lmer(s_sc4_ddiff ~ nitr + p + (1|ring) + (1|year), data = vi_dd)
+sc4_m1 <- lmer(s_sc4_ddiff ~ s_nitr + s_p + (1|ring) + (1|year), data = vi_dd)
+sc4_m1 <- lmer(s_sc4_ddiff ~ s_nitr + s_p + (1|ring) +(1|year), data = vi_dd)
 summary(sc4_m1)
 Anova(sc4_m1, test.statistic = "F")
 
