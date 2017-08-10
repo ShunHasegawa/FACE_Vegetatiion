@@ -1,45 +1,4 @@
-# #############################
-# # create ellipses on ggplot #
-# #############################
-# StatEllipse <- proto(ggplot2:::Stat,
-# {
-#   required_aes <- c("x", "y")
-#   default_geom <- function(.) GeomPath
-#   objname <- "ellipse"
-#   
-#   calculate_groups <- function(., data, scales, ...){
-#     .super$calculate_groups(., data, scales,...)
-#   }
-#   calculate <- function(., data, scales, level = 0.75, segments = 51,...){
-#     dfn <- 2
-#     dfd <- length(data$x) - 1
-#     if (dfd < 3){
-#       ellipse <- rbind(c(NA,NA))	
-#     } else {
-# #       require(MASS)
-#       v <- cov.trob(cbind(data$x, data$y))
-#       shape <- v$cov
-#       center <- v$center
-#       radius <- sqrt(dfn * qf(level, dfn, dfd))
-#       angles <- (0:segments) * 2 * pi/segments
-#       unit.circle <- cbind(cos(angles), sin(angles))
-#       ellipse <- t(center + radius * t(unit.circle %*% chol(shape)))
-#     }
-#     
-#     ellipse <- as.data.frame(ellipse)
-#     colnames(ellipse) <- c("x","y")
-#     return(ellipse)
-#   }
-# }
-# )
-# 
-# stat_ellipse <- function(mapping=NULL, data=NULL, geom="path", position="identity", ...) {
-#   StatEllipse$new(mapping=mapping, data=data, geom=geom, position=position, ...)
-# }
-
-###################
-# plot CA results #
-###################
+# plot CA results
 pltCA <- function(data, xv, yv, ...){
   # CA
   vg.data <- data[, -grep("year|ring|plot|position|cell", names(data))]
@@ -82,9 +41,7 @@ plt.CA.yr <- function(data){
   pltCA(data, xv = "CA1", yv = "CA3")
 }
 
-##############################
-# Save ggplot in PDF and PNG #
-##############################
+# Save ggplot in PDF and PNG
 ggsavePP <- function(filename, plot, width, height){
   ggsave(filename = paste(filename, ".pdf", sep = ""), 
          plot = plot, 
@@ -105,9 +62,8 @@ ggsavePP <- function(filename, plot, width, height){
          encoding = "MacRoman.enc")
 }
 
-####################
-# Create bargraphs #
-####################
+
+# Create bargraphs
 PltVeg <- function(data, xval, xlab = NULL, ..., 
                    pfgLabs = c("C[3]", "C[4]", "Legume", "Moss", "Non_legume", "wood"),
                    orgnLabs = c("Native", "Introduced")){
@@ -129,14 +85,13 @@ PltVeg <- function(data, xval, xlab = NULL, ...,
   return(p2)
 }
 
-#########################
-# subset and droplevels #
-#########################
-subsetD <- function(...) droplevels(subset(...))
+# subset and droplevels
+subsetD <- function(...){
+  droplevels(subset(...))
+}
 
-###########################
-# step deletion with lmer #
-###########################
+
+# step deletion with lmer
 stepLmer <- function(model, red.rndm = FALSE, ddf = "Kenward-Roger", ...){
   update(step(model, reduce.random = red.rndm, ddf = ddf,...)$model, 
          contrasts = NULL)
@@ -146,9 +101,9 @@ stepLmer <- function(model, red.rndm = FALSE, ddf = "Kenward-Roger", ...){
 # default of step gives me a warning message for IEM-NO3 for some reasons (not
 # sure why.. so changed it.)
 
-###########################################
-# produce box plots with transformed data #
-###########################################
+
+# produce box plots with transformed data----
+
 # log OR sqrt OR power(1/3) OR inverse OR box-cox
 bxplts <- function(value, xval, ofst = 0, data, ...){
   data$y <- data[[value]] + ofst # ofst is added to make y >0
@@ -199,9 +154,8 @@ bxcxplts <- function(value, xval, data, sval, fval){
   par(par.def) # set the graphic conditions back
 }
 
-####################################################
-# function which reads worksheet from an xcel file #
-####################################################
+
+# reads worksheet from an xcel file----
 read.veg.xlx <- function(sheetName, file) {
   a <- read.xlsx2(file, sheetName,
                   header = TRUE, startRow = 4, endRow = 29, stringsAsFactors = FALSE)
@@ -214,9 +168,8 @@ read.veg.xlx <- function(sheetName, file) {
   return(a)
 }
 
-####################################################
-# organise species in a data frame read from excel #
-####################################################
+
+# organise species in a data frame read from excel----
 OrgSpp <- function(df, KeepCol, CombineCol, siteVec = c("ring", "plot", "position", "cell")){
   df[KeepCol] <- rowSums(df[CombineCol])
   RemoveCol <- CombineCol[CombineCol != KeepCol]
@@ -227,9 +180,7 @@ OrgSpp <- function(df, KeepCol, CombineCol, siteVec = c("ring", "plot", "positio
   return(df)
 }
 
-##########################################
-# compute canonical correlation from CAP #
-##########################################
+# compute canonical correlation from CAP----
 CanonicalCor <- function(CAPRes, EnvDF, term){
   m <- CAPRes$m
   xv <- EnvDF[, term]
@@ -245,9 +196,7 @@ CanonicalCor <- function(CAPRes, EnvDF, term){
 # also look at CAP_CanonicalCorrelation.pdf
 
 
-################################
-# Return star based on P value #
-################################
+# Return star based on P value----
 FormatPval <- function(Pval) {
   stars <- ifelse(Pval > .1, "",
                   ifelse(Pval > .05, "scriptstyle('\u2020')",
@@ -263,9 +212,8 @@ FormatPval <- function(Pval) {
   return(data.frame(stars, p))
 } 
 
-####################################
-# create table of contrast results #
-####################################
+
+# create table of contrast results----
 cntrstTbl <- function(cntrstRes, data, variable, ...){
   Df <- data.frame(
     year = unique(data[, "year"]),
@@ -279,15 +227,12 @@ cntrstTbl <- function(cntrstRes, data, variable, ...){
   return(Df)
 }
 
-#######################
-# Compute R2 for GLMM #
-#######################
+
+# Compute R2 for GLMM----
 source("R/rsquaredglmm.R")
 
 
-########################
-# Yearly dissimilarity #
-########################
+# Yearly dissimilarity----
 # Compute dissimilarity for each plot between 2013 & 2014 and 2014 & 2015
 YearDssmlrty <- function(x, spp) {
   df1 <- subset(x, year %in% c("Year0", "Year1"))
@@ -305,9 +250,7 @@ YearDssmlrty <- function(x, spp) {
   return(dfs)
 }
 
-#######################################
-# Use special symbols with facet_wrap #
-#######################################
+# Use special symbols with facet_wrap----
 facet_wrap_labeller <- function(gg.plot,labels=NULL) {
   #works with R 3.0.1 and ggplot2 0.9.3.1
   require(gridExtra)
@@ -327,9 +270,7 @@ facet_wrap_labeller <- function(gg.plot,labels=NULL) {
   g
 }
 
-###################################
-# df to create a circle on ggplot #
-###################################
+# df to create a circle on ggplot----
 circleFun <- function(center = c(0,0),diameter = 1, npoints = 100){
   r = diameter / 2
   tt <- seq(0,2*pi,length.out = npoints)
@@ -339,9 +280,7 @@ circleFun <- function(center = c(0,0),diameter = 1, npoints = 100){
 }
 
 
-#####################################################
-# make df to set ranges of x and y axies for biplot #
-#####################################################
+# make df to set ranges of x and y axies for biplot----
 rangeDF <- function(df, xv = "CAP1", yv = "CAP2", year = "2013"){
   ddply(df, .(co2), function(x) {
     xyrange <- c(range(x[, xv]), range(x[, yv]))
@@ -353,9 +292,7 @@ rangeDF <- function(df, xv = "CAP1", yv = "CAP2", year = "2013"){
   )
 }
 
-#############################################
-# Compute Species correlation with CAP axes #
-#############################################
+# Compute Species correlation with CAP axes----
 SpScorCorFun <- function(CapSpScorDF, CorVal = .7, co2) {
   # CorVal is threshhold for correlation
   # CapSpScorDF is species score from CAP analysis
@@ -370,9 +307,7 @@ SpScorCorFun <- function(CapSpScorDF, CorVal = .7, co2) {
 }
 
 
-###################################
-# Create species correlation plot #
-###################################
+# Create species correlation plot----
 SpCorpPlot <- function(df, xv = "CAP1", yv = "CAP2", textpos = 1.07) {
   # textpos adjusts species names position in the grap
   df$xval <- df[, xv]
@@ -404,9 +339,7 @@ SpCorpPlot <- function(df, xv = "CAP1", yv = "CAP2", textpos = 1.07) {
   return(CorPl)
 }
 
-##########################
-# Create CAP result plot #
-##########################
+# Create CAP result plot----
 CapPlot <- function(df){
   p <- ggplot(df, aes(x = CAP1, y = CAP2, fill = year, col = year))
   p2 <- p + geom_point(size = 3.5) + 
@@ -420,9 +353,7 @@ CapPlot <- function(df){
   return(p2)
 }
 
-###############################
-# Barplot for data inspection #
-###############################
+# Barplot for data inspection----
 InspctPlot <- function(df = vdf, ringval, plotval, sp){
   cmdf <- subset(df, ring == ringval & plot == plotval, 
                  select =c ("year", "month", "ring", "plot", "position", "cell", sp))
@@ -432,14 +363,10 @@ InspctPlot <- function(df = vdf, ringval, plotval, sp){
   print(p2)
 }
 
-#############################################
-# Remove year, ring and co2 columns from DF #
-#############################################
+# Remove year, ring and co2 columns from DF----
 Rm_ymc <- function(x) x[, !names(x) %in% c("year", "ring", "co2")]
 
-###########
-# Triplot #
-###########
+# Triplot----
 TriPlot <- function(MultValRes, env, yaxis, axispos, EnvNumeric = TRUE, lowx = .5, lowy = .5,
                     spcons = 2.5, biplcons = 3, centcons = 1){
   #   lowx, lowy are minimum sp correlation with axes to plot
@@ -538,9 +465,7 @@ TriPlot <- function(MultValRes, env, yaxis, axispos, EnvNumeric = TRUE, lowx = .
   p5
 }
 
-#######################################
-# Plot RDA result against year by co2 #
-#######################################
+# Plot RDA result against year by co2----
 PlotRDA_Year <- function(rdaResLst, spscore = .3, env){
   names(rdaResLst) <- c("amb", "elev")
   
@@ -579,9 +504,8 @@ PlotRDA_Year <- function(rdaResLst, spscore = .3, env){
   p2
 }
 
-###############################
-# Compare AIC and R2 for glmm #
-###############################
+
+# Compare AIC and R2 for glmm----
 CompAIC <- function(model){
   m1 <- update(model, ~ . - year:co2)
   m2 <- update(m1, ~ . - co2)
@@ -593,9 +517,8 @@ CompAIC <- function(model){
   return(res)
 }
 
-############################
-# Add labels in facet_wrap #
-############################
+
+# Add labels in facet_wrap----
 facet_wrap_labeller <- function(gg.plot,labels=NULL) {
   #works with R 3.0.1 and ggplot2 0.9.3.1
   # copied from http://stackoverflow.com/questions/19282897/
@@ -957,27 +880,59 @@ create_rda_plots <- function(sitedd,    # site score
   return(p)
 }
 
-
+# standard error----
 se <- function(...){
   ci(...)[4]
 }
 
+# no. of obs----
 get_n <- function(x){
   sum(!is.na(x))
 }
 
 
-# rverse transform z-transformed variables
+# rverse transform z-transformed variables----
 rev_ztrans <- function(x, xsd, xmean){
   x * xsd + xmean
 }
 
 
-# get CI from bootMer objects
+# get CI from bootMer objects----
 get_ci <- function(bb, a = .05){
   # bb: bootMer object
   lwr <- apply(bb$t, 2, quantile, a / 2)
   upr <- apply(bb$t, 2, quantile, 1 - a / 2)
   fit <- bb$t0
   cbind(lwr, upr, fit)
+}
+
+
+# create paritial residual plot----
+create_resplot <- function(model, ylim, ylab){
+  
+  par(mfrow = c(2, 2), mar = c(4.5, 3, .5, .5), oma = c(0, 2, 0, 0))
+  visreg(model, xvar = "s_logpar", 
+         xlab = expression(Adj.~Log[e](PAR,~mu*mol~s^'-1'~m^"-2")),
+         ylim = ylim)
+  
+  visreg(model, xvar = "s_logmoist", 
+         ylab = ylab, 
+         xlab = expression(Adj.~Log[e](Moist)),
+         ylim = ylim)
+  
+  visreg(model, xvar = "s_temp", 
+         ylab = ylab, 
+         xlab = expression(Adj.~Temp~(degree*C)),
+         ylim = ylim)
+  
+  visreg(model, xvar = "co2", 
+         ylab = ylab, 
+         ylim = ylim,
+         xlab = expression(CO[2]),
+         xaxt="n")
+  axis(side = 1, labels = c("Ambient", expression(eCO[2])), 
+       at = c(.25, .75))
+  
+  mtext(ylab, outer = TRUE, cex = 1, side = 2)
+  
 }
