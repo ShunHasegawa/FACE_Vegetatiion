@@ -195,7 +195,7 @@ create_resplot(c3d_m2,
 ```
 
 
-# Relationship between C~4~:C~3~ ratios and soil Na nd P availability
+# Relationship between C~4~:C~3~ ratios and soil N and P availability
 ```{r c43r_soilNP, echo=FALSE, results='asis', message=FALSE}
 rid <- data.frame(RI = c43_soil_coef_impo) %>% 
   mutate(predictor = row.names(.),
