@@ -70,6 +70,19 @@ pander(spp_co2_summary, caption = "The number of species for each CO2 treatment.
 pander(pfg_cov_summary, caption = "% coverage of each PFG")
 
 pander(tail(spp_cov_summary, n = 10), caption = "% coverage of top 10 species")
+
+sb_tbl <- veg_FullVdf %>% 
+  filter(form == "Grass") %>% 
+  left_join(grass_df[, c("species", "type")], by = c("variable" = "species")) %>% 
+  mutate(type = ifelse(is.na(type), "transient", type)) %>% 
+  group_by(PFG, type) %>% 
+  summarise(value = sum(value)) %>% 
+  ungroup() %>% 
+  mutate(prop = value / sum(value),
+         prop = round(prop * 100, 1))
+pander(sb_tbl, caption = "Summary of dominant ands subordinat species of graminoids",
+       justify = "right")
+
 ```
 
 
@@ -89,6 +102,7 @@ emphasize.italics.cols(pcol)
 emphasize.strong.cells(which(d <= .1, arr.ind = TRUE))
 row.names(all_tbl) <- NULL
 pander(all_tbl, caption = "Summary of repeated measures ANOVA", justify = "right", split.table = Inf, keep.line.breaks = TRUE)
+
 ```
 
 

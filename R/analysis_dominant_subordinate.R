@@ -29,17 +29,26 @@ grass_df <- PlotSumVeg[, c(SppName_grass,
          cumcov = cumsum(abund),
          cumcov = cumcov * 100 / max(cumcov),
          type = ifelse(r_abund > .1, "D", "S"),
-         species = factor(species, 
+         species = factor(species,
                           levels = species[order(abund, decreasing = TRUE)]))
 
-ggplot(grass_df, aes(x = as.numeric(species), y = r_abund, label = type))+
+ds_fig_d <- grass_df %>% 
+  mutate(species = gsub(pattern = "[.]", " ", species), 
+         species = factor(species,
+                          levels = species[order(abund, decreasing = TRUE)]),
+         Dominance = mapvalues(type, c("S", "D"), c("Subordinate", "dominant")))
+ds_fig <- ggplot(ds_fig_d, aes(x = as.numeric(species), y = r_abund, label = type))+
   geom_path()+
-  geom_text(aes(col = type)) +
-  geom_hline(yintercept = .1, col = "blue", linetype = "dashed") +
-  scale_x_continuous(breaks = seq(1, nrow(grass_df), 1),
-                     labels =  as.character(grass_df$species[order(grass_df$abund, decreasing = TRUE)]))+
+  geom_text() +
+  geom_hline(yintercept = .1, linetype = "dashed") +
+  scale_x_continuous(breaks = c(seq(1, nrow(ds_fig_d), 1)),
+                     labels =  as.character(ds_fig_d$species[order(ds_fig_d$abund, decreasing = TRUE)]))+
+  scale_y_continuous(breaks = c(0, .1, seq(.25, 1, .25)), 
+                     labels =  format(c(0, .1, seq(.25, 1, .25)), digits = 2))+
   theme(axis.text.x = element_text(angle = 45, hjust = 1))+
   labs(x = NULL, y = "Relative abundance")
+ggsavePP(filename = "output/figs/fig_relativeabund_dom_sub", plot = ds_fig, 
+         width = 6, height = 4)
 
 
 
@@ -51,6 +60,18 @@ grass_DS <- veg_FullVdf %>%
   filter(variable %in% ds_spp$species) %>% 
   left_join(grass_df[, c("species", "type")], by = c("variable" = "species")) %>% 
   droplevels(.)
+
+
+# proportioan of each group
+veg_FullVdf %>% 
+  filter(form == "Grass") %>% 
+  left_join(grass_df[, c("species", "type")], by = c("variable" = "species")) %>% 
+  mutate(type = ifelse(is.na(type), "transient", type)) %>% 
+  group_by(PFG, type) %>% 
+  summarise(value = sum(value)) %>% 
+  ungroup() %>% 
+  mutate(prop = value / sum(value),
+         prop = round(prop * 100, 1))
 
 
 # . subordinate: dominant ratio -------------------------------------------
