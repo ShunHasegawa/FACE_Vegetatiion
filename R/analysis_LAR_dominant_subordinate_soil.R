@@ -4,43 +4,6 @@
 
 
 # merge with IEM data
-iem <- read.xlsx2(file = "Data/newIem_smmry_tbl.xlsx", sheetIndex = 1, stringsAsFactors = FALSE)
-iem <- iem %>% 
-  select(-Moist, -Temp_Mean) %>% 
-  mutate_each(funs(as.Date), insertion, sampling, date) %>% 
-  mutate_each(funs(as.numeric), nitrate, ammonium, phosphate) %>%
-  mutate_each(funs(as.factor), ring, plot) %>% 
-  filter(time %in% c(6, 7, 13, 14, 16, 19)) %>% 
-  mutate(year = ifelse(time %in% c(6, 7), "Year0",
-                       ifelse(time %in% c(13, 14), "Year1", 
-                              ifelse(time == 16, "Year2", "Year3"))))
-
-
-iem %>% 
-  select(insertion, sampling, time, year) %>% 
-  gather(variable, value, insertion, sampling) %>% 
-  mutate(day2 = yday(value)) %>% 
-  distinct() %>% 
-  arrange(as.numeric(as.character(time))) %>%
-  mutate(day2 = ifelse(day2 < 100, 365 + day2, day2)) %>% 
-  ggplot(., aes(x = day2, y = 1, group = time, col = time))+
-  geom_point()+
-  geom_path()+
-  facet_grid(year ~ .)
-
-
-iem_raw <- iem %>% 
-  rename(no = nitrate, nh = ammonium, p = phosphate) %>% 
-  group_by(year, time, ring) %>% 
-  summarise_each(funs(mean), no, nh, p) %>% 
-  group_by(year, ring) %>% 
-  summarise_each(funs(mean), no, nh, p) %>% 
-  ungroup() %>% 
-  mutate(nitr = no + nh,
-         np   = nitr / p)
-
-plot(nitr ~ as.numeric(factor(year)), data = iem_raw, col = ring, pch = 19)
-plot(p ~ as.numeric(factor(year)), data = iem_raw, col = ring, pch = 19)
 
 
 # merge annual change rats of grass species and iem data
