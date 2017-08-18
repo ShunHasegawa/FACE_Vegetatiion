@@ -53,7 +53,7 @@ ggsavePP(filename = "output/figs/fig_relativeabund_dom_sub", plot = ds_fig,
 
 
 
-# analysis ----------------------------------------------------------------
+# analysis on S:D ratios----------------------------------------------------------------
 
 # df for dominant and subordinate spp
 grass_DS <- veg_FullVdf %>% 
@@ -127,7 +127,7 @@ qqPlot(resid(s_m1))
 
 # . fig -------------------------------------------------------------------
 
-# CI and postdoc test -----------------------------------------------------
+# > CI and postdoc test -----------------------------------------------------
 
 
 # compute 95 CI
@@ -169,7 +169,7 @@ sd_rr_d <- sd_CI_dd %>%
 
 
 
-# create a figure ---------------------------------------------------------
+# > create a figure ---------------------------------------------------------
 
 # create fig
 dodgeval <- .3
@@ -268,10 +268,10 @@ grass_DS_sum <- grass_DS %>%
 
  
 
-# analysis on Dminant and subordinate C3 and C4 species -------------------
+# analysis on abundance ---------------------------------------------------
 
 
-# > prepare data frame ----------------------------------------------------
+# . prepare data frame ----------------------------------------------------
 
 # year0
 grass_DS_sum_y0 <- grass_DS_sum %>% 
@@ -318,9 +318,11 @@ sc4_dd <- grass_DS_dd %>%
 
 
 
-# > analysis --------------------------------------------------------------
+# . analysis --------------------------------------------------------------
 
-# dominant c3
+
+# > dominant c3 -----------------------------------------------------------
+
 dc3_m1 <- lmer(value ~ co2 * year + value0 + (1|ring) + (1|id) + (1|RY), dc3_dd)
 Anova(dc3_m1, test.statistic = "F")
 plot(dc3_m1)
@@ -330,7 +332,9 @@ qqPlot(resid(dc3_m2))
 Anova(dc3_m2, test.statistic = "F")
 
 
-# dominant c4
+# > dominant c4 -----------------------------------------------------------
+
+
 dc4_m1 <- lmer(sqrt(value + 1) ~ co2 * year + sqrt(value0 + 1) + (1|ring) + (1|id) + (1|RY), dc4_dd)
 Anova(dc4_m1, test.statistic = "F")
 summary(dc4_m1)
@@ -338,7 +342,9 @@ plot(dc4_m1)
 qqPlot(resid(dc4_m1))
 
 
-# subordinate c3
+# > subordinate c3 --------------------------------------------------------
+
+
 boxplot(log(value + 1) ~ co2 * year, data = sc3_dd)
 sc3_m1 <- glmer(value ~ co2 * year + I(value0/100) +  (1|id) + (1|RY), 
                 family = "poisson", sc3_dd)
@@ -353,7 +359,9 @@ plot(sc3_m1)
 qqPlot(resid(sc3_m1))
 
 
-# subordinate c4
+# > subordinate c4 --------------------------------------------------------
+
+
 sc4_m1 <- lmer(sqrt(value + 1) ~ co2 * year + sqrt(value0 + 1) + (1|ring) + (1|id) + (1|RY), sc4_dd)
 qqPlot(resid(sc4_m1))
 plot(sc4_m1)
@@ -362,10 +370,11 @@ Anova(sc4_m1, test.statistic = "F")
 summary(sc4_m1)
 
 
+
 # . fig -------------------------------------------------------------------
 
 
-# CI and post-hoc test ----------------------------------------------------
+# . CI and post-hoc test ----------------------------------------------------
 
 
 # compute 95 CI and post-hoc test (only need grass and forb species)
@@ -506,7 +515,7 @@ ggsavePP(filename = "output/figs/adjusted_SD_C34_abund",
 
 
 
-# summary table -----------------------------------------------------------
+# . summary table -----------------------------------------------------------
 
 # table for observed values
 obs_tbl <- sd_obs_dd %>% 
@@ -535,3 +544,150 @@ sd_adjMean_tble <- ci_dd %>%
 # save as csv
 write.table(sd_adjMean_tble, file = "output/table/summary_tbl_dom_sub_c34_abund.csv", 
             row.names = FALSE)
+
+
+
+
+
+# analysis on abundance and soil N, P -------------------------------------
+
+
+# merge data frames
+grass_DS_soil <- grass_DS %>% 
+  group_by(year, ring, co2, PFG, type) %>% 
+  summarise(value = sum(value)) %>% 
+  mutate(pfg_type = paste(PFG, type, sep = "_")) %>% 
+  ungroup() %>%
+  select(-PFG, -type) %>% 
+  spread(pfg_type, value) %>% 
+  mutate(year = as.character(year)) %>% 
+  left_join(iem_raw) %>% 
+  mutate(logn = log(nitr), 
+         logp = log(p),
+         logdc3 = log(c3_D), 
+         logsc3 = log(c3_S + .1), 
+         logdc4 = log(c4_D), 
+         logsc4 = log(c4_S)) %>% 
+  mutate_each(funs(s = scale(.)[, 1]), c4_S, c4_D, c3_S, c3_D, logn, logp, 
+              logdc3, logsc3, logdc4, logsc4)
+
+
+
+# . dominant c3 -----------------------------------------------------------
+dc3_soil_m1 <- lmer(c3_D_s ~ logn_s + logp_s + (1|ring), data = grass_DS_soil)
+plot(dc3_soil_m1)
+qqPlot(resid(dc3_soil_m1))
+Anova(dc3_soil_m1, test.statistic = "F")
+summary(dc3_soil_m1)
+
+# coefficient and RI
+dc3_soil_coef      <- confint(dc3_soil_m1, method = "boot", nsim = 999)
+dc3_soil_coef_90   <- confint(dc3_soil_m1, method = "boot", nsim = 999, level = .9)
+dc3_soil_full      <- dredge(dc3_soil_m1)
+dc3_soil_coef_impo <- importance(dc3_soil_full)
+dc3_soil_coef_impo
+
+
+
+
+# . subordinate c3 --------------------------------------------------------
+sc3_soil_m1 <- lmer(logsc3 ~ logn_s + logp_s + (1|ring) + (1|year), data = grass_DS_soil)
+sc3_soil_m1 <- lmer(c3_S_s ~ logn_s + logp_s + (1|ring) + (1|year), data = grass_DS_soil)
+sc3_soil_m2 <- update(sc3_soil_m1, subset = -which.max(resid(sc3_soil_m1)))
+plot(sc3_soil_m1)
+plot(sc3_soil_m2)
+qqPlot(resid(sc3_soil_m1))
+qqPlot(resid(sc3_soil_m2))
+Anova(sc3_soil_m1, test.statistic = "F")
+Anova(sc3_soil_m2, test.statistic = "F")
+summary(sc3_soil_m1)
+
+# coefficient and RI
+sc3_soil_coef      <- confint(sc3_soil_m1, method = "boot", nsim = 999)
+sc3_soil_coef_90   <- confint(sc3_soil_m1, method = "boot", nsim = 999, level = .9)
+sc3_soil_full      <- dredge(sc3_soil_m1)
+sc3_soil_coef_impo <- importance(sc3_soil_full)
+sc3_soil_coef_impo
+
+
+
+
+# . dominant c4 -----------------------------------------------------------
+dev.off()
+plot(c4_D_s ~ logn_s, data = grass_DS_soil, col = ring, pch = 19)
+plot(logdc4_s ~ logn_s, data = grass_DS_soil, col = ring, pch = 19)
+plot(logdc4_s ~ logn_s, data = grass_DS_soil, col = ring, pch = 19)
+
+summary(lm(c4_D_s ~ logn_s + logp_s, data = grass_DS_soil))
+summary(lm(logdc4_s ~ logn_s + logp_s, data = grass_DS_soil))
+dc4_soil_m1 <- lmer(c4_D_s ~ logn_s + logp_s + (1|ring) + (1|year), data = grass_DS_soil)
+dc4_soil_m2 <- update(dc4_soil_m1, subset = -which.max(resid(dc4_soil_m1)))
+
+
+plot(dc4_soil_m1)
+qqPlot(resid(dc4_soil_m1))
+qqPlot(resid(dc4_soil_m2))
+Anova(dc4_soil_m1, test.statistic = "F")
+Anova(dc4_soil_m2, test.statistic = "F")
+summary(dc4_soil_m1)
+
+# coefficient and RI
+dc4_soil_coef      <- confint(dc4_soil_m1, method = "boot", nsim = 999)
+dc4_soil_coef_90   <- confint(dc4_soil_m1, method = "boot", nsim = 999, level = .9)
+dc4_soil_full      <- dredge(dc4_soil_m1)
+dc4_soil_coef_impo <- importance(dc4_soil_full)
+dc4_soil_coef_impo
+
+
+
+
+# . subordinate c4 --------------------------------------------------------
+par(mfrow = c(1, 2))
+plot(c4_S_s ~ logn_s, data = grass_DS_soil  , col = factor(year), pch = 19)
+plot(c4_S_s ~ nitr, data = grass_DS_soil  , col = factor(year), pch = 19)
+
+plot(logsc4_s ~ logn_s, data = grass_DS_soil, col = factor(year), pch = 19)
+plot(logsc4_s ~ nitr, data = grass_DS_soil, col = factor(year), pch = 19)
+
+sc4_soil_m1 <- lmer(c4_S_s ~ logn_s + logp_s + (1|ring) + (1|year), data = grass_DS_soil)
+sc4_soil_m2 <- lmer(logsc4_s ~ logn_s + logp_s + (1|ring) + (1|year), data = grass_DS_soil)
+
+sc4_soil_m1 <- lmer(c4_S_s   ~ logn_s + logp_s + (1|ring) + (1|year), data = grass_DS_soil)
+sc4_soil_m2 <- lmer(logsc4_s ~ logn_s + logp_s + (1|ring) + (1|year), data = grass_DS_soil)
+r.squared(sc4_soil_m1)
+r.squared(sc4_soil_m2)
+
+
+plot(sc4_soil_m1)
+plot(sc4_soil_m2)
+qqPlot(resid(sc4_soil_m1))
+qqPlot(resid(sc4_soil_m2))
+Anova(sc4_soil_m1, test.statistic = "F")
+Anova(sc4_soil_m2, test.statistic = "F")
+summary(sc4_soil_m1)
+summary(sc4_soil_m2)
+
+# coefficient and RI
+sc4_soil_coef      <- confint(sc4_soil_m1, method = "boot", nsim = 999)
+sc4_soil_coef_90   <- confint(sc4_soil_m1, method = "boot", nsim = 999, level = .9)
+sc4_soil_full      <- dredge(sc4_soil_m1)
+sc4_soil_coef_impo <- importance(sc4_soil_full)
+sc4_soil_coef_impo
+
+
+
+
+m1 <- lmer(c4_D_s ~ logn_s + logp_s + (1|ring) + (1|year), data = dd1)
+m1 <- lmer(c3_S_s ~ logn_s + logp_s + (1|ring) + (1|year), data = dd1)
+m1 <- lmer(c3_D_s ~ logn_s + logp_s + (1|ring) + (1|year), data = dd1)
+plot(m1)
+qqPlot(resid(m1))
+r.squared(m1)
+
+Anova(m1, test.statistic = "F")
+visreg(m1, xvar = "logn_s")
+visreg(m1, xvar = "logp_s")
+confint(m1, method = "boot")
+summary(m1)
+
+
