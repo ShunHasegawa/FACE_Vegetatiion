@@ -673,21 +673,3 @@ sc4_soil_coef_90   <- confint(sc4_soil_m1, method = "boot", nsim = 999, level = 
 sc4_soil_full      <- dredge(sc4_soil_m1)
 sc4_soil_coef_impo <- importance(sc4_soil_full)
 sc4_soil_coef_impo
-
-
-
-
-m1 <- lmer(c4_D_s ~ logn_s + logp_s + (1|ring) + (1|year), data = dd1)
-m1 <- lmer(c3_S_s ~ logn_s + logp_s + (1|ring) + (1|year), data = dd1)
-m1 <- lmer(c3_D_s ~ logn_s + logp_s + (1|ring) + (1|year), data = dd1)
-plot(m1)
-qqPlot(resid(m1))
-r.squared(m1)
-
-Anova(m1, test.statistic = "F")
-visreg(m1, xvar = "logn_s")
-visreg(m1, xvar = "logp_s")
-confint(m1, method = "boot")
-summary(m1)
-
-
