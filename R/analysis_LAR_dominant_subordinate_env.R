@@ -59,14 +59,14 @@ sc4_coef_imp    <- importance(lar_sc4_m2_full)
 # partial residual plot
 pdf(file = "output/figs/lar_sC4_partial_regression_plot.pdf", width = 5, height = 5)
 create_resplot(lar_sc4_m2, 
-               ylab = expression(Adj.~annual~rates~of~change~"in"~C[4]),
+               ylab = expression(Adj.~annual~rates~of~change~"in"~subordinate~C[4]),
                ylim <- c(-2, 2.6))
 
 dev.off()
 
 png(file = "output/figs/lar_sC4_partial_regression_plot.png", width = 5, height = 5, res = 600, units = "in")
 create_resplot(lar_sc4_m2, 
-               ylab = expression(Adj.~annual~rates~of~change~"in"~C[4]),
+               ylab = expression(Adj.~annual~rates~of~change~"in"~subordinate~C[4]),
                ylim <- c(-2, 2.6))
 
 dev.off()
@@ -92,6 +92,26 @@ dc4_coef_imp    <- importance(lar_dc4_m2_full)
 dc4_coef_imp
 
 
+# partial residual plot
+range(visreg(lar_dc4_m2, xvar = "s_temp")$res$visregRes)
+
+pdf(file = "output/figs/lar_dC4_partial_regression_plot.pdf", width = 5, height = 5)
+create_resplot(lar_dc4_m2, 
+               ylab = expression(Adj.~annual~rates~of~change~"in"~dominant~C[4]),
+               ylim = c(-1.6, 2.3))
+
+dev.off()
+
+png(file = "output/figs/lar_dC4_partial_regression_plot.png", width = 5, height = 5, res = 600, units = "in")
+create_resplot(lar_dc4_m2, 
+               ylab = expression(Adj.~annual~rates~of~change~"in"~dominant~C[4]),
+               ylim = c(-1.6, 2.3))
+
+dev.off()
+
+
+
+
 # subordinate c3 ----------------------------------------------------------
 
 lar_sc3_m1 <- lmer(s_sc3_ddiff ~ co2 * (s_logmoist+s_temp + s_logpar) +(1|ring)+(1|RY)+(1|id), data = grass_DS_acr)
@@ -111,6 +131,24 @@ sc3_coef_90     <- confint(lar_sc3_m2, method = "boot", level = .9, nsim = 999)
 lar_sc3_m2_full <- dredge(lar_sc3_m2)
 sc3_coef_imp    <- importance(lar_sc3_m2_full)
 sc3_coef_imp
+
+
+# partial residual plot
+range(visreg(lar_sc3_m2, xvar = "s_temp")$res$visregRes)
+
+pdf(file = "output/figs/lar_sC3_partial_regression_plot.pdf", width = 5, height = 5)
+create_resplot(lar_sc3_m2, 
+               ylab = expression(Adj.~annual~rates~of~change~"in"~subordinate~C[3]),
+               ylim = c(-2.1, 2.8))
+
+dev.off()
+
+png(file = "output/figs/lar_sC3_partial_regression_plot.png", width = 5, height = 5, res = 600, units = "in")
+create_resplot(lar_sc3_m2, 
+               ylab = expression(Adj.~annual~rates~of~change~"in"~subordinate~C[3]),
+               ylim = c(-2.1, 2.8))
+
+dev.off()
 
 
 
@@ -156,6 +194,25 @@ dc3_coef_90     <- confint(lar_dc3_m3, method = "boot", level = .9, nsim = 999)
 lar_dc3_m3_full <- dredge(lar_dc3_m3)
 dc3_coef_imp    <- importance(lar_dc3_m3_full)
 dc3_coef_imp
+
+
+# partial residual plot
+range(visreg(lar_dc3_m3, xvar = "s_temp")$res$visregRes)
+
+pdf(file = "output/figs/lar_dC3_partial_regression_plot.pdf", width = 5, height = 5)
+create_resplot(lar_dc3_m3, 
+               ylab = expression(Adj.~annual~rates~of~change~"in"~dominant~C[3]),
+               ylim = c(-3.8, 2.7))
+
+dev.off()
+
+png(file = "output/figs/lar_dC3_partial_regression_plot.png", width = 5, height = 5, res = 600, units = "in")
+create_resplot(lar_dc3_m3, 
+               ylab = expression(Adj.~annual~rates~of~change~"in"~dominant~C[3]),
+               ylim = c(-3.8, 2.7))
+dev.off()
+
+
 
 
 # summary -----------------------------------------------------------------
