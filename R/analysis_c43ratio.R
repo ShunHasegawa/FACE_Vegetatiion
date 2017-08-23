@@ -167,6 +167,9 @@ plot(log(c43_r + .1) ~ log(p), c43_ratio_iem, col = co2, pch = 19)
 
 # anlaysis
 c43_soil <- lmer(s_c43_r ~ s_n + s_p + (1|ring), data = c43_ratio_iem)
+summary(c43_soil1)
+
+
 Anova(c43_soil, test.statistic = "F")
 summary(c43_soil)
 plot(c43_soil)
@@ -178,4 +181,118 @@ c43_soil_coef_90   <- confint(c43_soil, method = "boot", nsim = 999, level = .9)
 c43_soil_full      <- dredge(c43_soil)
 c43_soil_coef_impo <- importance(c43_soil_full)
 c43_soil_coef_impo
+
+
+
+
+# . fig -------------------------------------------------------------------
+
+
+# Nitrogen ----------------------------------------------------------------
+vireg_obs_n <- visreg(c43_soil, xvar = "s_n")$res  # adjusted observed values
+vireg_fit_n <- visreg(c43_soil, xvar = "s_n")$fit  # fitted values
+vireg_obs_n$co2 <- c43_ratio_iem$co2
+
+nlim <- c(-2.5, 1.7)
+resplot_n <- function(){
+  plot(visregRes ~ s_n, data = vireg_obs_n, type = "n", 
+       xlab = "",
+       ylab = expression(Adj.~C[4]:C[3]~ratios),
+       ylim = c(-1.2, 1.7),
+       xlim = nlim,
+       axes = F)
+  axis(side = 1)
+  axis(side = 2, las = 2)
+  box()
+  polygon(c(rev(vireg_fit_n$s_n), vireg_fit_n$s_n), 
+          c(rev(vireg_fit_n$visregLwr), vireg_fit_n$visregUpr), 
+          col = "gray80", border = NA)
+  lines(visregFit ~ s_n, vireg_fit_n, lwd = 3)
+  points(visregRes ~ s_n, data = vireg_obs_n, subset = co2 == "amb", pch = 19)
+  points(visregRes ~ s_n, data = vireg_obs_n, subset = co2 == "elev", pch = 0)
+}
+
+
+# N boxplot
+n_boxplot <- function(){
+  boxplot(s_n ~ co2 * year, c43_ratio_iem, horizontal = TRUE, 
+          ylim = nlim,
+          axes = F, col = c("gray80", "white"),
+          xlab = "Adj. soil N availability")
+  axis(side = 1, labels = FALSE, tck = .03)
+  axis(side = 2, at = c(1.5, 3.5, 5.5, 7.5), labels = paste0("Year", 0:3), 
+       las = 2)
+  box()
+}
+
+
+
+# PHosphorus ----------------------------------------------------------------
+vireg_obs_p <- visreg(c43_soil, xvar = "s_p")$res  # adjusted observed values
+vireg_fit_p <- visreg(c43_soil, xvar = "s_p")$fit  # fitted values
+vireg_obs_p$co2 <- c43_ratio_iem$co2
+
+plim <- c(-1.8, 1.6)
+resplot_p <- function(){
+  plot(visregRes ~ s_p, data = vireg_obs_p, type = "n",
+       ylim = c(-1.2, 1.7), axes = F, ann = F,
+       xlim = plim)
+  axis(side = 1, at = seq(-1.5, 1.5, 1), labels = seq(-1.5, 1.5, 1))
+  axis(side = 2, las = 2, labels = F)
+  box()
+  polygon(c(rev(vireg_fit_p$s_p), vireg_fit_p$s_p), 
+          c(rev(vireg_fit_p$visregLwr), vireg_fit_p$visregUpr), 
+          col = "gray80", border = NA)
+  lines(visregFit  ~ s_p, vireg_fit_p, lwd = 3)
+  points(visregRes ~ s_p, data = vireg_obs_p, subset = co2 == "amb", pch = 19)
+  points(visregRes ~ s_p, data = vireg_obs_p, subset = co2 == "elev", pch = 0)
+}
+resplot_p()
+
+
+# P boxplot
+p_boxplot <- function(){
+  boxplot(s_p ~ co2 * year, c43_ratio_iem, horizontal = TRUE, axes = F, 
+          col = c("gray80", "white"),
+          ylim = plim)
+  axis(side = 1, at = seq(-1.5, 1.5, 1), labels = F, tck = .03)
+  axis(side = 2, at = c(1.5, 3.5, 5.5, 7.5), labels = F, las = 2)
+  box()
+}
+
+
+# merge figs --------------------------------------------------------------
+
+source("http://www.math.mcmaster.ca/bolker/R/misc/legendx.R") # allow to change legend box sizes when defined using fill
+
+plot_c43r_np <- function(){
+  par(mfrow = c(2, 2), tck = .03, oma = c(4, 5, .5, .5))
+  par(mar = c(0, 0, .5, .5))
+  n_boxplot()
+  text(par("usr")[1], par("usr")[4], expression(bold((a))), adj = c(0, 1))
+  legend("bottomleft", legend = c(expression(eCO[2]), "Amb"), 
+         fill = c("white", "gray80"), bty = "n", box.cex = c(1.1, .8))
+  p_boxplot()
+  text(par("usr")[1], par("usr")[4], expression(bold((b))), adj = c(0, 1))
+  
+  # partial regression plots
+  resplot_n()
+  text(par("usr")[1], par("usr")[4], expression(bold((c))), adj = c(0, 1))
+  mtext(side = 1, text = "Adj. soil N availability", line = 2.5)
+  mtext(side = 2, text = expression(Adj.~C[4]:C[3]~ratios), line = 2.5)
+  legend("bottomleft", legend = c(expression(eCO[2]), "Amb"), pch = c(0, 19),
+         pt.cex = 2, bty = "n")
+  resplot_p()
+  text(par("usr")[1], par("usr")[4], expression(bold((d))), adj = c(0, 1))
+  mtext(side = 1, text = "Adj. soil P availability", line = 2.5)
+}
+
+
+pdf(file = "output/figs/C43ratio_NP_partial_regression_plot.pdf", width = 5.5, height = 5)
+plot_c43r_np()
+dev.off()
+
+png(file = "output/figs/C43ratio_NP_partial_regression_plot.png", width = 5.5, height = 5, res = 600, units = "in")
+plot_c43r_np()
+dev.off()
 
