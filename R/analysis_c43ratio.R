@@ -158,7 +158,8 @@ c43_ratio_iem <- left_join(c43_ratio, iem_raw) %>%
   ungroup() %>% 
   mutate(s_c43_r  = scale(log(c43_r + .1))[, 1],    # Z-standardize for multiple regression
          s_n = scale(log(nitr))[, 1],
-         s_p = scale(log(p))[, 1])
+         s_p = scale(log(p))[, 1],
+         probe = ifelse(year %in% c("Year0", "Year1"), "IEM", "PRS"))
 summary(c43_ratio_iem)
 plot(s_c43_r ~ log(nitr), c43_ratio_iem, col = factor(year), pch = 19)
 plot(s_c43_r ~ log(nitr), c43_ratio_iem, col = co2, pch = 19)
@@ -166,8 +167,8 @@ plot(log(c43_r + .1) ~ log(p), c43_ratio_iem, col = co2, pch = 19)
 
 
 # anlaysis
-c43_soil <- lmer(s_c43_r ~ s_n + s_p + (1|ring), data = c43_ratio_iem)
-summary(c43_soil1)
+c43_soil <- lmer(s_c43_r ~ s_n + s_p + (1|ring) + (1|probe) + (1|year), data = c43_ratio_iem)
+summary(c43_soil)
 
 
 Anova(c43_soil, test.statistic = "F")
@@ -217,8 +218,7 @@ resplot_n <- function(){
 n_boxplot <- function(){
   boxplot(s_n ~ co2 * year, c43_ratio_iem, horizontal = TRUE, 
           ylim = nlim,
-          axes = F, col = c("gray80", "white"),
-          xlab = "Adj. soil N availability")
+          axes = F, col = c("gray80", "white"))
   axis(side = 1, labels = FALSE, tck = .03)
   axis(side = 2, at = c(1.5, 3.5, 5.5, 7.5), labels = paste0("Year", 0:3), 
        las = 2)
@@ -227,7 +227,7 @@ n_boxplot <- function(){
 
 
 
-# PHosphorus ----------------------------------------------------------------
+# Phosphorus ----------------------------------------------------------------
 vireg_obs_p <- visreg(c43_soil, xvar = "s_p")$res  # adjusted observed values
 vireg_fit_p <- visreg(c43_soil, xvar = "s_p")$fit  # fitted values
 vireg_obs_p$co2 <- c43_ratio_iem$co2
@@ -266,7 +266,7 @@ p_boxplot <- function(){
 source("http://www.math.mcmaster.ca/bolker/R/misc/legendx.R") # allow to change legend box sizes when defined using fill
 
 plot_c43r_np <- function(){
-  par(mfrow = c(2, 2), tck = .03, oma = c(4, 5, .5, .5))
+  par(mfrow = c(2, 2), tck = .03, oma = c(4, 5, .5, .5), mgp = c(3, .1, 0))
   par(mar = c(0, 0, .5, .5))
   n_boxplot()
   text(par("usr")[1], par("usr")[4], expression(bold((a))), adj = c(0, 1))
@@ -278,13 +278,15 @@ plot_c43r_np <- function(){
   # partial regression plots
   resplot_n()
   text(par("usr")[1], par("usr")[4], expression(bold((c))), adj = c(0, 1))
-  mtext(side = 1, text = "Adj. soil N availability", line = 2.5)
-  mtext(side = 2, text = expression(Adj.~C[4]:C[3]~ratios), line = 2.5)
+  mtext(side = 1, text = expression(Adj.~Log[e](soil~N,~ng~cm^"-2"~d^"-1")), 
+        line = 2, cex = .9)
+  mtext(side = 2, text = expression(Adj.~C[4]:C[3]~ratios), line = 2)
   legend("bottomleft", legend = c(expression(eCO[2]), "Amb"), pch = c(0, 19),
          pt.cex = 2, bty = "n")
   resplot_p()
   text(par("usr")[1], par("usr")[4], expression(bold((d))), adj = c(0, 1))
-  mtext(side = 1, text = "Adj. soil P availability", line = 2.5)
+  mtext(side = 1, text = expression(Adj.~Log[e](soil~P,~ng~cm^"-2"~d^"-1")), 
+        line = 2, cex = .9)
 }
 
 
