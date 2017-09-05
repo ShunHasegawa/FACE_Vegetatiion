@@ -23,6 +23,14 @@ library(lmerTest)
 knitr::opts_chunk$set(echo = TRUE)
 load("../output/Data/summary_analysis.RData")
 load("../output/Data/AllObj.RData")
+
+# confirmed coefficients (no convergent errorr while bootstrapping)
+load("../output/Data/coef_c43ratio.RData")
+load("../output/Data/coef_dc3_env.RData")
+load("../output/Data/coef_dc4_env.RData")
+load("../output/Data/coef_sc3_env.RData")
+load("../output/Data/coef_sc4_env.RData")
+
 theme_set(theme_bw() + 
             theme(panel.grid.major = element_blank(), 
                   panel.grid.minor = element_blank()))

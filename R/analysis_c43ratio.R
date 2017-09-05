@@ -177,8 +177,10 @@ plot(c43_soil)
 qqPlot(resid(c43_soil))
 
 # coefficient and RI
-c43_soil_coef      <- confint(c43_soil, method = "boot", nsim = 999)
-c43_soil_coef_90   <- confint(c43_soil, method = "boot", nsim = 999, level = .9)
+# c43_soil_coef      <- confint(c43_soil, method = "boot", nsim = 999)
+# c43_soil_coef_90   <- confint(c43_soil, method = "boot", nsim = 999, level = .9)
+# save(c43_soil_coef, c43_soil_coef_90, file = "output/Data/coef_c43ratio.RData")
+load("output/Data/coef_c43ratio.RData")
 c43_soil_full      <- dredge(c43_soil)
 c43_soil_coef_impo <- importance(c43_soil_full)
 c43_soil_coef_impo
