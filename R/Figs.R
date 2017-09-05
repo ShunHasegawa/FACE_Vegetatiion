@@ -24,12 +24,12 @@ Veg_Plot <- veg_FullVdf %>%
          co2        = factor(co2, labels = c("Ambient", expression(eCO[2]))),
          PFG        = ifelse(form == "Grass", paste(PFG, form, sep = "_"),     # relabel PFG: (C3grass, C4grass, legume, non-legeume, wood, Moss/Fern)
                              ifelse(form == "Forb", as.character(PFG),
-                                    ifelse(form == "Moss/Fern", "Moss/Fern", "Wood"))),
+                                    ifelse(form == "Moss/Fern", "Moss/Fern", "Woody"))),
          PFG        = factor(PFG, 
                              levels = c("c3_Grass", "c4_Grass", "legume", 
-                                        "Non_legume", "Wood", "Moss/Fern"),
+                                        "Non_legume", "Woody", "Moss/Fern"),
                              labels = c("C[3]~graminoid","C[4]~graminoid",
-                                        "Legume", "Non*-legume", "Wood", "Moss/Fern")))
+                                        "Legume", "Non*-legume", "Woody", "Moss/Fern")))
 summary(Veg_Plot)
   
   
@@ -95,12 +95,12 @@ ggsavePP(filename = "output/figs/FACE_vegetation_CO2_Scatter", plot = p,
 
 # ring sum
 Veg_RingSum <- veg_FullVdf %>% 
-  mutate(PFG = ifelse(form == "Grass", paste(PFG, form, sep = "_"),     # relabel PFG: (C3grass, C4grass, legume, non-legeume, wood, Moss/Fern)
+  mutate(PFG = ifelse(form == "Grass", paste(PFG, form, sep = "_"),     # relabel PFG: (C3grass, C4grass, legume, non-legeume, Woody, Moss/Fern)
                       ifelse(form == "Forb", as.character(PFG), 
                              as.character(form))),
          PFG = factor(PFG, 
                       levels = c("c3_Grass", "c4_Grass", "legume", "Non_legume",
-                                 "Wood", "Fern", "Moss"))) %>% 
+                                 "Woody", "Fern", "Moss"))) %>% 
   group_by(year, ring, co2, PFG) %>% 
   summarise(value = sum(value)) %>% 
   ungroup() %>% 
@@ -152,7 +152,7 @@ PFG_Fraction <- PFG_Fraction %>%
 
 
 pfgLabs <- c(expression(C[3]~grass), expression(C[4]~grass), "Legume", 
-             "Non_legume", "Wood", "Fern", "Moss")
+             "Non_legume", "Woody", "Fern", "Moss")
 
 p <- ggplot(PFG_Fraction,aes(x = co2, y = original, fill = PFG)) +
   facet_grid(. ~ year, labeller = label_parsed) +
