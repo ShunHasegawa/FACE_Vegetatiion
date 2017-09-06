@@ -224,7 +224,7 @@ rid <- data.frame(RI = c43_soil_coef_impo) %>%
          RI = round(RI, 3))
 
 c43soil_tbl <- ldply(list('90CI' = c43_soil_coef_90, '95CI' = c43_soil_coef), function(x){
-  d <- cbind(summary(c43_soil)$coef[, "Estimate"], x[3:5, ])
+  d <- cbind(summary(c43_soil)$coef[, "Estimate"], x[5:7, ])
   colnames(d) <- c("estimate", "lwr", "upr")
   dd <- data.frame(d) %>% 
     mutate(predictor = row.names(.)) %>% 
