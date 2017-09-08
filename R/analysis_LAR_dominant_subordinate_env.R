@@ -54,7 +54,7 @@ qqPlot(resid(lar_sc4_m2))
 # scC4_coef_90     <- confint(lar_sc4_m2, method = "boot", level = .9, nsim = 999)
 # save(sc4_coef, sc4_coef_90, file = "output/Data/coef_sc4_env.RData")
 load("output/Data/coef_sc4_env.RData")
-lar_sc4_m2_full <- dredge(lar_sc4_m2)
+lar_sc4_m2_full <- dredge(lar_sc4_m2, REML = F)
 sc4_coef_imp    <- importance(lar_sc4_m2_full)
 
 
@@ -91,7 +91,7 @@ Anova(lar_dc4_m2, test.statistic = "F")
 # dc4_coef_90     <- confint(lar_dc4_m2, method = "boot", level = .9, nsim = 999)
 # save(dc4_coef, dc4_coef_90, file  = "output/Data/coef_dc4_env.RData")
 load("output/Data/coef_dc4_env.RData")
-lar_dc4_m2_full <- dredge(lar_dc4_m2)
+lar_dc4_m2_full <- dredge(lar_dc4_m2, REML = F)
 dc4_coef_imp    <- importance(lar_dc4_m2_full)
 dc4_coef_imp
 
@@ -134,7 +134,7 @@ qqPlot(resid(lar_sc3_m2))
 # sc3_coef_90     <- confint(lar_sc3_m2, method = "boot", level = .9, nsim = 999)
 # save(sc3_coef, sc3_coef_90, file = "output/Data/coef_sc3_env.RData")
 load("output/Data/coef_sc3_env.RData")
-lar_sc3_m2_full <- dredge(lar_sc3_m2)
+lar_sc3_m2_full <- dredge(lar_sc3_m2, REML = F)
 sc3_coef_imp    <- importance(lar_sc3_m2_full)
 sc3_coef_imp
 
@@ -189,10 +189,10 @@ qqPlot(resid(lar_dc3_m4))
 
 
 # coefficients and RI
-dc3_coef_m3        <- confint(lar_dc3_m3, method = "boot", nsim = 999)
-dc3_coef_m4        <- confint(lar_dc3_m4, method = "boot", nsim = 999)
-dc3_coef_m3
-dc3_coef_m4
+# dc3_coef_m3        <- confint(lar_dc3_m3, method = "boot", nsim = 999)
+# dc3_coef_m4        <- confint(lar_dc3_m4, method = "boot", nsim = 999)
+# dc3_coef_m3
+# dc3_coef_m4
   # removal of outliers did not chnage the final results, so just use the model
   # withought removing the outliers
 
@@ -201,7 +201,7 @@ dc3_coef_m4
 # dc3_coef_90     <- confint(lar_dc3_m3, method = "boot", level = .9, nsim = 999)
 # save(dc3_coef, dc3_coef_90, file = "output/Data/coef_dc3_env.RData")
 load("output/Data/coef_dc3_env.RData")
-lar_dc3_m3_full <- dredge(lar_dc3_m3)
+lar_dc3_m3_full <- dredge(lar_dc3_m3, REML = F)
 dc3_coef_imp    <- importance(lar_dc3_m3_full)
 dc3_coef_imp
 
