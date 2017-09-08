@@ -151,11 +151,13 @@ ggsavePP(filename = "output/figs/adjusted_c43_ratio", width = 3, height = 3,
 head(iem_raw)
 
 # merge with C34 ratiodata
-c43_ratio_iem <- left_join(c43_ratio, iem_raw) %>% 
-  .[complete.cases(.), ] %>% 
-  group_by(year, ring, co2) %>% 
-  summarise_each(funs(mean), c43_r, nitr, p, np) %>% 
+c43_ratio_iem <- C3grassC4 %>% 
+  group_by(year, co2, ring, PFG) %>% 
+  summarise(value = sum(value)) %>% 
   ungroup() %>% 
+  spread(key = PFG, value) %>% 
+  mutate(c43_r = c4 / c3) %>% 
+  left_join(iem_raw) %>% 
   mutate(s_c43_r  = scale(log(c43_r + .1))[, 1],    # Z-standardize for multiple regression
          s_n = scale(log(nitr))[, 1],
          s_p = scale(log(p))[, 1],
@@ -167,21 +169,21 @@ plot(log(c43_r + .1) ~ log(p), c43_ratio_iem, col = co2, pch = 19)
 
 
 # anlaysis
-c43_soil <- lmer(s_c43_r ~ s_n + s_p + (1|ring) + (1|probe) + (1|year), data = c43_ratio_iem)
-summary(c43_soil)
-
-
-Anova(c43_soil, test.statistic = "F")
-summary(c43_soil)
-plot(c43_soil)
-qqPlot(resid(c43_soil))
+c43_soil_m1 <- lmer(s_c43_r ~ s_n + s_p + (1|ring) + (1|probe) + (1|year), data = c43_ratio_iem)
+summary(c43_soil_m1)
+# probe type doeesn't explain any variation (probe is redundant with year anyway so remove)
+c43_soil_m2 <- lmer(s_c43_r ~ s_n + s_p + (1|ring) + (1|year), data = c43_ratio_iem)
+summary(c43_soil_m2)
+Anova(c43_soil_m2, test.statistic = "F")
+plot(c43_soil_m2)
+qqPlot(resid(c43_soil_m2))
 
 # coefficient and RI
-# c43_soil_coef      <- confint(c43_soil, method = "boot", nsim = 999)
-# c43_soil_coef_90   <- confint(c43_soil, method = "boot", nsim = 999, level = .9)
+# c43_soil_coef      <- confint(c43_soil_m2, method = "boot", nsim = 999)
+# c43_soil_coef_90   <- confint(c43_soil_m2, method = "boot", nsim = 999, level = .9)
 # save(c43_soil_coef, c43_soil_coef_90, file = "output/Data/coef_c43ratio.RData")
 load("output/Data/coef_c43ratio.RData")
-c43_soil_full      <- dredge(c43_soil)
+c43_soil_full      <- dredge(c43_soil_m1, REML = F)
 c43_soil_coef_impo <- importance(c43_soil_full)
 c43_soil_coef_impo
 
@@ -192,8 +194,8 @@ c43_soil_coef_impo
 
 
 # Nitrogen ----------------------------------------------------------------
-vireg_obs_n <- visreg(c43_soil, xvar = "s_n")$res  # adjusted observed values
-vireg_fit_n <- visreg(c43_soil, xvar = "s_n")$fit  # fitted values
+vireg_obs_n <- visreg(c43_soil_m1,  xvar = "s_n")$res  # adjusted observed values
+vireg_fit_n <- visreg(c43_soil_m1,  xvar = "s_n")$fit  # fitted values
 vireg_obs_n$co2 <- c43_ratio_iem$co2
 
 nlim <- c(-2.5, 1.7)
@@ -230,8 +232,8 @@ n_boxplot <- function(){
 
 
 # Phosphorus ----------------------------------------------------------------
-vireg_obs_p <- visreg(c43_soil, xvar = "s_p")$res  # adjusted observed values
-vireg_fit_p <- visreg(c43_soil, xvar = "s_p")$fit  # fitted values
+vireg_obs_p <- visreg(c43_soil_m1,  xvar = "s_p")$res  # adjusted observed values
+vireg_fit_p <- visreg(c43_soil_m1,  xvar = "s_p")$fit  # fitted values
 vireg_obs_p$co2 <- c43_ratio_iem$co2
 
 plim <- c(-1.8, 1.6)
