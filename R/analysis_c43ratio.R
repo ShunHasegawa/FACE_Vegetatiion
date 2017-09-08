@@ -201,8 +201,6 @@ vireg_obs_n$co2 <- c43_ratio_iem$co2
 nlim <- c(-2.5, 1.7)
 resplot_n <- function(){
   plot(visregRes ~ s_n, data = vireg_obs_n, type = "n", 
-       xlab = "",
-       ylab = expression(Adj.~C[4]:C[3]~ratios),
        ylim = c(-1.2, 1.7),
        xlim = nlim,
        axes = F)
@@ -284,7 +282,7 @@ plot_c43r_np <- function(){
   text(par("usr")[1], par("usr")[4], expression(bold((c))), adj = c(0, 1))
   mtext(side = 1, text = expression(Adj.~Log[e](soil~N,~ng~cm^"-2"~d^"-1")), 
         line = 2, cex = .9)
-  mtext(side = 2, text = expression(Adj.~C[4]:C[3]~ratios), line = 2)
+  mtext(side = 2, text = expression(Adj.~Log[e](C[4]:C[3])), line = 2)
   legend("bottomleft", legend = c(expression(eCO[2]), "Amb"), pch = c(0, 19),
          pt.cex = 2, bty = "n")
   resplot_p()
