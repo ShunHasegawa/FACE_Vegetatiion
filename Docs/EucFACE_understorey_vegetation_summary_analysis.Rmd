@@ -219,30 +219,30 @@ create_resplot(c3d_m2,
 
 # Relationship between C~4~:C~3~ ratios and soil N and P availability
 ```{r c43r_soilNP, echo=FALSE, results='asis', message=FALSE}
-rid <- data.frame(RI = c43_soil_coef_impo) %>% 
+rid <- data.frame(RI = c43_soil_coef_impo) %>%
   mutate(predictor = row.names(.),
          RI = round(RI, 3))
 
 c43soil_tbl <- ldply(list('90CI' = c43_soil_coef_90, '95CI' = c43_soil_coef), function(x){
-  d <- cbind(summary(c43_soil)$coef[, "Estimate"], x[5:7, ])
+  d <- cbind(summary(c43_soil_m1)$coef[, "Estimate"], x[4:6, ])
   colnames(d) <- c("estimate", "lwr", "upr")
-  dd <- data.frame(d) %>% 
-    mutate(predictor = row.names(.)) %>% 
-    mutate_each(funs(round(., 3)), estimate, lwr, upr) %>% 
+  dd <- data.frame(d) %>%
+    mutate(predictor = row.names(.)) %>%
+    mutate_each(funs(round(., 3)), estimate, lwr, upr) %>%
     transmute(predictor, coefs = paste0(estimate, " [", lwr, ", ", upr, "]"))
   return(dd)
-}) %>% 
-  spread(.id, coefs) %>% 
+}) %>%
+  spread(.id, coefs) %>%
   left_join(rid)
 pander(c43soil_tbl, caption = "C4:C3 ratios vs soil N and P", justify = "right")
 
 
-pander(r.squared(c43_soil), caption = "model summary", justify = "right")
+pander(r.squared(c43_soil_m1), caption = "model summary", justify = "right")
 
 ```
 
 ```{r c43soil_fig, fig.width=4, fig.height=4, echo=FALSE}
-plot(s_c43_r ~ s_n, c43_ratio_iem, col = co2, pch = 19, ylab = "C4:C3 ratios", 
+plot(s_c43_r ~ s_n, c43_ratio_iem, col = co2, pch = 19, ylab = "C4:C3 ratios",
      xlab = "Soil N availability")
 legend("topright", legend = levels(c43_ratio_iem$co2), col = c(1, 2), pch = 19, bty = 'n')
 ```
