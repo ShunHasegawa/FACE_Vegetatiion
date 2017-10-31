@@ -8,9 +8,9 @@ DivDF_year0_list <- llply(DivDF_list, function(x){
   
   DivDF_year0 <- DivDF_mlt %>% # Year0
     filter(year == "Year0") %>%
-    select(id, value, variable) %>%
+    select(ring, value, variable) %>%
     rename(value0 = value) %>% 
-    left_join(filter(DivDF_mlt, year != "Year0"), by = c("id", "variable")) %>% 
+    left_join(filter(DivDF_mlt, year != "Year0"), by = c("ring", "variable")) %>% 
     filter(!is.na(value)) %>% 
     mutate(value0_log  = log(value0 + 1),
            value0_sqrt = sqrt(value0))
@@ -34,21 +34,48 @@ l_ply(names(DivDF_year0_list), function(x){
 # analysis ----------------------------------------------------------------
 
 
-# create models to be tested
-summary(DivDF_year0_list)
+# prepare data frames
+f_d  <- DivDF_year0_list$forb_spp
+fh_d <- filter(f_d, variable == "H")
+fj_d <- filter(f_d, variable == "J")
+fs_d <- filter(f_d, variable == "S")
 
-div_m_list <- llply(DivDF_year0_list, function(x){
-  dlply(x, .(variable), function(y){
-    m1 <- lmer(value ~ co2 * year + value0 + (1|block) + (1|ring) + (1|id) + (1|RY), data = y)
-    m2 <- lmer(value ~ co2 * year + value0 + (1|ring) + (1|id) + (1|RY), data = y)
-    if (AICc(m1) >= AICc(m2)) return(m2) else return(m1)
-    })
-  })
+g_d  <- DivDF_year0_list$grass_spp
+gh_d <- filter(g_d, variable == "H")
+gj_d <- filter(g_d, variable == "J")
+gs_d <- filter(g_d, variable == "S")
 
-div_m_list <- unlist(div_m_list, recursive = FALSE)
+
+# forb
+plot(value ~ value0, data = fh_d, col = year, pch = 19)
+plot(value ~ value0, data = fj_d, col = year, pch = 19)
+plot(value ~ value0, data = fs_d, col = year, pch = 19)
+
+fh_m1 <- lmer(value ~ co2 * year + value0 + (1|ring), data = fh_d)
+fj_m1 <- lmer(value ~ co2 * year + value0 + (1|ring), data = fj_d)
+fs_m1 <- lmer(value ~ co2 * year + value0 + (1|ring), data = fs_d)
+
+# grass
+plot(value ~ value0, data = gh_d, col = year, pch = 19)
+plot(value ~ value0, data = gj_d, col = year, pch = 19)
+plot(sqrt(value) ~ sqrt(value0), data = gs_d, col = year, pch = 19)
+
+gh_m1 <- lmer(value ~ co2 * year + value0 + (1|ring), data = gh_d)
+gj_m1 <- lmer(value ~ co2 * year + value0 + (1|ring), data = gj_d)
+gs_m1 <- lmer(sqrt(value) ~ co2 * year + value0_sqrt + (1|ring), data = gs_d)
+
+
+div_m_list <- list(grass_spp.H = gh_m1,
+                   grass_spp.J = gj_m1,
+                   grass_spp.S = gs_m1,
+                   forb_spp.H  = fh_m1,
+                   forb_spp.J  = fj_m1,
+                   forb_spp.S  = fs_m1)
+
+names(div_m_list)
 summary(div_m_list) 
 llply(div_m_list, VarCorr)
- # block is not included in the any of the models
+
 
 # . model diagnosis -------------------------------------------------------
 
@@ -58,20 +85,21 @@ pdf("output/figs/mod_diag_divind.pdf", onefile = TRUE, width = 4, height = 4)
 l_ply(names(div_m_list), function(x){
   m <- div_m_list[[x]]
   print(plot(m, main = x))
-  qqnorm(resid(m, main = x))
-  qqline(resid(m, main = x))
+  qqPlot(resid(m, main = x))
 })
 dev.off()
 
 
-# inspect grass_spp.J
-div_m_list[["grass_spp.J"]]
-d_gsj <- filter(DivDF_year0_list[["grass_spp"]], variable == "J")
-m1 <- lmer(value ~ co2 * year + value0 + (1|ring) + (1|id) + (1|RY), data = d_gsj)
+# inspect forb S
+div_m_list[["forb_spp.S"]]
+d_gsj <- filter(DivDF_year0_list[["forb_spp"]], variable == "S")
+m1 <- lmer(value ~ co2 * year + value0 + (1|ring), data = d_gsj)
 plot(m1)
+qqPlot(resid(m1))
 which.min(resid(m1))
-m2 <- update(m1, subset = -8)
+m2 <- update(m1, subset = -15)
 plot(m2)
+qqPlot(resid(m2))
 # model is improved
 llply(list(m1, m2), function(x) Anova(x, test.statistic = "F"))
   # no difference so keep the original
@@ -87,11 +115,16 @@ nl <- names(div_m_list)
 div_m_list <- div_m_list[grepl("grass|forb", nl)]  # extract grass and forb species
 
 lsmeans_list <- llply(div_m_list, function(x) {
-  lsmeans::lsmeans(x, ~ co2 | year)
+  lsmeans::lsmeans(x, ~ co2 | year, type = "response")
   })
 
 # 95% CI
-CI_dd <- ldply(lsmeans_list, function(x) data.frame(summary(x))) 
+CI_dd <- ldply(lsmeans_list, function(x){
+  d <- data.frame(summary(x))
+  if(any(names(d) == "response")) d <- rename(d, lsmean = response)
+  return(d)
+  }) 
+
 
 # post-hoc test
 contrast_dd <- ldply(lsmeans_list, function(x) {
@@ -210,7 +243,7 @@ div_plots <- dlply(ci_dd, .(variable), function(x){
   return(p)
   })
 
-div_plots[[1]]
+div_plots[[3]]
 names(div_plots)
 
 

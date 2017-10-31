@@ -97,11 +97,16 @@ vegDF <- vegDF_list[["all_spp"]]
 
 # compute diversity indices
 DivDF_list <- llply(vegDF_list, function(x) {
-  mutate(siteDF, 
-         H = diversity(x),  # Shannon's index
-         S = specnumber(x), # number of spp
-         J = H/log(S)       # Pielou's evenness
-  )})
+  siteDF %>% 
+    mutate( 
+      H = diversity(x),  # Shannon's index
+      S = specnumber(x), # number of spp
+      J = H/log(S)       # Pielou's evenness
+    ) %>% 
+    group_by(year, ring, co2) %>% 
+    summarise_each(funs(mean(., na.rm = TRUE)), H, S, J) %>% 
+    ungroup()
+  })
 
 # Identify dominant spp
 SppSum <- ddply(veg_FullVdf, .(variable), summarise, value = sum(value))

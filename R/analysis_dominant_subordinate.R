@@ -83,14 +83,17 @@ DS_ratio <- grass_DS %>%
   ungroup() %>% 
   spread(key = type, value = abund) %>% 
   mutate(total = D + S,
-         sd_ratio = S / D)
+         sd_ratio = S / D) %>% 
+  group_by(year, co2, ring) %>% 
+  summarise_each(funs(mean), sd_ratio, D, S) %>% 
+  ungroup()
 
 DS_ratio_y0 <- DS_ratio %>% 
   filter(year == "Year0") %>% 
   rename(sd_ratio0 = sd_ratio,
          d0        = D,
          s0        = S) %>% 
-  select(id, sd_ratio0, d0, s0)
+  select(ring, sd_ratio0, d0, s0)
 
 DS_ratio_ed <- DS_ratio %>% 
   filter(year != "Year0") %>% 
@@ -99,17 +102,19 @@ DS_ratio_ed <- DS_ratio %>%
          logit_ratio0 = logit(sd_ratio0))
 
 plot(sqrt(sd_ratio) ~ sqrt(sd_ratio0), DS_ratio_ed, pch = 19, col = co2)
-sd_m1 <- lmer(sqrt(sd_ratio) ~ co2 * year + sqrt(sd_ratio0) + (1|ring) + (1|id) + (1|RY), data = DS_ratio_ed)
+plot(logit(sd_ratio) ~ logit(sd_ratio0), DS_ratio_ed, pch = 19, col = co2)
+
+sd_m1 <- lmer(logit(sd_ratio) ~ co2 * year + logit(sd_ratio0) + (1|ring), data = DS_ratio_ed)
 Anova(sd_m1, test.statistic = "F")
 summary(sd_m1)
 plot(sd_m1)
 qqPlot(resid(sd_m1))
-r.squared(sd_m1)
 visreg(sd_m1, xvar = "sd_ratio0", by = "co2", overlay = TRUE, xtrans = sqrt)
+
 
 # Dominant
 plot(D ~ d0, DS_ratio_ed, pch = 19, col = co2)
-d_m1 <- lmer(D ~ co2 * year + d0 + (1|ring) + (1|id) + (1|RY), data = DS_ratio_ed)
+d_m1 <- lmer(D ~ co2 * year + d0 + (1|ring), data = DS_ratio_ed)
 Anova(d_m1, test.statistic = "F")
 plot(d_m1)
 qqPlot(resid(d_m1))
@@ -118,7 +123,7 @@ qqPlot(resid(d_m1))
 # Subordinate 
 plot(S ~ s0, DS_ratio_ed, pch = 19, col = co2)
 plot(sqrt(S) ~ sqrt(s0), DS_ratio_ed, pch = 19, col = co2)
-s_m1 <- lmer(sqrt(S) ~ co2 * year + sqrt(s0) + (1|ring) + (1|id) + (1|RY), data = DS_ratio_ed)
+s_m1 <- lmer(sqrt(S) ~ co2 * year + sqrt(s0) + (1|ring), data = DS_ratio_ed)
 Anova(s_m1, test.statistic = "F")
 plot(s_m1)
 qqPlot(resid(s_m1))
@@ -134,6 +139,13 @@ qqPlot(resid(s_m1))
 sd_lsmeans <- lsmeans::lsmeans(sd_m1, ~ co2 | year)
 
 
+# post-hoc test
+sd_contrast_dd <- data.frame(summary(pairs(sd_lsmeans)[1:3], adjust = "none")) %>% 
+  mutate(co2 = factor("amb", levels = c("amb", "elev")),
+         star = get_star(p.value)) %>% 
+  select(year, co2, p.value, star)
+
+
 # CO2 effect
 sd_co2_pval <- tidy(Anova(sd_m1, test.statistic = "F")) %>%
   filter(term == "co2") %>% 
@@ -144,7 +156,8 @@ sd_co2_pval <- tidy(Anova(sd_m1, test.statistic = "F")) %>%
 sd_CI_dd <- data.frame(summary(sd_lsmeans, type = "response")) %>% 
   mutate(year       = factor(year, levels = paste0("Year", 0:3)),
          co2star    = sd_co2_pval[,1],
-         value_type = "adjusted")
+         value_type = "adjusted") %>% 
+  left_join(sd_contrast_dd)
 
 
 # df for observed values
@@ -194,6 +207,7 @@ fig_sd <- ggplot(sd_CI_dd, aes(x = year, y = response)) +
             position = position_dodge(width = dodgeval)) +
   geom_point(aes(shape = co2, group = co2, col = value_type), 
              size = 2.5, position = position_dodge(width = dodgeval)) +
+  geom_text(aes(y = upper.CL, label = star), fontface = "bold", vjust = -.1) +
   
   # scaling
   scale_shape_manual(values = c(16, 15),
@@ -226,41 +240,41 @@ ggsavePP(filename = "output/figs/adjusted_sd_ratio", width = 3, height = 3,
 
 
 
-# Paspalidium.distans -----------------------------------------------------
-
-
-grass_DS %>% 
-  filter(type == "S") %>% 
-  group_by(year, co2, plot, id, RY, PFG, variable) %>% 
-  summarise(value = sum(value))
-
-ddd <- filter(grass_DS, variable == "Paspalidium.distans") %>% 
-  group_by(year, co2, ring, plot, id, RY) %>% 
-  summarise(value = sum(value)) %>% 
-  ungroup()
-dd0 <- ddd %>% 
-  filter(year == "Year0") %>% 
-  rename(value0 = value) %>% 
-  select(id, value0)
-ddd2 <- ddd %>% 
-  filter(year != "Year0") %>% 
-  left_join(dd0) %>% 
-  mutate(YC = factor(paste(year, co2, sep = "")))
-
-plot(value ~ value0, data = ddd2, col = co2, pch = 19)
-plot(sqrt(value) ~ value0, data = ddd2, col = co2, pch = 19)
-plot(log(value) ~ log(value0), data = ddd2, col = co2, pch = 19)
-m1 <- lmer(sqrt(value) ~ co2 * year + value0 + (1|ring) + (1|id) + (1|RY), data = ddd2)  
-summary(m1)
-Anova(m1, test.statistic = "F")
-plot(m1)
-qqPlot(resid(m1))
-which.max(resid(m1))
+# # Paspalidium.distans -----------------------------------------------------
+# 
+# 
+# grass_DS %>% 
+#   filter(type == "S") %>% 
+#   group_by(year, co2, plot, id, RY, PFG, variable) %>% 
+#   summarise(value = sum(value))
+# 
+# ddd <- filter(grass_DS, variable == "Paspalidium.distans") %>% 
+#   group_by(year, co2, ring, plot, id, RY) %>% 
+#   summarise(value = sum(value)) %>% 
+#   ungroup()
+# dd0 <- ddd %>% 
+#   filter(year == "Year0") %>% 
+#   rename(value0 = value) %>% 
+#   select(id, value0)
+# ddd2 <- ddd %>% 
+#   filter(year != "Year0") %>% 
+#   left_join(dd0) %>% 
+#   mutate(YC = factor(paste(year, co2, sep = "")))
+# 
+# plot(value ~ value0, data = ddd2, col = co2, pch = 19)
+# plot(sqrt(value) ~ value0, data = ddd2, col = co2, pch = 19)
+# plot(log(value) ~ log(value0), data = ddd2, col = co2, pch = 19)
+# m1 <- lmer(sqrt(value) ~ co2 * year + value0 + (1|ring) + (1|id) + (1|RY), data = ddd2)  
+# summary(m1)
+# Anova(m1, test.statistic = "F")
+# plot(m1)
+# qqPlot(resid(m1))
+# which.max(resid(m1))
 
 
 grass_DS_sum <- grass_DS %>% 
-  group_by(year, ring, co2, plot, id, RY, PFG, type) %>% 
-  summarise(value = sum(value)) %>% 
+  group_by(year, ring, co2, PFG, type) %>% 
+  summarise(value = sum(value)/4) %>%            # ring mean (sum of 4 subplots / 4)
   ungroup() %>% 
   mutate(pfg_type = paste(type, PFG, sep = "_"))
 
@@ -277,7 +291,7 @@ grass_DS_sum <- grass_DS %>%
 grass_DS_sum_y0 <- grass_DS_sum %>% 
   filter(year == "Year0") %>% 
   rename(value0 = value) %>% 
-  select(id, value0, pfg_type, PFG, type)
+  select(ring, value0, pfg_type, PFG, type)
 
 # merge
 grass_DS_dd <- grass_DS_sum %>% 
@@ -288,32 +302,11 @@ ggplot(grass_DS_dd, aes(x = sqrt(value0 + 1), y = sqrt(value + 1)))+
   geom_point() +
   facet_wrap(PFG ~ type, scale = "free")
 
-# dominant C3
-dc3_dd <- filter(grass_DS_dd, pfg_type == "D_c3")
-dc3_dd_ed <- dc3_dd %>% 
-  rename(dc3 = value) %>% 
-  select(year, id, dc3)
 
-
-# dominant C4
-dc4_dd <- filter(grass_DS_dd, pfg_type == "D_c4")
-dc4_dd_ed <- dc4_dd %>% 
-  rename(dc4 = value) %>% 
-  select(year, id, dc4)
-
-
-# subordinate C3
-sc3_dd <- grass_DS_dd %>% 
-  filter(pfg_type == "S_c3") %>%
-  left_join(dc3_dd_ed) %>% 
-  left_join(dc4_dd_ed)
-
-  
-# subordinate C4  
-sc4_dd <- grass_DS_dd %>% 
-  filter(pfg_type == "S_c4") %>% 
-  left_join(dc3_dd_ed) %>% 
-  left_join(dc4_dd_ed)
+dc3_dd <- filter(grass_DS_dd, pfg_type == "D_c3")  # dominant C3
+dc4_dd <- filter(grass_DS_dd, pfg_type == "D_c4")  # dominant C4
+sc3_dd <- filter(grass_DS_dd, pfg_type == "S_c3")  # subordinate C3
+sc4_dd <-  filter(grass_DS_dd, pfg_type == "S_c4") # subordinate C4  
 
 
 
@@ -322,20 +315,20 @@ sc4_dd <- grass_DS_dd %>%
 
 
 # > dominant c3 -----------------------------------------------------------
+plot(value ~ value0, dc3_dd, col = year, pch= 19)
+plot(logit(value) ~ logit(value0), dc3_dd, col = year, pch= 19)
+plot(logit(value) ~ value0, dc3_dd, col = year, pch= 19)
 
-dc3_m1 <- lmer(value ~ co2 * year + value0 + (1|ring) + (1|id) + (1|RY), dc3_dd)
+dc3_m1 <- lmer(value ~ co2 * year + value0 + (1|ring), dc3_dd)
 Anova(dc3_m1, test.statistic = "F")
 plot(dc3_m1)
 qqPlot(resid(dc3_m1))
-dc3_m2 <- lmer(value ~ co2 * year + value0 + (1|ring) + (1|id) + (1|RY), dc3_dd[-which.min(resid(dc3_m1)), ])
-qqPlot(resid(dc3_m2))
-Anova(dc3_m2, test.statistic = "F")
 
 
 # > dominant c4 -----------------------------------------------------------
 
 
-dc4_m1 <- lmer(sqrt(value + 1) ~ co2 * year + sqrt(value0 + 1) + (1|ring) + (1|id) + (1|RY), dc4_dd)
+dc4_m1 <- lmer(sqrt(value) ~ co2 * year + sqrt(value0) + (1|ring), dc4_dd)
 Anova(dc4_m1, test.statistic = "F")
 summary(dc4_m1)
 plot(dc4_m1)
@@ -344,16 +337,9 @@ qqPlot(resid(dc4_m1))
 
 # > subordinate c3 --------------------------------------------------------
 
-
 boxplot(log(value + 1) ~ co2 * year, data = sc3_dd)
-sc3_m1 <- glmer(value ~ co2 * year + I(value0/100) +  (1|id) + (1|RY), 
-                family = "poisson", sc3_dd)
-summary(sc3_m1)
-plot(sc3_m1)
-qqPlot(resid(sc3_m1))
-
-plot(log(value + 1)  ~ log(value0 + 1), data = sc3_dd, col = co2, pch = 19)
-sc3_m1 <- lmer(log(value + 1) ~ co2 * year + log(value0 + 1) + (1|ring) + (1|id) + (1|RY), sc3_dd)
+plot(log(value + 1)  ~ log(value0 + 1), data = sc3_dd, col = year, pch = 19)
+sc3_m1 <- lmer(log(value + 1) ~ co2 * year + log(value0 + 1) + (1|ring), sc3_dd)
 Anova(sc3_m1, test.statistic = "F")
 plot(sc3_m1)
 qqPlot(resid(sc3_m1))
@@ -362,10 +348,9 @@ qqPlot(resid(sc3_m1))
 # > subordinate c4 --------------------------------------------------------
 
 
-sc4_m1 <- lmer(sqrt(value + 1) ~ co2 * year + sqrt(value0 + 1) + (1|ring) + (1|id) + (1|RY), sc4_dd)
-qqPlot(resid(sc4_m1))
+sc4_m1 <- lmer(sqrt(value) ~ co2 * year + sqrt(value0) + (1|ring), sc4_dd)
 plot(sc4_m1)
-
+qqPlot(resid(sc4_m1))
 Anova(sc4_m1, test.statistic = "F")
 summary(sc4_m1)
 
@@ -386,12 +371,11 @@ sd_m_list <- list(Dominant_C3    = dc3_m1,
 nl <- names(sd_m_list)
 
 # defint transformation
-sapply(lsmeans_list, str)
+sapply(sd_m_list, function(x) x@call)
 sd_m_list_tr <- sd_m_list
-sd_m_list_tr[[2]] <- update(ref.grid(sd_m_list_tr[[2]]), tran = make.tran("power", c(.5, -1))) # (y + 1)^.5
-sd_m_list_tr[[3]] <- update(ref.grid(sd_m_list_tr[[3]]), tran = make.tran("genlog", 1))        # log(y + 1)
-sd_m_list_tr[[4]] <- update(ref.grid(sd_m_list_tr[[4]]), tran = make.tran("power", c(.5, -1))) # (y + 1)^.5
-
+sd_m_list_tr[[2]] <- update(ref.grid(sd_m_list_tr[[2]]), tran = make.tran("power", .5)) # y^.5
+sd_m_list_tr[[3]] <- update(ref.grid(sd_m_list_tr[[3]]), tran = make.tran("genlog", 1)) # log(y + 1)
+sd_m_list_tr[[4]] <- update(ref.grid(sd_m_list_tr[[4]]), tran = make.tran("power", .5)) # y^.5
 
 
 lsmeans_list <- llply(sd_m_list_tr, function(x) {
@@ -542,7 +526,7 @@ sd_adjMean_tble <- ci_dd %>%
 
 
 # save as csv
-write.table(sd_adjMean_tble, file = "output/table/summary_tbl_dom_sub_c34_abund.csv", 
+write.csv(sd_adjMean_tble, file = "output/table/summary_tbl_dom_sub_c34_abund.csv", 
             row.names = FALSE)
 
 

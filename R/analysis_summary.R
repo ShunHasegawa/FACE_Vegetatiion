@@ -83,5 +83,43 @@ writeWorksheetToFile(file        = "output/table/summary_rptdAov_tbl.xlsx",    #
 
 
 
+# . summary table with VC -------------------------------------------------
+
+# variance components
+vc_df <- ldply(all_m_list, function(x){
+  vc <- data.frame(VarCorr(x, comp="Variance")) %>% 
+    select(grp, vcov) %>% 
+    mutate(vcov = round(vcov, 4)) %>% 
+    spread(grp, vcov) %>% 
+    dplyr::rename(vc_residual = Residual,
+                  vc_ring = ring) %>% 
+    select(vc_ring, vc_residual)
+  return(vc)
+})
+
+anova_vc_df <- anova_df %>% 
+  mutate(term  = factor(ifelse(term %in% c("co2", "year", "co2:year"), term, "Baseline"),
+                        levels = c("co2", "year", "co2:year", "Baseline"),
+                        labels = c("CO2", "Year", "CO2xYear", "Baseline")),
+         statistic = round(statistic, 2),
+         Df.res    = round(Df.res, 0), 
+         dfs        = paste0("F(", df, ",", Df.res, ")"),
+         P         = round(p.value, 3),
+         P         = ifelse(P < 0.001, "<0.001", P), 
+         Fval = paste(term, dfs, sep = "_")) %>%
+  select(-df, -Df.res, -p.value, term, -dfs) %>% 
+  gather(variable, value, statistic, P) %>% 
+  mutate(Fval = ifelse(variable == "statistic", Fval, paste(term, "p", sep = "_"))) %>% 
+  select(-term, -variable) %>% 
+  spread(Fval, value) %>% 
+  left_join(vc_df) %>% 
+  mutate(Type = tstrsplit(.id, "[.]")[[1]],
+         Type = factor(Type, levels = c("diversity", "pfg_prop", "sd_abund"))) %>%
+  arrange(Type) %>% 
+  select(.id, starts_with("Baseline"), starts_with("CO2_"), starts_with("Year_"), 
+         starts_with("CO2xYear_"), starts_with("vc_"))
+anova_vc_df
+write.csv(anova_vc_df, "output/table/summary_tbl_ringmean_analysis.csv", row.names = FALSE)
+
 
 save.image(file = "output/Data/summary_analysis.RData")

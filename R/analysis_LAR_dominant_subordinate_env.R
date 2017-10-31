@@ -6,14 +6,16 @@
 
 # prepare data frame ------------------------------------------------------
 
+summary(c34growth_moist)
+
 
 # compute annual change rate (acr) for each group
 grass_DS_acr <- grass_DS %>%
   mutate(type_pfg = paste(type, PFG, sep = "_")) %>% 
-  group_by(year, block, ring, plot, co2, id, RY, type_pfg, variable) %>% 
+  group_by(year, block, ring, co2, plot, id, RY, type_pfg, variable) %>% 
   summarise(value = sum(value)) %>%
   mutate(value = log(value + 1)) %>% 
-  group_by(year, block, ring, plot, co2, id, RY, type_pfg) %>% 
+  group_by(year, block, ring, co2, plot, id, RY, type_pfg) %>% 
   summarise(value = sum(value)) %>% 
   spread(key = type_pfg, value = value) %>% 
   ungroup() %>% 
@@ -22,6 +24,8 @@ grass_DS_acr <- grass_DS %>%
   mutate_each(funs(ddiff = . - lag(., 1)),
               D_c3, D_c4, S_c3, S_c4) %>%
   filter(year != "Year0") %>%
+  group_by(year, ring, co2) %>%
+  summarise_each(funs(mean), ends_with("_ddiff")) %>%
   left_join(c34growth_moist) %>% 
   ungroup() %>% 
   mutate(s_dc4_ddiff = scale(D_c4_ddiff)[, 1],
@@ -30,29 +34,31 @@ grass_DS_acr <- grass_DS %>%
          s_sc3_ddiff = scale(S_c3_ddiff)[, 1],
          s_logmoist  = scale(log(totalmoist))[, 1],
          s_temp      = scale(annual_temp2m)[, 1],
-         s_logpar    = scale(log(PAR))[, 1],
-         s_dc3       = scale(log(D_c3 + 1))[, 1],
-         s_dc4       = scale(log(D_c4 + 1))[, 1],
-         s_sc3       = scale(log(S_c3 + 1))[, 1],
-         s_sc4       = scale(log(S_c4 + 1))[, 1])
+         s_logpar    = scale(log(PAR))[, 1])
 
 
 # subordinate c4  -------------------------------------------------------------
 
-lar_sc4_m1 <- lmer(s_sc4_ddiff ~ co2 * (s_logmoist+s_temp + s_logpar) +(1|ring)+(1|RY)+(1|id), data = grass_DS_acr)
-lar_sc4_m1_full <- dredge(lar_sc4_m1, fixed = c("co2", "s_logmoist", "s_temp",  "s_logpar"))
+lar_sc4_m1 <- lmer(s_sc4_ddiff ~ co2 * (s_logmoist+s_temp + s_logpar) +(1|ring), data = grass_DS_acr)
+lar_sc4_m1_full <- dredge(lar_sc4_m1, fixed = c("co2", "s_logmoist", "s_temp",  "s_logpar"), REML = F)
+lar_sc4_m1_full
 plot(lar_sc4_m1)
 qqPlot(resid(lar_sc4_m1))
 # no interaction is suggested
-lar_sc4_m2 <- lmer(s_sc4_ddiff ~ co2 + s_logmoist+s_temp + s_logpar +(1|ring)+(1|RY)+(1|id), data = grass_DS_acr)
+lar_sc4_m2 <- lmer(s_sc4_ddiff ~ co2 + s_logmoist + s_temp + s_logpar + (1|ring), data = grass_DS_acr)
 Anova(lar_sc4_m2, test.statistic = "F")
 plot(lar_sc4_m2)
 qqPlot(resid(lar_sc4_m2))
+summary(lar_sc4_m2)
 
 # coefficients and RI
-# sc4_coef        <- confint(lar_sc4_m2, method = "boot", nsim = 999)
-# scC4_coef_90     <- confint(lar_sc4_m2, method = "boot", level = .9, nsim = 999)
-# save(sc4_coef, sc4_coef_90, file = "output/Data/coef_sc4_env.RData")
+
+VarCorr(lar_sc4_m2) # no variaation was explained by ring, so remove to avaoid convergence issues
+
+lar_sc4_m3 <- lm(s_sc4_ddiff ~ co2 + s_logmoist+s_temp + s_logpar, data = grass_DS_acr)
+sc4_coef       <- confint(lar_sc4_m3)
+sc4_coef_90    <- confint(lar_sc4_m3, level = .9)
+save(sc4_coef, sc4_coef_90, file = "output/Data/coef_sc4_env.RData")
 load("output/Data/coef_sc4_env.RData")
 lar_sc4_m2_full <- dredge(lar_sc4_m2, REML = F)
 sc4_coef_imp    <- importance(lar_sc4_m2_full)
@@ -77,19 +83,25 @@ dev.off()
 
 
 # dominant c4 -------------------------------------------------------------
-lar_dc4_m1 <- lmer(s_dc4_ddiff ~ co2 * (s_logmoist+s_temp + s_logpar) +(1|ring)+(1|RY)+(1|id), data = grass_DS_acr)
-lar_dc4_m1_full <- dredge(lar_dc4_m1, fixed = c("co2", "s_logmoist", "s_temp",  "s_logpar"))
+lar_dc4_m1      <- lmer(s_dc4_ddiff ~ co2 * (s_logmoist+s_temp + s_logpar) +(1|ring), data = grass_DS_acr)
+lar_dc4_m1_full <- dredge(lar_dc4_m1, fixed = c("co2", "s_logmoist", "s_temp",  "s_logpar"), REML = F)
 lar_dc4_m1_full
 plot(lar_dc4_m1)
 qqPlot(resid(lar_dc4_m1))
 # no interaction is suggested
-lar_dc4_m2 <- lmer(s_dc4_ddiff ~ co2 + s_logmoist+s_temp + s_logpar +(1|ring)+(1|RY)+(1|id), data = grass_DS_acr)
+lar_dc4_m2 <- lmer(s_dc4_ddiff ~ co2 + s_logmoist+s_temp + s_logpar +(1|ring), data = grass_DS_acr)
 Anova(lar_dc4_m2, test.statistic = "F")
+summary(lar_dc4_m2)
+VarCorr(lar_dc4_m2)
+plot(lar_dc4_m2)
+qqPlot(resid(lar_dc4_m2))
 
+# no variaation was explained by ring, so remove to avaoid convergence issues
+lar_dc4_m3 <- lm(s_dc4_ddiff ~ co2 + s_logmoist+s_temp + s_logpar, data = grass_DS_acr)
 # coefficients and RI
-# dc4_coef        <- confint(lar_dc4_m2, method = "boot", nsim = 999)
-# dc4_coef_90     <- confint(lar_dc4_m2, method = "boot", level = .9, nsim = 999)
-# save(dc4_coef, dc4_coef_90, file  = "output/Data/coef_dc4_env.RData")
+dc4_coef        <- confint(lar_dc4_m3)
+dc4_coef_90     <- confint(lar_dc4_m3, level = .9)
+save(dc4_coef, dc4_coef_90, file  = "output/Data/coef_dc4_env.RData")
 load("output/Data/coef_dc4_env.RData")
 lar_dc4_m2_full <- dredge(lar_dc4_m2, REML = F)
 dc4_coef_imp    <- importance(lar_dc4_m2_full)
@@ -102,14 +114,14 @@ range(visreg(lar_dc4_m2, xvar = "s_temp")$res$visregRes)
 pdf(file = "output/figs/lar_dC4_partial_regression_plot.pdf", width = 5, height = 5)
 create_resplot(lar_dc4_m2, 
                ylab = expression(Adj.~annual~rates~of~change~"in"~dominant~C[4]),
-               ylim = c(-1.6, 2.3))
+               ylim = c(-2, 2.5))
 
 dev.off()
 
 png(file = "output/figs/lar_dC4_partial_regression_plot.png", width = 5, height = 5, res = 600, units = "in")
 create_resplot(lar_dc4_m2, 
                ylab = expression(Adj.~annual~rates~of~change~"in"~dominant~C[4]),
-               ylim = c(-1.6, 2.3))
+               ylim = c(-2, 2.5))
 
 dev.off()
 
@@ -118,16 +130,24 @@ dev.off()
 
 # subordinate c3 ----------------------------------------------------------
 
-lar_sc3_m1 <- lmer(s_sc3_ddiff ~ co2 * (s_logmoist+s_temp + s_logpar) +(1|ring)+(1|RY)+(1|id), data = grass_DS_acr)
-lar_sc3_m1_full <- dredge(lar_sc3_m1, fixed = c("co2", "s_logmoist", "s_temp",  "s_logpar"))
+lar_sc3_m1 <- lmer(s_sc3_ddiff ~ co2 * (s_logmoist+s_temp + s_logpar) +(1|ring), data = grass_DS_acr)
+lar_sc3_m1_full <- dredge(lar_sc3_m1, fixed = c("co2", "s_logmoist", "s_temp",  "s_logpar"), REML = F)
 lar_sc3_m1_full
 plot(lar_sc3_m1)
 qqPlot(resid(lar_sc3_m1))
 # no interaction is suggested
-lar_sc3_m2 <- lmer(s_sc3_ddiff ~ co2 + s_logmoist+s_temp + s_logpar +(1|ring)+(1|RY)+(1|id), data = grass_DS_acr)
+lar_sc3_m2 <- lmer(s_sc3_ddiff ~ co2 + s_logmoist+s_temp + s_logpar +(1|ring), data = grass_DS_acr)
 Anova(lar_sc3_m2, test.statistic = "F")
 plot(lar_sc3_m2)
 qqPlot(resid(lar_sc3_m2))
+summary(lar_sc3_m2)
+# mcp.fnc(lar_sc3_m2)
+# lar_sc3_m3 <- update(lar_sc3_m2, subset = -which.min(resid(lar_sc3_m2)))
+# plot(lar_sc3_m3)
+# qqPlot(resid(lar_sc3_m3))
+# confint(lar_sc3_m2, method = "boot", nsim = 99, level = .9)
+# confint(lar_sc3_m3, method = "boot", nsim = 99, level = .9)
+
 
 # coefficients and RI
 # sc3_coef        <- confint(lar_sc3_m2, method = "boot", nsim = 999)
@@ -145,7 +165,7 @@ range(visreg(lar_sc3_m2, xvar = "s_temp")$res$visregRes)
 pdf(file = "output/figs/lar_sC3_partial_regression_plot.pdf", width = 5, height = 5)
 create_resplot(lar_sc3_m2, 
                ylab = expression(Adj.~annual~rates~of~change~"in"~subordinate~C[3]),
-               ylim = c(-2.1, 2.8))
+               ylim = c(-2.1, 3.0))
 
 dev.off()
 
@@ -161,65 +181,45 @@ dev.off()
 
 # dominant c3 ----------------------------------------------------------
 
-lar_dc3_m1 <- lmer(s_dc3_ddiff ~ co2 * (s_logmoist+s_temp + s_logpar) +(1|ring)+(1|RY)+(1|id), data = grass_DS_acr)
+lar_dc3_m1 <- lmer(s_dc3_ddiff ~ co2 * (s_logmoist+s_temp + s_logpar) +(1|ring), data = grass_DS_acr)
 plot(lar_dc3_m1)
 qqPlot(resid(lar_dc3_m1))
-
-# potential outliers are suggested
-mcp.fnc(lar_dc3_m1)
-oldf_dc3 <- romr.fnc(lar_dc3_m1, data = data.frame(grass_DS_acr))
-dplyr::setdiff(oldf_dc3$data0, oldf_dc3$data)
-  # three outliers are indicated
-
-lar_dc3_m2 <- update(lar_dc3_m1, data = oldf_dc3$data)
-plot(lar_dc3_m2)
-qqPlot(resid(lar_dc3_m2))
-lar_dc3_m1_full <- dredge(lar_dc3_m2, fixed = c("co2", "s_logmoist", "s_temp",  "s_logpar"))
+lar_dc3_m1_full <- dredge(lar_dc3_m1, fixed = c("co2", "s_logmoist", "s_temp",  "s_logpar"), REML = F)
 lar_dc3_m1_full
   # no interaction is suggested
 
-lar_dc3_m3 <- lmer(s_dc3_ddiff ~ co2 + s_logmoist+s_temp + s_logpar +(1|ring)+(1|RY)+(1|id), data = grass_DS_acr)
-lar_dc3_m4 <- lmer(s_dc3_ddiff ~ co2 + s_logmoist+s_temp + s_logpar +(1|ring)+(1|RY)+(1|id), data = oldf_dc3$data)
+lar_dc3_m2 <- lmer(s_dc3_ddiff ~ co2 + s_logmoist+s_temp + s_logpar +(1|ring), data = grass_DS_acr)
+Anova(lar_dc3_m2, test.statistic = "F")
+plot(lar_dc3_m2)
+qqPlot(resid(lar_dc3_m2))
 
-plot(lar_dc3_m3)
-qqPlot(resid(lar_dc3_m3))
+VarCorr(lar_dc3_m2) # no variation was explained by random factor
 
-plot(lar_dc3_m4)
-qqPlot(resid(lar_dc3_m4))
-
-
+lar_dc3_m3 <- lm(s_dc3_ddiff ~ co2 + s_logmoist+s_temp + s_logpar, data = grass_DS_acr)
 # coefficients and RI
-# dc3_coef_m3        <- confint(lar_dc3_m3, method = "boot", nsim = 999)
-# dc3_coef_m4        <- confint(lar_dc3_m4, method = "boot", nsim = 999)
-# dc3_coef_m3
-# dc3_coef_m4
-  # removal of outliers did not chnage the final results, so just use the model
-  # withought removing the outliers
-
-
-# dc3_coef        <- dc3_coef_m3
-# dc3_coef_90     <- confint(lar_dc3_m3, method = "boot", level = .9, nsim = 999)
-# save(dc3_coef, dc3_coef_90, file = "output/Data/coef_dc3_env.RData")
+dc3_coef    <- confint(lar_dc3_m3)
+dc3_coef_90 <- confint(lar_dc3_m3, level = .9)
+save(dc3_coef, dc3_coef_90, file = "output/Data/coef_dc3_env.RData")
 load("output/Data/coef_dc3_env.RData")
-lar_dc3_m3_full <- dredge(lar_dc3_m3, REML = F)
-dc3_coef_imp    <- importance(lar_dc3_m3_full)
+lar_dc3_m2_full <- dredge(lar_dc3_m2, REML = F)
+dc3_coef_imp    <- importance(lar_dc3_m2_full)
 dc3_coef_imp
 
 
 # partial residual plot
-range(visreg(lar_dc3_m3, xvar = "s_temp")$res$visregRes)
+range(visreg(lar_dc3_m2, xvar = "s_temp")$res$visregRes)
 
 pdf(file = "output/figs/lar_dC3_partial_regression_plot.pdf", width = 5, height = 5)
-create_resplot(lar_dc3_m3, 
+create_resplot(lar_dc3_m2, 
                ylab = expression(Adj.~annual~rates~of~change~"in"~dominant~C[3]),
-               ylim = c(-3.8, 2.7))
+               ylim = c(-2.4, 2))
 
 dev.off()
 
 png(file = "output/figs/lar_dC3_partial_regression_plot.png", width = 5, height = 5, res = 600, units = "in")
-create_resplot(lar_dc3_m3, 
+create_resplot(lar_dc3_m2, 
                ylab = expression(Adj.~annual~rates~of~change~"in"~dominant~C[3]),
-               ylim = c(-3.8, 2.7))
+               ylim = c(-2.4, 2))
 dev.off()
 
 
@@ -229,7 +229,7 @@ dev.off()
 lar_sd_c34_ml <- list(subordinate_c4 = lar_sc4_m2, 
                       subordinate_c3 = lar_sc3_m2, 
                       dominant_c4    = lar_dc4_m2, 
-                      dominant_c3    = lar_dc3_m3)
+                      dominant_c3    = lar_dc3_m2)
 
 lar_sd_c34_aov <- ldply(lar_sd_c34_ml, function(x) tidy(Anova(x, test.statistic = "F"))) %>% 
   mutate(term = mapvalues(term, c("s_logmoist", "s_temp", "s_logpar"), c("Moist", "Temp", "PAR")),
@@ -255,8 +255,8 @@ coef_imp_df <-ldply(list(c4.subordinate = sc4_coef_imp,
          PFG  = tstrsplit(.id, split = "[.]")[[1]]) %>% 
   select(-.id)
 
-create_smmry_coeftbl <- function(coefaval, model){
-  d <- cbind(summary(model)$coef[, "Estimate"], coefaval[5:9, ])
+create_smmry_coeftbl <- function(coefaval, model, coefpos1, coefpos2){
+  d <- cbind(summary(model)$coef[, "Estimate"], coefaval[coefpos1:coefpos2, ])
   colnames(d) <- c("estimate", "lwr", "upr")
   dd <- data.frame(d) %>% 
     mutate(predictor = row.names(.)) %>% 
@@ -265,18 +265,23 @@ create_smmry_coeftbl <- function(coefaval, model){
   return(dd)
 }
 
-coeftbl_c4  <- ldply(list('coef95CI' = c4_coef,  'coef90CI' = c4_coef_90),  create_smmry_coeftbl,  model = c4d_m2)
-coeftbl_sc4 <- ldply(list('coef95CI' = sc4_coef, 'coef90CI' = sc4_coef_90), create_smmry_coeftbl, model  = lar_sd_c34_ml$subordinate_c4)
-coeftbl_dc4 <- ldply(list('coef95CI' = dc4_coef, 'coef90CI' = dc4_coef_90), create_smmry_coeftbl, model  = lar_sd_c34_ml$dominant_c4)
-coeftbl_c3  <- ldply(list('coef95CI' = c3_coef,  'coef90CI' = c3_coef_90),  create_smmry_coeftbl,  model = c3d_m2)
-coeftbl_sc3 <- ldply(list('coef95CI' = sc3_coef, 'coef90CI' = sc3_coef_90), create_smmry_coeftbl, model  = lar_sd_c34_ml$subordinate_c3)
-coeftbl_dc3 <- ldply(list('coef95CI' = dc3_coef, 'coef90CI' = dc3_coef_90), create_smmry_coeftbl, model  = lar_sd_c34_ml$dominant_c3)
+
+summary(c4d_m2)$coef[, "Estimate"]
+coeftbl_c4  <- ldply(list('coef95CI' = c4_coef,  'coef90CI' = c4_coef_90),  create_smmry_coeftbl, coefpos1 = 1, coefpos2 = 5, model = c4d_m2)
+coeftbl_sc4 <- ldply(list('coef95CI' = sc4_coef, 'coef90CI' = sc4_coef_90), create_smmry_coeftbl, coefpos1 = 1, coefpos2 = 5, model  = lar_sd_c34_ml$subordinate_c4)
+coeftbl_dc4 <- ldply(list('coef95CI' = dc4_coef, 'coef90CI' = dc4_coef_90), create_smmry_coeftbl, coefpos1 = 1, coefpos2 = 5, model  = lar_sd_c34_ml$dominant_c4)
+coeftbl_c3  <- ldply(list('coef95CI' = c3_coef,  'coef90CI' = c3_coef_90),  create_smmry_coeftbl, coefpos1 = 3, coefpos2 = 7, model = c3d_m2)
+coeftbl_sc3 <- ldply(list('coef95CI' = sc3_coef, 'coef90CI' = sc3_coef_90), create_smmry_coeftbl, coefpos1 = 3, coefpos2 = 7, model  = lar_sd_c34_ml$subordinate_c3)
+coeftbl_dc3 <- ldply(list('coef95CI' = dc3_coef, 'coef90CI' = dc3_coef_90), create_smmry_coeftbl, coefpos1 = 1, coefpos2 = 5, model  = lar_sd_c34_ml$dominant_c3)
 
 
 
-coeftbl_all <- ldply(list('c4.all' = coeftbl_c4, 'c4.subordinate' = coeftbl_sc4, 
-                          'c4.dominant' = coeftbl_dc4, 'c3.all' = coeftbl_c3, 
-                          'c3.subordinate' = coeftbl_sc3, 'c3.dominant' = coeftbl_dc3),
+coeftbl_all <- ldply(list('c4.all'         = coeftbl_c4, 
+                          'c4.subordinate' = coeftbl_sc4, 
+                          'c4.dominant'    = coeftbl_dc4,
+                          'c3.all'         = coeftbl_c3, 
+                          'c3.subordinate' = coeftbl_sc3,
+                          'c3.dominant'    = coeftbl_dc3),
                      .id = "type") %>% 
   mutate(PFG  = tstrsplit(type, split = "[.]")[[1]],
          type = tstrsplit(type, split = "[.]")[[2]]) %>%

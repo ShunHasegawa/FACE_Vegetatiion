@@ -8,15 +8,20 @@ c43_ratio <- C3grassC4 %>%
   summarise(value = sum(value)) %>% 
   ungroup() %>% 
   spread(key = PFG, value) %>% 
-  mutate(c43_r = c4 / c3)
+  mutate(c43_r = c4 / c3) %>% 
+  group_by(year, co2, ring) %>% 
+  summarise(c43_r = mean(c43_r)) %>% 
+  ungroup()
 
 
 c43_ratio_year0 <- c43_ratio %>%
   filter(year == "Year0") %>%
-  select(ring, plot, c43_r) %>%
+  select(ring, c43_r) %>%
   rename(ratios0 = c43_r) %>% 
-  left_join(filter(c43_ratio, year != "Year0"), by = c("ring", "plot")) %>% 
-  droplevels()
+  left_join(filter(c43_ratio, year != "Year0"), by = "ring") %>% 
+  droplevels() %>% 
+  group_by(year, ring, co2) %>% 
+  summarise_each(funs(mean), c43_r, ratios0)
 
 
 
@@ -24,20 +29,13 @@ c43_ratio_year0 <- c43_ratio %>%
 # analysis ----------------------------------------------------------------
 
 
-plot(log(c43_r + .01) ~ log(ratios0 + .01), data = c43_ratio_year0)
-summary(c43_ratio_year0)
+plot(log(c43_r) ~ log(ratios0), data = c43_ratio_year0, pch = 19, col = co2)
 
-
-c43_m1 <- lmer(I(log(c43_r + .01)) ~ co2 * year + I(log(ratios0 + .01)) + (1|ring) + (1|ring:plot) + (1|ring:year), data = c43_ratio_year0)
+c43_m1 <- lmer(I(log(c43_r)) ~ co2 * year + I(log(ratios0)) + (1|ring), data = c43_ratio_year0)
 plot(c43_m1)
 qqPlot(residuals(c43_m1))
-c43_m2 <- update(c43_m1, subset = -order(resid(c43_m1))[1:2])
-plot(c43_m2)
-qqPlot(residuals(c43_m2))
-
 Anova(c43_m1, test.statistic = "F")
-Anova(c43_m2, test.statistic = "F")
-
+VarCorr(c43_m1)
 
 
 # CI and postdoc test -----------------------------------------------------
@@ -55,9 +53,9 @@ c43_co2_pval <- tidy(Anova(c43_m1, test.statistic = "F")) %>%
 
 c43_CI_dd <- data.frame(summary(c43_lsmeans)) %>% 
   mutate(year       = factor(year, levels = paste0("Year", 0:3)),
-         rlsmean    = exp(lsmean) - 0.01,
-         rlowerCL   = exp(lower.CL) - 0.01,
-         rupperCL   = exp(upper.CL) - 0.01,
+         rlsmean    = exp(lsmean),
+         rlowerCL   = exp(lower.CL),
+         rupperCL   = exp(upper.CL),
          co2star    = c43_co2_pval[,1],
          value_type = "adjusted")
 
