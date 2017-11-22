@@ -211,6 +211,15 @@ iem_raw <- iem %>%
   mutate(nitr = no + nh,
          np   = nitr / p)
 
+# soil data for teh manuscript
+soil_data <- iem_raw %>% 
+  select(year, ring, no, nh, p) %>% 
+  rename(nitrate = no, ammonium = nh, phosphate = p) %>% 
+  filter(year != "Year0")
+write.csv(soil_data, "output/table/manuscript_data/soil_data.csv",
+          row.names = FALSE)
+
+
 plot(nitr ~ as.numeric(factor(year)), data = iem_raw, col = ring, pch = 19)
 plot(p ~ as.numeric(factor(year)), data = iem_raw, col = ring, pch = 19)
 
