@@ -138,39 +138,52 @@ ggsavePP(filename = "output/figs/adjusted_c43_ratio", width = 3, height = 3,
 
 
 
-# fit soil N and P (IEM) --------------------------------------------------
+# fit soil N and P (IEM) and other env vars------------------------------------------
 
 # fit soil nutrient data from Hasegawa et al. 2016 and Juan & Raul's data
 
 
 
-# . merge with IEM  data-------------------------------------------------------------
+# . merge with env  data-------------------------------------------------------------
 
+
+source("R/process_env.R") # env vars
+head(c34growth_moist)
 head(iem_raw)
 
 # merge with C34 ratiodata
-c43_ratio_iem <- C3grassC4 %>% 
-  group_by(year, co2, ring, PFG) %>% 
-  summarise(value = sum(value)) %>% 
-  ungroup() %>% 
-  spread(key = PFG, value) %>% 
-  mutate(c43_r = c4 / c3) %>% 
+c43_ratio_iem <- c43_ratio %>% 
   left_join(iem_raw) %>% 
-  mutate(s_c43_r  = scale(log(c43_r + .1))[, 1],    # Z-standardize for multiple regression
-         s_n = scale(log(nitr))[, 1],
-         s_p = scale(log(p))[, 1],
-         probe = ifelse(year %in% c("Year0", "Year1"), "IEM", "PRS"))
+  filter(year != "Year0") %>% 
+  left_join(c34growth_moist) %>% 
+  mutate(s_c43_r     = scale(log(c43_r))[, 1],    # Z-standardize for multiple regression
+         s_n         = scale(log(nitr))[, 1],
+         s_p         = scale(log(p))[, 1],
+         probe       = ifelse(year %in% c("Year0", "Year1"), "IEM", "PRS"),
+         s_moist     = scale(totalmoist)[, 1],
+         s_logmoist  = scale(log(totalmoist))[, 1],
+         s_temp      = scale(annual_temp2m)[, 1],
+         s_par       = scale(PAR)[, 1],
+         s_logpar    = scale(log(PAR))[, 1]) %>% 
+  arrange(year, ring)
 summary(c43_ratio_iem)
 plot(s_c43_r ~ log(nitr), c43_ratio_iem, col = factor(year), pch = 19)
 plot(s_c43_r ~ log(nitr), c43_ratio_iem, col = co2, pch = 19)
+plot(s_c43_r ~ totalmoist, c43_ratio_iem, col = co2, pch = 19)
 plot(log(c43_r + .1) ~ log(p), c43_ratio_iem, col = co2, pch = 19)
 
 
 # anlaysis
-c43_soil_m1 <- lmer(s_c43_r ~ s_n + s_p + (1|ring) + (1|probe) + (1|year), data = c43_ratio_iem)
+
+car::vif(lm(s_c43_r ~ s_n + s_p + s_moist + s_temp + s_par, data = c43_ratio_iem))
+
+c43_soil_m1 <- lmer(s_c43_r ~ s_n + s_p + s_moist + s_temp + s_par + (1|ring) + (1|probe) + (1|year), data = c43_ratio_iem)
 summary(c43_soil_m1)
 # probe type doeesn't explain any variation (probe is redundant with year anyway so remove)
-c43_soil_m2 <- lmer(s_c43_r ~ s_n + s_p + (1|ring) + (1|year), data = c43_ratio_iem)
+c43_soil_m2 <- lmer(s_c43_r ~ s_n + s_p + s_moist + s_temp + s_par + (1|ring) + (1|year), data = c43_ratio_iem)
+c43_soil_m3 <- lmer(s_c43_r ~ s_n + s_p + s_logmoist + s_temp + s_logpar + (1|ring) + (1|year), data = c43_ratio_iem)
+r.squared(c43_soil_m2)
+r.squared(c43_soil_m3)
 summary(c43_soil_m2)
 Anova(c43_soil_m2, test.statistic = "F")
 plot(c43_soil_m2)
@@ -192,14 +205,14 @@ c43_soil_coef_impo
 
 
 # Nitrogen ----------------------------------------------------------------
-vireg_obs_n <- visreg(c43_soil_m1,  xvar = "s_n")$res  # adjusted observed values
-vireg_fit_n <- visreg(c43_soil_m1,  xvar = "s_n")$fit  # fitted values
+vireg_obs_n <- visreg(c43_soil_m2,  xvar = "s_n")$res  # adjusted observed values
+vireg_fit_n <- visreg(c43_soil_m2,  xvar = "s_n")$fit  # fitted values
 vireg_obs_n$co2 <- c43_ratio_iem$co2
 
-nlim <- c(-2.5, 1.7)
+nlim <- c(-2.5, 1.5)
 resplot_n <- function(){
   plot(visregRes ~ s_n, data = vireg_obs_n, type = "n", 
-       ylim = c(-1.2, 1.7),
+       ylim = c(-1.7, 2.6),
        xlim = nlim,
        axes = F)
   axis(side = 1)
@@ -212,7 +225,7 @@ resplot_n <- function(){
   points(visregRes ~ s_n, data = vireg_obs_n, subset = co2 == "amb", pch = 19)
   points(visregRes ~ s_n, data = vireg_obs_n, subset = co2 == "elev", pch = 0)
 }
-
+resplot_n()
 
 # N boxplot
 n_boxplot <- function(){
@@ -220,7 +233,7 @@ n_boxplot <- function(){
           ylim = nlim,
           axes = F, col = c("gray80", "white"))
   axis(side = 1, labels = FALSE, tck = .03)
-  axis(side = 2, at = c(1.5, 3.5, 5.5, 7.5), labels = paste0("Year", 0:3), 
+  axis(side = 2, at = c(1.5, 3.5, 5.5), labels = paste0("Year", 1:3), 
        las = 2)
   box()
 }
@@ -228,22 +241,22 @@ n_boxplot <- function(){
 
 
 # Phosphorus ----------------------------------------------------------------
-vireg_obs_p <- visreg(c43_soil_m1,  xvar = "s_p")$res  # adjusted observed values
-vireg_fit_p <- visreg(c43_soil_m1,  xvar = "s_p")$fit  # fitted values
+vireg_obs_p <- visreg(c43_soil_m2,  xvar = "s_p")$res  # adjusted observed values
+vireg_fit_p <- visreg(c43_soil_m2,  xvar = "s_p")$fit  # fitted values
 vireg_obs_p$co2 <- c43_ratio_iem$co2
 
-plim <- c(-1.8, 1.6)
+plim <- c(-1.8, 1.4)
 resplot_p <- function(){
   plot(visregRes ~ s_p, data = vireg_obs_p, type = "n",
-       ylim = c(-1.2, 1.7), axes = F, ann = F,
+       ylim = c(-1.7, 2.6), axes = F, ann = F,
        xlim = plim)
   axis(side = 1, at = seq(-1.5, 1.5, 1), labels = seq(-1.5, 1.5, 1))
   axis(side = 2, las = 2, labels = F)
   box()
-  polygon(c(rev(vireg_fit_p$s_p), vireg_fit_p$s_p), 
-          c(rev(vireg_fit_p$visregLwr), vireg_fit_p$visregUpr), 
-          col = "gray80", border = NA)
-  lines(visregFit  ~ s_p, vireg_fit_p, lwd = 3)
+  # polygon(c(rev(vireg_fit_p$s_p), vireg_fit_p$s_p), 
+  #         c(rev(vireg_fit_p$visregLwr), vireg_fit_p$visregUpr), 
+  #         col = "gray80", border = NA)
+  # lines(visregFit  ~ s_p, vireg_fit_p, lwd = 3)
   points(visregRes ~ s_p, data = vireg_obs_p, subset = co2 == "amb", pch = 19)
   points(visregRes ~ s_p, data = vireg_obs_p, subset = co2 == "elev", pch = 0)
 }
@@ -256,7 +269,7 @@ p_boxplot <- function(){
           col = c("gray80", "white"),
           ylim = plim)
   axis(side = 1, at = seq(-1.5, 1.5, 1), labels = F, tck = .03)
-  axis(side = 2, at = c(1.5, 3.5, 5.5, 7.5), labels = F, las = 2)
+  axis(side = 2, at = c(1.5, 3.5, 5.5), labels = F, las = 2)
   box()
 }
 
