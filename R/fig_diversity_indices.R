@@ -1,5 +1,8 @@
 
-# prepare data frames -----------------------------------------------------
+# ANCOVA ------------------------------------------------------------------
+
+
+# . prepare data frames -----------------------------------------------------
 
 # Move Year0 value to a new column to be used as covariate for the analysis
 DivDF_year0_list <- llply(DivDF_list, function(x){
@@ -31,7 +34,7 @@ l_ply(names(DivDF_year0_list), function(x){
 
 
 
-# analysis ----------------------------------------------------------------
+# . analysis ----------------------------------------------------------------
 
 
 # prepare data frames
@@ -107,7 +110,7 @@ llply(list(m1, m2), function(x) Anova(x, test.statistic = "F"))
 
 
 
-# CI and post-hoc test ----------------------------------------------------
+# . CI and post-hoc test ----------------------------------------------------
 
 
 # compute 95 CI and post-hoc test (only need grass and forb species)
@@ -175,7 +178,7 @@ div_obs_dd <- ldply(DivDF_list) %>%
   gather(variable, value, H, S, J)
 
 
-# create fig --------------------------------------------------------------
+# . create fig --------------------------------------------------------------
 
 
 div_plots <- dlply(ci_dd, .(variable), function(x){
@@ -310,7 +313,7 @@ ggsavePP(filename = "output/figs/adjusted_diversity_indices",
 
 
 
-# summary table -----------------------------------------------------------
+# . summary table -----------------------------------------------------------
 
 # table for observed values
 obs_tbl <- div_obs_dd %>% 
@@ -348,3 +351,92 @@ writeWorksheetToFile(file        = "output/table/summary_tbl_diversity.xlsx",  #
                      data        = div_tbl_l,                                  # writeWorksheetToFile doesn't take dplyr object so turn them into data frames using as.data.frame
                      sheet       = names(div_tbl_l),                           # sheet names in excel are defined by object names a list
                      clearSheets = TRUE)
+
+
+
+
+# Forb pre & post CO2 -----------------------------------------------------
+
+forb_pre_d <- filter(DivDF_list$forb_spp, year == "Year0")
+forb_post_d <- filter(DivDF_list$forb_spp, year != "Year0")
+
+# . Pre CO2 ---------------------------------------------------------------
+
+create_trans_boxplot(H ~ co2, data = forb_pre_d)
+forb_pre_H_m1 <- lm(H ~ co2, data = forb_pre_d)
+summary(forb_pre_H_m1)
+par(mfrow = c(2, 2))
+plot(forb_pre_H_m1)
+
+create_trans_boxplot(S ~ co2, data = forb_pre_d)
+forb_pre_S_m1 <- lm(S ~ co2, data = forb_pre_d)
+par(mfrow = c(2, 2))
+plot(forb_pre_S_m1)
+summary(forb_pre_S_m1)
+
+create_trans_boxplot(J ~ co2, data = forb_pre_d)
+forb_pre_J_m1 <- lm(J ~ co2, data = forb_pre_d)
+summary(forb_pre_J_m1)
+
+
+# . Post CO2 ----------------------------------------------------------------
+
+create_trans_boxplot(H ~ co2 * year, data = forb_post_d)
+forb_post_H_m1 <- lmer(H ~ co2 * year + (1|ring), data = forb_post_d)
+Anova(forb_post_H_m1, test.statistic = "F")
+plot(forb_post_H_m1)
+qqPlot(resid(forb_post_H_m1))
+
+
+create_trans_boxplot(S ~ co2 * year, data = forb_post_d)
+forb_post_S_m1 <- lmer(S ~ co2 * year + (1|ring), data = forb_post_d)
+plot(forb_post_S_m1)
+qqPlot(resid(forb_post_S_m1))
+Anova(forb_post_S_m1, test.statistic = "F")
+
+
+create_trans_boxplot(J ~ co2 * year, data = forb_post_d)
+forb_post_J_m1 <- lmer(J ~ co2 * year + (1|ring), data = forb_post_d)
+plot(forb_post_J_m1)
+qqPlot(resid(forb_post_J_m1))
+Anova(forb_post_J_m1, test.statistic = "F")
+
+
+
+
+# . summary table -Forb ---------------------------------------------------
+
+forb_pre_m_l <- list(pre_h  = forb_pre_H_m1, 
+                     pre_j  = forb_pre_J_m1,
+                     pre_S  = forb_pre_S_m1)
+forb_pre_anv <- ldply(forb_pre_m_l, function(x) tidy(Anova(x))) %>% 
+  select(-sumsq) %>% 
+  filter(term == "co2") %>% 
+  mutate(Df.res = 4)
+
+
+
+forb_post_m_l <- list(post_h = forb_post_H_m1, 
+                      post_j = forb_post_J_m1,
+                      post_s = forb_post_S_m1)
+forb_post_anv <- ldply(forb_post_m_l, function(x) tidy(Anova(x, test.statistic = "F")))
+
+
+
+forb_anv <- bind_rows(forb_pre_anv, forb_post_anv) %>%
+  rename(Fval = statistic) %>% 
+  mutate(treat   = tstrsplit(.id, "_")[[1]],
+         ind     = tstrsplit(.id, "_")[[2]],
+         dfs     = paste0("F", "(", df, ", ", round(Df.res, 0), ")"),
+         Fval    = round(Fval, 3),
+         p.value = round(p.value, 3)) %>% 
+  select(-.id, -df, -Df.res) %>%
+  gather(variable, value, Fval, p.value, dfs) %>% 
+  mutate(term_var = paste(term, variable, sep = "_")) %>% 
+  select(-term, -variable) %>% 
+  spread(term_var, value) %>% 
+  select(ind, treat, starts_with("co2_"), starts_with("year_"), starts_with("co2:year")) %>% 
+  arrange(ind, desc(treat))
+forb_anv[is.na(forb_anv)] <- "-" 
+write.csv(forb_anv, file = "output/table/analysis_PrePost_forb_diveristy.csv", 
+          row.names = F)
