@@ -104,24 +104,29 @@ stepLmer <- function(model, red.rndm = FALSE, ddf = "Kenward-Roger", ...){
 
 # produce box plots with transformed data----
 
-# log OR sqrt OR power(1/3) OR inverse OR box-cox
-bxplts <- function(value, xval, ofst = 0, data, ...){
-  data$y <- data[[value]] + ofst # ofst is added to make y >0
-  data$xv <- data[[xval]]
-  a <- boxcox(y ~ xv * year, data = data, plotit = FALSE)
-  par(mfrow = c(2, 3))
-  boxplot(y ~ xv*year, data, main = "raw")
-  boxplot(log(y) ~ xv*year, main = "log", data)
-  boxplot(sqrt(y) ~ xv*year, main = "sqrt", data)
-  boxplot(y^(1/3) ~ xv*year, main = "power(1/3)", data)
-  boxplot(1/y ~ xv*year, main = "inverse", data)
+create_trans_boxplot <- function(x, data, ...){ # x = formula
+  
+  # get box-cox value
+  a <- boxcox(x, data = data, plotit = FALSE, ...)
   BCmax <- a$x[a$y == max(a$y)]
-  texcol <- ifelse(BCmax < 0, "red", "black") 
-  boxplot(y^(BCmax) ~ xv*year, 
-          main = "", sep = "=", 
-          data = data)
-  title(main = paste("Box Cox", round(BCmax, 4)), 
-        col.main = texcol)
+  texcol <- ifelse(BCmax < 0, "red", "black")  # use red color for negative values
+  
+  # create formulas for each transformation
+  f_cha     <- as.character(x)
+  f_log     <- as.formula(paste("log(", f_cha[2], ") ~ ", f_cha[3]))
+  f_sqrt    <- as.formula(paste("sqrt(", f_cha[2], ") ~ ", f_cha[3]))
+  f_pw      <- as.formula(paste("(", f_cha[2], ")^(1/3) ~ ", f_cha[3]))
+  f_inv     <- as.formula(paste("1 / (", f_cha[2], ") ~ ", f_cha[3]))
+  f_boxcox  <- as.formula(paste("(", f_cha[2], ")^(BCmax) ~ ", f_cha[3]))
+  f_list    <- list('raw' = x,
+                    'log' = f_log,
+                    'sqrt' = f_sqrt,
+                    'power(1/3)' = f_pw,
+                    'inverse' = f_inv)
+  par(mfrow = c(2, 3))
+  l_ply(names(f_list), function(x) boxplot(f_list[[x]], data = data, main = x))
+  boxplot(f_boxcox, main = "", sep = "=", data = data)
+  title(main = paste("Box Cox", round(BCmax, 4)), col.main = texcol)
   par(mfrow = c(1,1))
 }
 
