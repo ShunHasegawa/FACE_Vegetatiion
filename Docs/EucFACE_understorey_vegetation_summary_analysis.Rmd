@@ -161,61 +161,6 @@ fig_sd
 ```
 
 
-# Annual rates of change in C~4~ and C~3~ abundance
-Here, I examined the effects of eCO~2~ on annual rates of change in C~3~ and C~4~ abundance in relation to understorey temperature, PAR and soil moisture. I tested CO~2~ and interactions between CO~2~ and the others.
-
-
-## C4 graminoid
-
-
-```{r c4_model_summary, echo=FALSE, results='asis', message=FALSE}
-lc4    <- dlply(filter(coeftbl_all, PFG == "c4"), .(type))
-lc4tbl <- llply(names(lc4), function(x) pander(lc4[[x]][, -c(1, 2)], caption = x, justify = "right"))
-lc4tbl[[1]]
-lc4tbl[[2]]
-lc4tbl[[3]]
-
-pander(ldply(list('all' = c4d_m2, 
-               'subordinate' = lar_sd_c34_ml$subordinate_c4,
-               'dominant' = lar_sd_c34_ml$dominant_c4),
-      r.squared), 
-      justify = "right", caption = "model summary")
-
-```
-
-
-```{r c4_partial_regerssion_plot, echo=FALSE, results='asis', fig.width=5, fig.height=5}
-create_resplot(c4d_m2, 
-               ylab = expression(Adj.~annual~rates~of~change~"in"~C[4]),
-               ylim <- c(-2, 2.6))
-```
-
-
-## C3 graminoid
-
-
-```{r c3_model_summary, echo=FALSE, results='asis', message=FALSE}
-lc3    <- dlply(filter(coeftbl_all, PFG == "c3"), .(type))
-lc3tbl <- llply(names(lc3), function(x) pander(lc3[[x]][, -c(1, 2)], caption = x, justify = "right"))
-lc3tbl[[1]]
-lc3tbl[[2]]
-lc3tbl[[3]]
-
-pander(ldply(list('all' = c3d_m2, 
-               'subordinate' = lar_sd_c34_ml$subordinate_c3,
-               'dominant' = lar_sd_c34_ml$dominant_c3),
-             r.squared),
-       justify = "right", caption = "model summary")
-
-```
-
-
-```{r c3_partial_regerssion_plot, echo=FALSE, results='asis', fig.width=5, fig.height=5}
-create_resplot(c3d_m2, 
-               ylab = expression(Adj.~annual~rates~of~change~"in"~C[3]),
-               ylim <- c(-2.5, 1.5))
-```
-
 
 # Relationship between C~4~:C~3~ ratios and soil N and P availability
 ```{r c43r_soilNP, echo=FALSE, results='asis', message=FALSE}
@@ -224,7 +169,7 @@ rid <- data.frame(RI = c43_soil_coef_impo) %>%
          RI = round(RI, 3))
 
 c43soil_tbl <- ldply(list('90CI' = c43_soil_coef_90, '95CI' = c43_soil_coef), function(x){
-  d <- cbind(summary(c43_soil_m1)$coef[, "Estimate"], x[4:6, ])
+  d <- cbind(summary(c43_soil_m2)$coef[, "Estimate"], x[4:9, ])
   colnames(d) <- c("estimate", "lwr", "upr")
   dd <- data.frame(d) %>%
     mutate(predictor = row.names(.)) %>%
@@ -234,17 +179,21 @@ c43soil_tbl <- ldply(list('90CI' = c43_soil_coef_90, '95CI' = c43_soil_coef), fu
 }) %>%
   spread(.id, coefs) %>%
   left_join(rid)
+
+# model summary
 pander(c43soil_tbl, caption = "C4:C3 ratios vs soil N and P", justify = "right")
+pander(r.squared(c43_soil_m2), caption = "model summary", justify = "right")
 
+# variance components
+VarCorr(c43_soil_m2)
 
-pander(r.squared(c43_soil_m1), caption = "model summary", justify = "right")
+# multicollinearity
+car::vif(lm(s_c43_r ~ s_n + s_p + s_moist + s_temp + s_par, data = c43_ratio_iem))
 
 ```
 
-```{r c43soil_fig, fig.width=4, fig.height=4, echo=FALSE}
-plot(s_c43_r ~ s_n, c43_ratio_iem, col = co2, pch = 19, ylab = "C4:C3 ratios",
-     xlab = "Soil N availability")
-legend("topright", legend = levels(c43_ratio_iem$co2), col = c(1, 2), pch = 19, bty = 'n')
+```{r c43soil_fig, fig.width=5.5, fig.height=5, echo=FALSE}
+plot_c43r_np()
 ```
 
 
