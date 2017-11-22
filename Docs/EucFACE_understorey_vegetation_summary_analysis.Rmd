@@ -184,6 +184,10 @@ c43soil_tbl <- ldply(list('90CI' = c43_soil_coef_90, '95CI' = c43_soil_coef), fu
 pander(c43soil_tbl, caption = "C4:C3 ratios vs soil N and P", justify = "right")
 pander(r.squared(c43_soil_m2), caption = "model summary", justify = "right")
 
+
+```
+
+```{r c43soil_modelinfo, echo=TRUE, results='markup'}
 # variance components
 VarCorr(c43_soil_m2)
 
@@ -191,6 +195,7 @@ VarCorr(c43_soil_m2)
 car::vif(lm(s_c43_r ~ s_n + s_p + s_moist + s_temp + s_par, data = c43_ratio_iem))
 
 ```
+
 
 ```{r c43soil_fig, fig.width=5.5, fig.height=5, echo=FALSE}
 plot_c43r_np()
