@@ -19,11 +19,35 @@ SiteName <- c("year", "block", "ring", "co2", "plot", "id", "position", "cell", 
 
 # Raw data for multi variate analysis (matrix)
 load("output//Data/EucFACE_understorey_vegetation_2012-2106_S1.RData")
+
+# fix species names
+FullVdf <- FullVdf %>% 
+  rename(Ambrosia.artemisiifolia  = Ambrosia.sp,
+         Arthropodium.minus       = Arthropodium.sp,
+         Digitaria.longiflora     = Digitaria.sp,
+         Drosera.auriculata       = Drosera.sp,
+         Leontodon.saxatilis      = Leontodon.taraxacoides,
+         Phyllanthus.gunnii       = Phyllanthus.sp,
+         Sisyrinchium.iridifolium = Sisyrinchium.sp)
 summary(FullVdf)
 
 # dfs with plant functional groups (df)
 load("output//Data/EucFACE_understorey_vegetation_2012-2106_S1_PFG.RData")
+
+# fix species names
+veg_FullVdf <-  veg_FullVdf %>% 
+  mutate(variable   = recode(variable,                                         
+                             "Ambrosia.sp"            = "Ambrosia.artemisiifolia",
+                             "Arthropodium.sp"        = "Arthropodium.minus",
+                             "Digitaria.sp"           = "Digitaria.longiflora",
+                             "Drosera.sp"             = "Drosera.auriculata",
+                             "Leontodon.taraxacoides" = "Leontodon.saxatilis",
+                             "Phyllanthus.sp"         = "Phyllanthus.gunnii",
+                             "Sisyrinchium.sp"        = "Sisyrinchium.iridifolium"))
 summary(veg_FullVdf)
+
+
+
 
 # spp
 SppName <- as.character(unique(veg_FullVdf$variable))
@@ -51,6 +75,24 @@ SppName_forb  <- gfspp[gfspp$form == "Forb", 1]
 PlotSumVeg <- ddply(FullVdf, .(year, ring, plot, block, co2, id, RY), 
                     function(x) colSums(x[, SppName])) %>% 
   arrange(ring, plot, year)
+
+
+# save raw data for EucFACE vegetaiotn manuscript
+forb_raw_data <- PlotSumVeg %>% 
+  select(year, co2, ring, plot, one_of(SppName_forb))
+gram_raw_data <- PlotSumVeg %>% 
+  select(year, co2, ring, plot, one_of(SppName_grass))
+gram_pfg <- veg_FullVdf %>% 
+  filter(form == "Grass") %>% 
+  select(variable, PFG) %>% 
+  distinct()
+
+write.csv(forb_raw_data, "output/Data/forb_data.csv", row.names = FALSE)
+write.csv(gram_raw_data, "output/Data/graminoid_data.csv", row.names = FALSE)
+write.csv(gram_pfg, "output/Data/graminoid_pfg.csv", row.names = FALSE)
+
+
+
 
 # ring sum
 RingSumVeg <- ddply(PlotSumVeg, .(year, ring, block, co2), 
