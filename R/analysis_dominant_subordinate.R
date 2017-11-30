@@ -485,7 +485,7 @@ sd_abund_fig <- ggplot(ci_dd, aes(x = year, y = lsmean)) +
         legend.direction  = "vertical", 
         legend.text.align = 0) +
   
-  labs(y = expression(Abundance~(Counts~plot^'-1'))) +
+  labs(y = expression(Cover~(Counts~plot^'-1'))) +
   
   geom_text(data = plab_d, aes(label = plot_lab), x = -Inf, y = Inf, 
             hjust = -.1, vjust = 1.5, size = 3, fontface = "bold") +

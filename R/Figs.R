@@ -12,14 +12,6 @@ Veg_Plot <- veg_FullVdf %>%
   ungroup() %>% 
   mutate(form       = car::recode(form, "c('Fern', 'Moss') = 'Moss/Fern'"),
          OrginalVar = variable,
-         variable   = recode(variable,                                         # fix species names
-                             "Ambrosia.sp"            = "Ambrosia.artemisiifolia",
-                             "Arthropodium.sp"        = "Arthropodium.minus",
-                             "Digitaria.sp"           = "Digitaria.longiflora",
-                             "Drosera.sp"             = "Drosera.auriculata",
-                             "Leontodon.taraxacoides" = "Leontodon.saxatilis",
-                             "Phyllanthus.sp"         = "Phyllanthus.gunnii",
-                             "Sisyrinchium.sp"        = "Sisyrinchium.iridifolium"),
          variable   = gsub("[.]", " ", as.character(variable)),                # e.g.  Araujia.sericifera ->  Araujia sericifera
          co2        = factor(co2, labels = c("Ambient", expression(eCO[2]))),
          PFG        = ifelse(form == "Grass", paste(PFG, form, sep = "_"),     # relabel PFG: (C3grass, C4grass, legume, non-legeume, wood, Moss/Fern)
@@ -72,7 +64,7 @@ p <- ggplot(veg_co2, aes(y = variable2, x = log10(Mean + 1),  col = year)) +
   geom_point(alpha = .8) +
   
   
-  theme(axis.text.y        = element_text(face = "italic", size = 7), 
+  theme(axis.text.y        = element_text(face = "italic", size = 6.6), 
         strip.text.y       = element_text(size = 7, angle = 0),
         legend.title       = element_blank(),
         legend.position    = c(1.05, .57), 
@@ -81,10 +73,10 @@ p <- ggplot(veg_co2, aes(y = variable2, x = log10(Mean + 1),  col = year)) +
         panel.grid.major   = element_line(colour = "grey90", size = .2),
         panel.grid.major.x = element_blank(),
         panel.margin       = unit(0, "lines")) +
-  labs(y = NULL, x = expression(log[10](Abundance+1)~(Count~m^'-2'))) 
+  labs(y = NULL, x = expression(log[10](Cover+1)~(Count~m^'-2'))) 
 p
 ggsavePP(filename = "output/figs/FACE_vegetation_CO2_Scatter", plot = p, 
-         width= 6, height = 9)
+         width= 6, height = 8)
 
 
 
