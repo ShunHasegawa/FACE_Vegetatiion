@@ -94,6 +94,27 @@ pander(sb_tbl, caption = "Summary of dominant ands subordinat species of gramino
 ```
 
 
+```{r forb_summary, echo=FALSE, results='markup'}
+f_df <- veg_FullVdf %>% 
+  filter(form == "Forb") %>% 
+  group_by(year, variable) %>% 
+  summarise(value = sum(value)) %>% 
+  ungroup() %>% 
+  filter(value > 0)
+
+f_y0 <- f_df$variable[f_df$year == "Year0"]
+f_y123 <- unique(f_df$variable[f_df$year != "Year0"])
+
+spring_spp <- length(setdiff(f_y0, f_y123))
+summer_spp <- length(setdiff(f_y123, f_y0))
+common_spp <- length(intersect(f_y123, f_y0))
+
+pander(data.frame(spring = spring_spp, summer = summer_spp, cmmon = common_spp),
+       caption = "The number of forb species found in the spring and summer surveys")
+
+```
+
+
 
 # Univariate analysis (ANCOVA)
 
