@@ -22,13 +22,13 @@ load("output//Data/EucFACE_understorey_vegetation_2012-2106_S1.RData")
 
 # fix species names
 FullVdf <- FullVdf %>% 
-  rename(Ambrosia.artemisiifolia  = Ambrosia.sp,
-         Arthropodium.minus       = Arthropodium.sp,
-         Digitaria.longiflora     = Digitaria.sp,
-         Drosera.auriculata       = Drosera.sp,
-         Leontodon.saxatilis      = Leontodon.taraxacoides,
-         Phyllanthus.gunnii       = Phyllanthus.sp,
-         Sisyrinchium.iridifolium = Sisyrinchium.sp)
+  dplyr::rename(Ambrosia.artemisiifolia  = Ambrosia.sp,
+                Arthropodium.minus       = Arthropodium.sp,
+                Digitaria.longiflora     = Digitaria.sp,
+                Drosera.auriculata       = Drosera.sp,
+                Leontodon.saxatilis      = Leontodon.taraxacoides,
+                Phyllanthus.gunnii       = Phyllanthus.sp,
+                Sisyrinchium.iridifolium = Sisyrinchium.sp)
 summary(FullVdf)
 
 # dfs with plant functional groups (df)
@@ -36,14 +36,14 @@ load("output//Data/EucFACE_understorey_vegetation_2012-2106_S1_PFG.RData")
 
 # fix species names
 veg_FullVdf <-  veg_FullVdf %>% 
-  mutate(variable   = recode(variable,                                         
-                             "Ambrosia.sp"            = "Ambrosia.artemisiifolia",
-                             "Arthropodium.sp"        = "Arthropodium.minus",
-                             "Digitaria.sp"           = "Digitaria.longiflora",
-                             "Drosera.sp"             = "Drosera.auriculata",
-                             "Leontodon.taraxacoides" = "Leontodon.saxatilis",
-                             "Phyllanthus.sp"         = "Phyllanthus.gunnii",
-                             "Sisyrinchium.sp"        = "Sisyrinchium.iridifolium"))
+  mutate(variable   = dplyr::recode(variable,                                         
+                                  "Ambrosia.sp"            = "Ambrosia.artemisiifolia",
+                                  "Arthropodium.sp"        = "Arthropodium.minus",
+                                  "Digitaria.sp"           = "Digitaria.longiflora",
+                                  "Drosera.sp"             = "Drosera.auriculata",
+                                  "Leontodon.taraxacoides" = "Leontodon.saxatilis",
+                                  "Phyllanthus.sp"         = "Phyllanthus.gunnii",
+                                  "Sisyrinchium.sp"        = "Sisyrinchium.iridifolium"))
 summary(veg_FullVdf)
 
 
