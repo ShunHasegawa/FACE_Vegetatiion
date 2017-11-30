@@ -324,6 +324,14 @@ obs_tbl <- div_obs_dd %>%
 
 
 # bind with adjusted values
+
+div_pval <- ci_dd %>% 
+  mutate(.id = paste0(tolower(Type), "_spp.", variable),
+         p.value = round(p.value, 4)) %>% 
+  filter(!is.na(p.value)) %>% 
+  select(.id, year, p.value)
+
+
 div_adjMean_tble <- ci_dd %>%
   mutate(.id = paste0(tolower(Type), "_spp.", variable)) %>% 
   select(.id, co2, year, lsmean, value_type) %>% 
@@ -332,15 +340,17 @@ div_adjMean_tble <- ci_dd %>%
   mutate(variable = paste(value_type, co2, sep = "_")) %>% 
   select(-value_type, -co2) %>% 
   spread(key = variable, value = M) %>% 
+  left_join(div_pval) %>% 
   mutate(resp     = adjusted_elev / adjusted_amb - 1,
          Type     = gsub("_.*", "", .id),
          variable = str_sub(.id, -1, -1)) %>% 
   group_by(Type, variable, year) %>% 
-  summarise_each(funs(round(., 2)), everything(), -.id) %>% 
+  mutate_each(funs(round(., 2)), everything(), -.id, -p.value) %>% 
   select(variable, Type, year, starts_with("observed"), starts_with("adjusted"), 
-         resp) %>% 
+         resp, p.value) %>% 
   ungroup() %>% 
   arrange(variable, Type)
+
 
 
 # split df by variable
